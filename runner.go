@@ -45,7 +45,7 @@ type Runner interface {
     // NOTE: In some cases you may not know the returned types ahead of time,
     // because it's somehow depends on the input types. For such cases, use the
     // Wildcard type.
-    Types() []Type
+    Returns() []Type
 }
 
 // NewPassThrough returns a new runner that lets all of its input through as-is
