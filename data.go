@@ -4,10 +4,11 @@ import (
     "sort"
 )
 
-// Data is an abstract interface representing a set of typed values.
+// Data is an abstract interface representing a set of typed values. Implement
+// it for each type of data that you need to support
 type Data interface {
 
-    // Implements the sort interface
+    // Data is sortable
     sort.Interface
 
     // Returns the data type of the contained values
