@@ -6,16 +6,18 @@ package ep
 type Dataset interface {
     Data
 
-    // Width returns
+    // Width returns the number of Data instances (columns) in the set
     Width() int
-    At(int) Data
+
+    // At returns the Data instance at index i
+    At(i int) Data
 }
 
 type dataset []Data
 
 // NewDataset creates a new Data object that's a horizontal composition of the
 // provided Data objects
-func NewDataset(data ...Data) Data {
+func NewDataset(data ...Data) Dataset {
     return dataset(data)
 }
 

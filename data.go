@@ -21,8 +21,8 @@ type Data interface {
     // panic
     Append(Data) Data
 
-    // ToStrings returns the string representation of all of the Data values
-    ToStrings() []string
+    // Strings returns the string representation of all of the Data values
+    Strings() []string
 
     // Clone returns a new Data object containing the same values as the
     // current one

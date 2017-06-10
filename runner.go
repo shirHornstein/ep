@@ -31,8 +31,7 @@ type Runner interface {
     // input will just close early.
     Run(ctx context.Context, inp, out chan Dataset) error
 
-    // Types returns the constant list of data types that are produced by this
-    // Runner.
+    // Returns the constant list of data types that are produced by this Runner.
     //
     // NOTE: Violation of meeting these defined types (either by producing
     // mismatching number of Data objects within the produced Datasets, or by
