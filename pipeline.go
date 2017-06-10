@@ -1,7 +1,7 @@
 package ep
 
-// NewPipeline returns a vertical composite pipeline runner that works as a
-// pipeline: the output of any one stream is passed as input to the next
+// NewPipeline returns a vertical composite pipeline runner where the output of
+// any one stream is passed as input to the next
 func NewPipeline(runners ...Runner) Runner {
     return pipeline(runners)
 }
