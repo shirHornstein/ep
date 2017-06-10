@@ -6,7 +6,8 @@ type Type interface {
 }
 
 // As returns a new Type that's assigned a name, Useful for cases where the name
-// of the data represented by the type matters for later referencing
+// of the data represented by the type matters for later referencing. To fetch
+// the name, cast the type to `interface { As() string }`
 func As(t Type, name string) Type {
     return &asType{t, name}
 }
