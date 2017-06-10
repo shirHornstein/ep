@@ -36,15 +36,15 @@ type Runner interface {
     //
     // NOTE: Violation of meeting these defined types (either by producing
     // mismatching number of Data objects within the produced Datasets, or by
-    // returning incorrect types) may result in a panic() or worse (incorrect
-    // results)
+    // returning incorrect types) may result in a panic or worse - incorrect
+    // results
     //
     // NOTE: If you need to annotate the returned data with names for
     // referencing later, use the `As()` helper function
     //
     // NOTE: In some cases you may not know the returned types ahead of time,
     // because it's somehow depends on the input types. For such cases, use the
-    //
+    // Wildcard type.
     Types() []Type
 }
 
