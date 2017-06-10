@@ -5,9 +5,15 @@ type Type interface {
     Name() string
 }
 
-// IsEqualTypes determines if two types are the same
-func IsEqualTypes(t1, t2 Type) bool {
-    return t1.Name() == t2.Name()
+// EqualTypes determines if two types are the same, and returns the first if
+// they are, or nil if they aren't.
+func EqualType(t1, t2 Type) (t Type, ok bool) {
+    ok := t1.Name() == t2.Name()
+    if ok {
+        return t1, true
+    } else {
+        return nil, false
+    }
 }
 
 // As returns a new Type that's assigned a name, Useful for cases where the name

@@ -3,7 +3,7 @@ package ep
 // NewScatter returns a distribute Runner that scatters its input uniformly to
 // all other nodes such that the received datasets are dispatched in a roubd-
 // robin to the nodes.
-func NewScatter(nodes []Node) Runner {
+func NewScatter() Runner {
     return nil
 }
 
@@ -17,7 +17,7 @@ func NewGather(to Node) Runner {
 // NewBroadcast returns a distribute Runner that duplicates its input to all
 // other nodes. The output will be effectively a union of all of the inputs from
 // all nodes (order not guaranteed)
-func NewBroadcast(nodes []Node) Runner {
+func NewBroadcast() Runner {
     return nil
 }
 
