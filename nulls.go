@@ -1,6 +1,6 @@
 package ep
 
-// NewNulls creates a new data object representing a list of null values
+// NewNulls creates a new data object representing a list of `n` null values
 func NewNulls(n int) Data {
     return nulls(n)
 }
