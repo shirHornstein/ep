@@ -28,10 +28,3 @@ func NewBroadcast() Runner {
 func NewPartition(predicate func(Dataset) Node) Runner {
     return nil
 }
-
-// NewDistribute creates a generic Runner that distributes all of its input data
-// to the provided nodes. This Runner, when executed on in parallel on multiple
-// nodes produces different results
-func NewDistribute(to []Node) Runner {
-    return nil
-}
