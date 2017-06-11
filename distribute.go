@@ -1,8 +1,6 @@
 package ep
 
 import (
-    "io"
-    "sync"
     "context"
 )
 
@@ -42,7 +40,7 @@ type distribute struct {
 }
 
 func (d *distribute) Run(ctx context.Context, inp, out chan Dataset) (err error) {
-    conns := d.Connect(ctx)
+    conns := newConnections(d, ctx)
     defer conns.Close(err) // notify peers that we're done
 
     // send the local data to the distributed target nodes
@@ -65,25 +63,4 @@ func (d *distribute) Run(ctx context.Context, inp, out chan Dataset) (err error)
 
         out <- data
     }
-}
-
-// Connect to all peer nodes
-func (d *distribute) Connect(ctx context.Context) *conns {
-    return nil
-}
-
-// conns is a helper object that represents a set of network connections to
-// peer nodes. It provides the API for sending and receiving data
-type conns struct {}
-
-func (c *conns) Send(data Dataset) error {
-    return nil
-}
-
-func (c *conns) Receive() (Dataset, error) {
-    return nil, nil
-}
-
-func (c *conns) Close(err error) error {
-    return nil
 }
