@@ -47,8 +47,8 @@ type Runner interface {
     Returns() []Type
 }
 
-// NewPassThrough returns a new runner that lets all of its input through as-is
-func NewPassThrough() Runner {
+// PassThrough returns a new runner that lets all of its input through as-is
+func PassThrough() Runner {
     return passthrough{}
 }
 
