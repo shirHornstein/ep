@@ -41,7 +41,7 @@ type distribute struct {
 
 func (d *distribute) Run(ctx context.Context, inp, out chan Dataset) (err error) {
     sources, targets, err := d.Connect(ctx)
-    defer func() { append(sources, targets...).Close(err) }
+    defer func() { append(sources, targets...).Close(err) }()
     if err != nil {
         return
     }
