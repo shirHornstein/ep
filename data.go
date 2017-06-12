@@ -34,8 +34,8 @@ func Clone(data Data) Data {
 // Cut the Data into several sub-segments at the provided cutpoint indices. It's
 // effectlively the same as calling Data.Slice() multiple times. Dataset also
 // implements the Data interface is a valid input to this function.
-func Cut(data Data, cutpoints ...int) []Data {
-    res := []Data{}
+func Cut(data Data, cutpoints ...int) Data {
+    res := dataset{}
     var last int
     for _, i := range cutpoints {
         res = append(res, data.Slice(last, i))
@@ -55,7 +55,7 @@ func Cut(data Data, cutpoints ...int) []Data {
 //
 // NOTE that partitioing will re-order to data to create the minimum number of
 // batches. Thus is does not maintain order
-func Partition(data Data) []Data {
+func Partition(data Data) Data {
     sort.Sort(data)
     var last string
     var cutpoints []int

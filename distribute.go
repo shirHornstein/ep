@@ -82,7 +82,7 @@ func (d *distribute) Connect(ctx context.Context) (sources, targets conns, err e
 
     // open a connection to all target nodes
     for _, n := range targetNodes {
-        isThisTarget ||= n == thisNode // TODO: short-circuit
+        isThisTarget = isThisTarget || n == thisNode // TODO: short-circuit
         conn, err = n.Connect(d.UUID)
         if err != nil {
             return
