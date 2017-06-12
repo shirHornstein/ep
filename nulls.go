@@ -1,8 +1,8 @@
 package ep
 
-// NewNulls creates a new data object representing a list of `n` null values
-func NewNulls(n int) Data {
-    return nulls(n)
-}
+// Nulls is a Type representing NULL values. Use Nulls.Data(n) to create Data
+// instances of `n` nulls
+var Nulls = nulls(0)
 
+// nulls is implemented to satisfy both the Type and Data interfaces
 type nulls int // number of nulls in the set

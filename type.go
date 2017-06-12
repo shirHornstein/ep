@@ -3,6 +3,9 @@ package ep
 // Type is an interface that represnts specific data types
 type Type interface {
     Name() string
+
+    // Data returns a new Data object of this type, containing `n` zero-values
+    Data(n uint) Data
 }
 
 // EqualTypes determines if two types are the same, and returns the first if

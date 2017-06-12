@@ -23,8 +23,10 @@ type Data interface {
 
     // Strings returns the string representation of all of the Data values
     Strings() []string
+}
 
-    // Clone returns a new Data object containing the same values as the
-    // current one
-    Clone() Data
+// Clone the contents of the provided Data (or Dataset, since it implements
+// Data)
+func Clone(data Data) Data {
+    return data.Type().New(0).Append(data)
 }

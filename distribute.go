@@ -34,19 +34,22 @@ func NewPartition() Runner {
     return nil
 }
 
-// distribute is a Runner that exchanges that between peer nodes
+// distribute is a Runner that exchanges data between peer nodes
 type distribute struct {
     UUID string
 }
 
 func (d *distribute) Run(ctx context.Context, inp, out chan Dataset) (err error) {
-    conns := newConnections(d, ctx)
-    defer conns.Close(err) // notify peers that we're done
+    sources, targets, err := d.Connect(ctx)
+    defer func() { append(sources, targets...).Close(err) }
+    if err != nil {
+        return
+    }
 
     // send the local data to the distributed target nodes
     go func() {
         for data := range inp {
-            err = conns.Send(data)
+            err = targets.Send(data)
             if err != nil {
                 return
             }
@@ -56,11 +59,59 @@ func (d *distribute) Run(ctx context.Context, inp, out chan Dataset) (err error)
     // listen to all nodes for incoming data
     var data Dataset
     for {
-        data, err = conns.Receive()
+        data, err = sources.Receive()
         if err != nil {
             return
         }
 
         out <- data
     }
+}
+
+func (d *distribute) Connect(ctx context.Context) (sources, targets conns, err error) {
+    var isThisTarget bool // is this node also a destination?
+
+    allNodes := ctx.Value("ep.AllNodes").([]Node)
+    thisNode := ctx.Value("ep.ThisNode").(Node)
+    masterNode := ctx.Value("ep.MasterNode").(Node)
+
+    targetNodes = allNodes
+    if d.Gather {
+        targetNodes = []Node{masterNode}
+    }
+
+    // open a connection to all target nodes
+    for _, n := range targetNodes {
+        isThisTarget ||= n == thisNode // TODO: short-circuit
+        conn, err = n.Connect(d.UUID)
+        if err != nil {
+            return
+        }
+
+        targets = append(targets, conn)
+    }
+
+    // if we're also a destination, listen to all nodes
+    for i := 0; isThisTarget && i < len(allNodes); i += 1 {
+        n := AllNodes[i]
+
+        // if we already established a connection to this node from the targets,
+        // re-use it. We don't need 2 uni-directional connections.
+        conn = targets.Get(n)
+        if conn == nil {
+            conn, err = n.Connect(d.UUID)
+        }
+
+        if err != nil {
+            return
+        }
+
+        sources = append(sources, conn)
+    }
+}
+
+type nodeConn struct {
+    conn net.Conn
+    node Node
+    enc
 }
