@@ -25,8 +25,46 @@ type Data interface {
     Strings() []string
 }
 
-// Clone the contents of the provided Data (or Dataset, since it implements
-// Data)
+// Clone the contents of the provided Data. Dataset also implements the Data
+// interface is a valid input to this function.
 func Clone(data Data) Data {
     return data.Type().New(0).Append(data)
+}
+
+// Cut the Data into several sub-segments at the provided cutpoint indices. It's
+// effectlively the same as calling Data.Slice() multiple times. Dataset also
+// implements the Data interface is a valid input to this function.
+func Cut(data Data, cutpoints ...int) []Data {
+    res := []Data{}
+    var last int
+    for _, i := range cutpoints {
+        res = append(res, data.Slice(last, i))
+        last = i
+    }
+
+    if last < data.Len() {
+        res = append(res, data.Slice(last, data.Len()))
+    }
+
+    return res
+}
+
+// Partition the Data into several sub-segments such that each segment contains
+// the same value, repeated multiple times. Dataset also implements the Data
+// interface is a valid input to this function.
+//
+// NOTE that partitioing will re-order to data to create the minimum number of
+// batches. Thus is does not maintain order
+func Partition(data Data) []Data {
+    sort.Sort(data)
+    var last string
+    var cutpoints []int
+    for i, s := range data.Strings() {
+        if i == 0 || last != s {
+            cutpoints = append(cutpoints, i)
+            last = s
+        }
+    }
+
+    return Cut(data, cutpoints...)
 }
