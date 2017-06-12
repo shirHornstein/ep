@@ -1,9 +1,9 @@
 package ep
 
-// NewProject returns a horizontal composite projection runner that dispatches
+// Project returns a horizontal composite projection runner that dispatches
 // its input to all of the internal streams, and joins the result into a single
 // dataset to return.
-func NewProject(runners ...Runner) Runner {
+func Project(runners ...Runner) Runner {
     return project(runners)
 }
 

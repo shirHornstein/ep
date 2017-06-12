@@ -4,34 +4,43 @@ import (
     "context"
 )
 
-// NewScatter returns a distribute Runner that scatters its input uniformly to
-// all other nodes such that the received datasets are dispatched in a roubd-
+// Scatter returns a distribute Runner that scatters its input uniformly to
+// all other nodes such that the received datasets are dispatched in a round-
 // robin to the nodes.
-func NewScatter() Runner {
+func Scatter() Runner {
     return nil
 }
 
-// NewGather returns a distribute Runner that gathers all of its input into a
+// Gather returns a distribute Runner that gathers all of its input into a
 // single node. In all other nodes it will produce no output, but on the main
 // node it will be passthrough from all of the other nodes
-func NewGather() Runner {
+func Gather() Runner {
     return nil
 }
 
-// NewBroadcast returns a distribute Runner that duplicates its input to all
+// Broadcast returns a distribute Runner that duplicates its input to all
 // other nodes. The output will be effectively a union of all of the inputs from
 // all nodes (order not guaranteed)
-func NewBroadcast() Runner {
+func Broadcast() Runner {
     return nil
 }
 
-// NewPartition returns a distribute Runner that scatters its input to all other
+// Partition returns a distribute Runner that scatters its input to all other
 // nodes, except that it uses the last Data column in the input datasets to
 // determine the target node of each dataset. This is useful for partitioning
 // based on the values in the data, thus guaranteeing that all equal values land
 // in the same target node
-func NewPartition() Runner {
+func Partition() Runner {
     return nil
+}
+
+// Distribute a Runner to run on multiple nodes concurrently. The returned
+// Runner acts as a Gather, in that it collects all of the values returned from
+// the individual nodes. However, input to this node is not distributed - an
+// explicit Scatter must exist for the input from the local node to be sent over
+// to the other nodes.
+func Distribute(runner Runner, nodes ...Node) (Runner, error) {
+    return nil, nil
 }
 
 // distribute is a Runner that exchanges data between peer nodes
@@ -76,7 +85,7 @@ func (d *distribute) Connect(ctx context.Context) (sources, targets conns, err e
     masterNode := ctx.Value("ep.MasterNode").(Node)
 
     targetNodes = allNodes
-    if d.Gather {
+    if d.send == sendGather {
         targetNodes = []Node{masterNode}
     }
 
@@ -113,5 +122,6 @@ func (d *distribute) Connect(ctx context.Context) (sources, targets conns, err e
 type nodeConn struct {
     conn net.Conn
     node Node
-    enc
+    enc *gob.Encoder
+    dec *gob.Decoder
 }
