@@ -40,6 +40,14 @@ func Partition() Runner {
 // explicit Scatter must exist for the input from the local node to be sent over
 // to the other nodes.
 func Distribute(runner Runner, nodes ...Node) (Runner, error) {
+    uuid := uuid()
+    for _, n := range nodes {
+        conn, err := n.Connect(uuid)
+
+        conn.Encode()
+    }
+
+
     return nil, nil
 }
 
@@ -92,7 +100,7 @@ func (d *distribute) Connect(ctx context.Context) (sources, targets conns, err e
     // open a connection to all target nodes
     for _, n := range targetNodes {
         isThisTarget = isThisTarget || n == thisNode // TODO: short-circuit
-        conn, err = n.Connect(d.UUID)
+        conn, err = connect(n, d.UUID)
         if err != nil {
             return
         }
@@ -108,7 +116,7 @@ func (d *distribute) Connect(ctx context.Context) (sources, targets conns, err e
         // re-use it. We don't need 2 uni-directional connections.
         conn = targets.Get(n)
         if conn == nil {
-            conn, err = n.Connect(d.UUID)
+            conn, err = connect(n, d.UUID)
         }
 
         if err != nil {
@@ -117,11 +125,4 @@ func (d *distribute) Connect(ctx context.Context) (sources, targets conns, err e
 
         sources = append(sources, conn)
     }
-}
-
-type nodeConn struct {
-    conn net.Conn
-    node Node
-    enc *gob.Encoder
-    dec *gob.Decoder
 }

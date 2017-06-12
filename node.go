@@ -3,6 +3,7 @@ package ep
 import (
     "io"
     "context"
+    "encoding/gob"
 )
 
 // Node is an interface representing a peer node in the cluster that's
@@ -18,9 +19,23 @@ type Node interface {
     // Connect() calls will arrive for the same UUID, thus its mapping can be
     // safely removed from memory.
     Connect(uuid string) (net.Conn, error)
+}
 
-    // IsCurrentNode determines if this node is the current node running the
-    // code. When executed on different nodes, only one of them should return
-    // true for this
-    IsCurrentNode() bool
+// wrapper around a connection to include its Node instance, along with the gob
+// Encoder and Decoder
+type nodeConn struct {
+    net.Conn
+    node Node
+    enc *gob.Encoder
+    dec *gob.Decoder
+}
+
+// helper function for connecting to a node
+func connect(n Node, uuid string) (*nodeConn, error) {
+    conn, err := n.Connect(uuid)
+    if err != nil {
+        return err
+    }
+
+    return &nodeConn{conn, n, gob.NewEncoder(conn), gob.NewDecoder(conn)}
 }
