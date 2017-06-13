@@ -44,15 +44,6 @@ func Partition() Runner {
     return nil
 }
 
-// Distribute a Runner to run on multiple nodes concurrently. The returned
-// Runner acts as a Gather, in that it collects all of the values returned from
-// the individual nodes. However, input to this node is not distributed - an
-// explicit Scatter must exist for the input from the local node to be sent over
-// to the other nodes.
-func Distribute(runner Runner, nodes ...Node) (Runner, error) {
-    return nil, nil
-}
-
 // distribute is a Runner that exchanges data between peer nodes
 type distribute struct {
     Uid string

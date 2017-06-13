@@ -24,5 +24,6 @@ type Node interface {
     // When the connection is closed, it's safe to assume that no additional
     // Connect() calls will arrive for the same UID, thus its mapping can be
     // safely removed from memory.
-    Connect(uid string) (net.Conn, error)
+    // Connect(uid string) (net.Conn, error)
+    Address() string
 }
