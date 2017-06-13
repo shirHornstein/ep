@@ -1,7 +1,17 @@
 package ep
 
 import (
+    "io"
+    "net"
     "context"
+    "encoding/gob"
+)
+
+const (
+    sendGather = 1
+    sendScatter = 2
+    sendBroadcast = 3
+    sendPartition = 4
 )
 
 // Scatter returns a distribute Runner that scatters its input uniformly to
@@ -40,25 +50,24 @@ func Partition() Runner {
 // explicit Scatter must exist for the input from the local node to be sent over
 // to the other nodes.
 func Distribute(runner Runner, nodes ...Node) (Runner, error) {
-    uuid := uuid()
-    for _, n := range nodes {
-        conn, err := n.Connect(uuid)
-
-        conn.Encode()
-    }
-
-
     return nil, nil
 }
 
 // distribute is a Runner that exchanges data between peer nodes
 type distribute struct {
     UUID string
+    SendTo int
+
+    encs []*gob.Encoder // encoders to all destination connections
+    decs []*gob.Decoder // decoders from all source connections
+    conns []net.Conn // all open connections (used for closing)
+    encsNext int // Encoders Round Robin next index
+    decsNext int // Decoders Round Robin next index
 }
 
 func (d *distribute) Run(ctx context.Context, inp, out chan Dataset) (err error) {
-    sources, targets, err := d.Connect(ctx)
-    defer func() { append(sources, targets...).Close(err) }()
+    defer func() { d.Close(err) }()
+    err = d.Init(ctx)
     if err != nil {
         return
     }
@@ -66,7 +75,7 @@ func (d *distribute) Run(ctx context.Context, inp, out chan Dataset) (err error)
     // send the local data to the distributed target nodes
     go func() {
         for data := range inp {
-            err = targets.Send(data)
+            err = d.Send(data)
             if err != nil {
                 return
             }
@@ -76,7 +85,7 @@ func (d *distribute) Run(ctx context.Context, inp, out chan Dataset) (err error)
     // listen to all nodes for incoming data
     var data Dataset
     for {
-        data, err = sources.Receive()
+        data, err = d.Receive()
         if err != nil {
             return
         }
@@ -85,7 +94,85 @@ func (d *distribute) Run(ctx context.Context, inp, out chan Dataset) (err error)
     }
 }
 
-func (d *distribute) Connect(ctx context.Context) (sources, targets conns, err error) {
+// Send a dataset to destination nodes
+func (d *distribute) Send(data Dataset) error {
+    switch d.sendTo {
+    case sendScatter:
+            return d.EncodeNext(data)
+    default:
+        return d.EncodeAll(data)
+    }
+}
+
+func (d *distribute) Receive() (Dataset, error) {
+    data := Dataset{}
+    err := d.DecodeNext(data)
+    return data, err
+}
+
+// Close all open connections. If an error object is supplied, it's first
+// encoded to all connections before closing.
+func (d *distribute) Close(err error) error {
+    var errOut error
+    if err != nil {
+        errOut = d.EncodeAll(err)
+    }
+
+    for _, conn := range d.conns {
+        err1 := conn.Close()
+        if err1 != nil {
+            errOut = err1
+        }
+    }
+
+    return errOut
+}
+
+// Encode an object to all destination connections
+func (d *distribute) EncodeAll(e interface{}) (err error) {
+    for _, enc := range d.encs {
+        err1 := enc.Encode(e)
+        if err1 != nil {
+            err = err1
+        }
+    }
+
+    return err
+}
+
+// Encode an object to the next destination connection in a round robin
+func (d *distribute) EncodeNext(e interface{}) error {
+    if len(d.encs) == 0 {
+        return io.ErrClosedPipe
+    }
+
+    d.encsNext := (d.encsNext + 1) % len(d.encs)
+    return d.encs[d.encsNext].Encode(e)
+}
+
+// Decode an object from the next source connection in a round robin
+func (d *distribute) DecodeNext(e interface{}) error {
+    if len(d.decs) == 0 {
+        return io.EOF
+    }
+
+    i := (d.decsNext + 1) % len(d.decs)
+    err := d.decs[i].Decode(e)
+    if err == io.EOF {
+        // remove the current decoder and try again
+        d.decs = append(d.decs[:i], d.decs[i + 1:]...)
+        return d.DecodeNext(e)
+    } else if err != nil {
+        return err
+    }
+
+    d.decsNext = i
+    return nil
+}
+
+// initialize the connections, encoders & decoders
+func (d *distribute) Init(ctx context.Context) error {
+    var err error
     var isThisTarget bool // is this node also a destination?
 
     allNodes := ctx.Value("ep.AllNodes").([]Node)
@@ -98,14 +185,17 @@ func (d *distribute) Connect(ctx context.Context) (sources, targets conns, err e
     }
 
     // open a connection to all target nodes
+    connsMap := map[Node]net.Conn{}
     for _, n := range targetNodes {
         isThisTarget = isThisTarget || n == thisNode // TODO: short-circuit
         conn, err = connect(n, d.UUID)
         if err != nil {
-            return
+            return nil, err
         }
 
-        targets = append(targets, conn)
+        connsMap[n] = conn
+        d.conns = append(d.conns, conn)
+        d.encs = append(d.encs, gob.NewEncoder(conn))
     }
 
     // if we're also a destination, listen to all nodes
@@ -114,15 +204,17 @@ func (d *distribute) Connect(ctx context.Context) (sources, targets conns, err e
 
         // if we already established a connection to this node from the targets,
         // re-use it. We don't need 2 uni-directional connections.
-        conn = targets.Get(n)
-        if conn == nil {
-            conn, err = connect(n, d.UUID)
+        if connsMap[n] != nil {
+            d.decs = append(d.decs, gob.NewDecoder(connsMap[n]))
+            continue
         }
 
+        conn, err = connect(n, d.UUID)
         if err != nil {
             return
         }
 
-        sources = append(sources, conn)
+        d.conns = append(d.conns, conn)
+        d.decs = append(d.decs, gob.NewDeocder(conn))
     }
 }
