@@ -55,7 +55,7 @@ func Distribute(runner Runner, nodes ...Node) (Runner, error) {
 
 // distribute is a Runner that exchanges data between peer nodes
 type distribute struct {
-    UUID string
+    Uid string
     SendTo int
 
     encs []*gob.Encoder // encoders to all destination connections
@@ -188,7 +188,7 @@ func (d *distribute) Init(ctx context.Context) error {
     connsMap := map[Node]net.Conn{}
     for _, n := range targetNodes {
         isThisTarget = isThisTarget || n == thisNode // TODO: short-circuit
-        conn, err = connect(n, d.UUID)
+        conn, err = connect(n, d.Uid)
         if err != nil {
             return nil, err
         }
@@ -209,7 +209,7 @@ func (d *distribute) Init(ctx context.Context) error {
             continue
         }
 
-        conn, err = connect(n, d.UUID)
+        conn, err = connect(n, d.Uid)
         if err != nil {
             return
         }
