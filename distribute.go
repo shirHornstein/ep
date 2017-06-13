@@ -146,7 +146,7 @@ func (d *distribute) EncodeNext(e interface{}) error {
         return io.ErrClosedPipe
     }
 
-    d.encsNext := (d.encsNext + 1) % len(d.encs)
+    d.encsNext = (d.encsNext + 1) % len(d.encs)
     return d.encs[d.encsNext].Encode(e)
 }
 
