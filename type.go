@@ -1,5 +1,7 @@
 package ep
 
+var _ = registerGob(asType{})
+
 // Type is an interface that represnts specific data types
 type Type interface {
     Name() string

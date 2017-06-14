@@ -7,6 +7,8 @@ import (
     "encoding/gob"
 )
 
+var _ = registerGob(exchange{})
+
 const (
     sendGather = 1
     sendScatter = 2

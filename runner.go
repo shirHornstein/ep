@@ -4,6 +4,8 @@ import (
     "context"
 )
 
+var _ = registerGob(passThrough{})
+
 // Runner represents objects that can receive a stream of input datasets,
 // manipulate them in some way (filter, mapping, reduction, expansion, etc.) and
 // and produce a new stream of the formatted values.

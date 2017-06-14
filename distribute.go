@@ -5,6 +5,8 @@ import (
     "time"
 )
 
+var _ = registerGob(req{})
+
 // Transport provides an API to a network transport. It's used to open and
 // listen for connections that are handled by the Distributer to allocate and
 // synchronize Runners across multiple nodes in a cluster.
@@ -42,11 +44,12 @@ type Distributer interface {
 // Runners across multiple nodes in a cluster. Distributer must be started on
 // all node peers in order for them to receive work.
 func NewDistributer(transport Transport) Distributer {
-    return &distributer{transport, nil, nil}
+    return &distributer{transport, make(map[string]net.Conn)}
 }
 
 type distributer struct {
     transport Transport
+    connsMap map[string]net.Conn
 }
 
 func (d *distributer) Start() error {
@@ -86,6 +89,11 @@ func (d *distributer) Distribute(runner Runner, addrs ...string) error {
 // ensure that both sides of the connection, when used with the same Uid,
 // resolve to the same connection
 func (d *distributer) Connect(addr string, uid string) (net.Conn, error) {
+    conn = d.connsMap[addr + ":" + uid]
+    if conn != nil {
+        return conn, nil
+    }
+
     conn, err := d.transport.Dial(addr)
     if err != nil {
         return nil, err
@@ -105,10 +113,15 @@ func (d *distributer) Serve(conn net.Conn) error {
     }
 
     if header.Runner != nil {
+        ctx := context.Background()
+        ctx = context.WithValue(ctx, "ep.AllNodes", r.RunnerNodes)
+        ctx = context.WithValue(ctx, "ep.MasterNodes", r.From)
+        ctx = context.WithValue(ctx, "ep.ThisNode", d.transport.Address())
         return header.Runner.Run(ctx, inp, out)
     } else {
         d.connsMap[headers.From + ":" + headers.Uid] = conn
     }
+    return nil
 }
 
 type req struct {

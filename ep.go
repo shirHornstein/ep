@@ -3,3 +3,14 @@
 // query engines and data processing pipelines that are distributed across a
 // cluster of nodes.
 package ep
+
+import (
+    "encoding/gob"
+)
+
+func registerGob(es ...inteface{}) bool {
+    for _, e := range es {
+        gob.Register(e)
+    }
+    return true
+}
