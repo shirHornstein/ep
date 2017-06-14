@@ -165,7 +165,7 @@ func (d *distribute) DecodeNext(e interface{}) error {
 func (d *distribute) Init(ctx context.Context) error {
     var err error
     var isThisTarget bool // is this node also a destination?
-
+    
     allNodes := ctx.Value("ep.AllNodes").([]Node)
     thisNode := ctx.Value("ep.ThisNode").(Node)
     masterNode := ctx.Value("ep.MasterNode").(Node)
