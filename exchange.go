@@ -90,6 +90,8 @@ func (ex *exchange) Send(data Dataset) error {
     switch ex.sendTo {
     case sendScatter:
         return ex.EncodeNext(data)
+    case sendPartition:
+        return ex.EncodePartition(data)
     default:
         return ex.EncodeAll(data)
     }
@@ -120,7 +122,7 @@ func (ex *exchange) Close(err error) error {
 }
 
 // Encode an object to all destination connections
-func (ex *exchange) EncodeAll(e interface{}) (err error) {
+func (ex *exchange) EncodeAll(e Dataset) (err error) {
     for _, enc := range ex.encs {
         err1 := enc.Encode(e)
         if err1 != nil {
@@ -132,7 +134,7 @@ func (ex *exchange) EncodeAll(e interface{}) (err error) {
 }
 
 // Encode an object to the next destination connection in a round robin
-func (ex *exchange) EncodeNext(e interface{}) error {
+func (ex *exchange) EncodeNext(e Dataset) error {
     if len(ex.encs) == 0 {
         return io.ErrClosedPipe
     }
@@ -141,8 +143,13 @@ func (ex *exchange) EncodeNext(e interface{}) error {
     return ex.encs[ex.encsNext].Encode(e)
 }
 
+// Encode an object to a destination connection selected by partitioning
+func (ex *exchange) EncodePartition(e Dataset) error {
+    return nil
+}
+
 // Decode an object from the next source connection in a round robin
-func (ex *exchange) DecodeNext(e interface{}) error {
+func (ex *exchange) DecodeNext(e Dataset) error {
     if len(ex.decs) == 0 {
         return io.EOF
     }
