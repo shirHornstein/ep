@@ -5,23 +5,6 @@ import (
     "time"
 )
 
-// Transport provides an API to a network transport. It's used to open and
-// listen for connections that are handled by the Distributer to allocate and
-// synchronize Runners across multiple nodes in a cluster
-type Transport interface {
-
-    // Transport is a listener, able to provide the Distributer with incoming
-    // connections. NOTE that the Address() function is used to denote the
-    // current running node. It can be any string, but will be matched against
-    // the addresses provided to the Distributer to know which node is the
-    // currently running now
-    net.Listener
-
-    // Dial should open a connection to a remote address. The address will be
-    // the string address provided to the Distributer.
-    Dial(addr string) (net.Conn, error)
-}
-
 // Distributer is an object that can distribute Runners to run in parallel on
 // multiple nodes.
 type Distributer interface {
@@ -43,7 +26,7 @@ type Distributer interface {
 // NewDistributer creates a Distributer that can be used to distribute work of
 // Runners across multiple nodes in a cluster. Distributer must be started on
 // all node peers in order for them to receive work.
-func NewDistributer(listener net.Listner) Distributer {
+func NewDistributer(transport Transport) Distributer {
     return &distributer{transport}
 }
 
@@ -98,4 +81,22 @@ func (d *distributer) Start() error {
 
 func (d *distribute) Close() error {
     return d.transport.Close()
+}
+
+
+// Transport provides an API to a network transport. It's used to open and
+// listen for connections that are handled by the Distributer to allocate and
+// synchronize Runners across multiple nodes in a cluster
+type Transport interface {
+
+    // Transport is a listener, able to provide the Distributer with incoming
+    // connections. NOTE that the Address() function is used to denote the
+    // current running node. It can be any string, but will be matched against
+    // the addresses provided to the Distributer to know which node is the
+    // currently running now
+    net.Listener
+
+    // Dial should open a connection to a remote address. The address will be
+    // the string address provided to the Distributer.
+    Dial(addr string) (net.Conn, error)
 }
