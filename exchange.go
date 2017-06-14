@@ -173,20 +173,23 @@ func (ex *exchange) Init(ctx context.Context) error {
     var err error
     var isThisTarget bool // is this node also a destination?
 
-    allNodes := ctx.Value("ep.AllNodes").([]Node)
-    thisNode := ctx.Value("ep.ThisNode").(Node)
-    masterNode := ctx.Value("ep.MasterNode").(Node)
+    allNodes := ctx.Value("ep.AllNodes").([]string)
+    thisNode := ctx.Value("ep.ThisNode").(string)
+    masterNode := ctx.Value("ep.MasterNode").(string)
+    dist := ctx.Value("ep.Distributer").(interface {
+        Connect(addr, uid string) (net.Conn, error)
+    })
 
     targetNodes = allNodes
     if ex.send == sendGather {
-        targetNodes = []Node{masterNode}
+        targetNodes = []string{masterNode}
     }
 
     // open a connection to all target nodes
     connsMap := map[Node]net.Conn{}
     for _, n := range targetNodes {
         isThisTarget = isThisTarget || n == thisNode // TODO: short-circuit
-        conn, err = connect(n, ex.Uid)
+        conn, err = dist.Connect(n, ex.Uid)
         if err != nil {
             return nil, err
         }
@@ -207,7 +210,7 @@ func (ex *exchange) Init(ctx context.Context) error {
             continue
         }
 
-        conn, err = connect(n, ex.Uid)
+        conn, err = dist.Connect(n, ex.Uid)
         if err != nil {
             return
         }
