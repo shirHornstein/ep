@@ -74,6 +74,7 @@ func (d *distributer) Distribute(runner Runner, addrs ...string) error {
             return err
         }
 
+        defer conn.Close()
         enc := gob.NewEncoder(conn)
         err = enc.Encode(&req{d.transport.Address(), runner, addrs, nil})
         if err != nil {
@@ -89,18 +90,33 @@ func (d *distributer) Distribute(runner Runner, addrs ...string) error {
 // ensure that both sides of the connection, when used with the same Uid,
 // resolve to the same connection
 func (d *distributer) Connect(addr string, uid string) (net.Conn, error) {
-    conn = d.connsMap[addr + ":" + uid]
-    if conn != nil {
-        return conn, nil
+    from := d.transport.Address()
+
+    if from < addr {
+        // dial
+        conn, err := d.transport.Dial(addr)
+        if err != nil {
+            return nil, err
+        }
+
+        err = enc.Encode(&req{d.transport.Address(), nil, nil, uid})
+        if err != nil {
+            return nil, err
+        }
+
+        // wait for an ack on the other side
+
+    } else {
+        // listen
+        conn := <- d.connCh(addr, uid)
+
+        // send the ack
+        err = enc.Encode(&req{d.transport.Address(), nil, nil, uid})
+        if err != nil {
+            return nil, err
+        }
     }
 
-    conn, err := d.transport.Dial(addr)
-    if err != nil {
-        return nil, err
-    }
-
-    enc := gob.NewEncoder(conn)
-    err = enc.Encode(&req{d.transport.Address(), nil, nil, uid})
     return conn, err
 }
 
@@ -112,16 +128,28 @@ func (d *distributer) Serve(conn net.Conn) error {
         return err
     }
 
-    if header.Runner != nil {
+    if r.Runner != nil {
         ctx := context.Background()
         ctx = context.WithValue(ctx, "ep.AllNodes", r.RunnerNodes)
         ctx = context.WithValue(ctx, "ep.MasterNodes", r.From)
         ctx = context.WithValue(ctx, "ep.ThisNode", d.transport.Address())
         return header.Runner.Run(ctx, inp, out)
     } else {
-        d.connsMap[headers.From + ":" + headers.Uid] = conn
+
+        // wait for someone to claim it.
+        d.connCh(r.From, r.Uid) <- conn
     }
     return nil
+}
+
+func (d *distributer) connCh(addr, uid string) (chan net.Conn) {
+    k := addr + ":" + uid
+    d.l.Lock()
+    defer d.l.Unlock()
+    if d.connsMap[k] == nil {
+        d.connsMap[k] = make(chan net.Conn)
+    }
+    return d.connsMap[k]
 }
 
 type req struct {
