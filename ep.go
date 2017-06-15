@@ -8,7 +8,7 @@ import (
     "encoding/gob"
 )
 
-func registerGob(es ...inteface{}) bool {
+func registerGob(es ...interface{}) bool {
     for _, e := range es {
         gob.Register(e)
     }
