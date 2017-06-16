@@ -28,7 +28,7 @@ type Data interface {
 // Clone the contents of the provided Data. Dataset also implements the Data
 // interface is a valid input to this function.
 func Clone(data Data) Data {
-    return data.Type().New(0).Append(data)
+    return data.Type().Data(0).Append(data)
 }
 
 // Cut the Data into several sub-segments at the provided cutpoint indices. It's

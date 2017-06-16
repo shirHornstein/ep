@@ -2,7 +2,6 @@ package ep
 
 import (
     "net"
-    "time"
 )
 
 var _ = registerGob(req{})
@@ -63,7 +62,7 @@ func (d *distributer) Start() error {
     }
 }
 
-func (d *distribute) Close() error {
+func (d *distributer) Close() error {
     return d.transport.Close()
 }
 
