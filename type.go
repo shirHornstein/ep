@@ -23,7 +23,7 @@ func (*wildcardType) Data(uint) Data { panic("wildcard has no concrete data") }
 // EqualTypes determines if two types are the same, and returns the first if
 // they are, or nil if they aren't.
 func EqualType(t1, t2 Type) (t Type, ok bool) {
-    ok := t1.Name() == t2.Name()
+    ok = t1.Name() == t2.Name()
     if ok {
         return t1, true
     } else {
