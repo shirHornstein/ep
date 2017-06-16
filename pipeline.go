@@ -1,5 +1,10 @@
 package ep
 
+import (
+    "sync"
+    "context"
+)
+
 // Pipeline returns a vertical composite pipeline runner where the output of
 // any one stream is passed as input to the next
 func Pipeline(runners ...Runner) Runner {
@@ -8,7 +13,7 @@ func Pipeline(runners ...Runner) Runner {
 
 type pipeline []Runner
 
-func (streams pipeline) Run(ctx Ctx, inp, out chan Dataset) (err error) {
+func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
     var wg sync.WaitGroup
     defer wg.Wait()
 
@@ -16,28 +21,31 @@ func (streams pipeline) Run(ctx Ctx, inp, out chan Dataset) (err error) {
     ctx, cancel := context.WithCancel(ctx)
     defer cancel()
 
-    l := len(streams)
-    head, tail1 := streams[:l - 1], streams[l - 1:][0]
+    l := len(rs)
+    head, tail1 := rs[:l - 1], rs[l - 1:][0]
 
-    for _, s := range head {
+    for _, r := range head {
         wg.Add(1)
         middle := make(chan Dataset)
-        Debugf("Run pipe: init stream %s %p %+v with inp %p and out %p\n", s.Name(), s, s, inp, middle)
-        go func(s Stream, inp, out chan Dataset) {
+        go func(r Runner, inp, out chan Dataset) {
             defer wg.Done()
             defer close(out)
-            err1 := s.Run(ctx, inp, out)
+            err1 := r.Run(ctx, inp, out)
             if err1 != nil && err == nil {
                 err = err1
             }
-        }(s, inp, middle)
+        }(r, inp, middle)
         inp = middle
     }
 
-    Debugf("Run pipe: init tail %s with inp %p and out %p\n", tail1, inp, out)
     err1 := tail1.Run(ctx, inp, out)
     if err1 != nil && err == nil {
         err = err1
     }
     return err
+}
+
+func (r pipeline) Returns() []Type {
+    panic("incorrect implementation")
+    return []Type{Wildcard}
 }

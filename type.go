@@ -1,6 +1,11 @@
 package ep
 
-var _ = registerGob(asType{})
+// Wildcard is a pseduo-type used to denote types that are dependent on their
+// input type. For example, a function returning [Wildcard, Int] effectively
+// returns its input followed by an int column. It should never be used in the
+// datasets themselves, but only in API declaration.
+var Wildcard = &wildcardType{}
+var _ = registerGob(asType{}, Wildcard)
 
 // Type is an interface that represnts specific data types
 type Type interface {
@@ -9,6 +14,11 @@ type Type interface {
     // Data returns a new Data object of this type, containing `n` zero-values
     Data(n uint) Data
 }
+
+// see Wildcard above.
+type wildcardType struct {}
+func (*wildcardType) Name() string { return "*" }
+func (*wildcardType) Data(uint) Data { panic("wildcard has no concrete data") }
 
 // EqualTypes determines if two types are the same, and returns the first if
 // they are, or nil if they aren't.
