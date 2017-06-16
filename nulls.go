@@ -7,7 +7,7 @@ var _ = registerGob(nullType{}, nulls(0))
 var Null = &nullType{}
 
 type nullType struct {}
-func (*nullType) Data(n int) Data { return nulls(n) }
+func (*nullType) Data(n uint) Data { return nulls(n) }
 func (*nullType) Name() string { return "NULL" }
 
 // nulls is implemented to satisfy both the Type and Data interfaces

@@ -37,15 +37,6 @@ func Broadcast() Runner {
     return nil
 }
 
-// Partition returns an exchange Runner that scatters its input to all other
-// nodes, except that it uses the last Data column in the input datasets to
-// determine the target node of each dataset. This is useful for partitioning
-// based on the values in the data, thus guaranteeing that all equal values land
-// in the same target node
-func Partition() Runner {
-    return nil
-}
-
 // exchange is a Runner that exchanges data between peer nodes
 type exchange struct {
     Uid string
@@ -89,7 +80,7 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 
 // Send a dataset to destination nodes
 func (ex *exchange) Send(data Dataset) error {
-    switch ex.sendTo {
+    switch ex.SendTo {
     case sendScatter:
         return ex.EncodeNext(data)
     case sendPartition:
@@ -100,7 +91,7 @@ func (ex *exchange) Send(data Dataset) error {
 }
 
 func (ex *exchange) Receive() (Dataset, error) {
-    data := Dataset{}
+    data := NewDataset()
     err := ex.DecodeNext(data)
     return data, err
 }
@@ -110,7 +101,8 @@ func (ex *exchange) Receive() (Dataset, error) {
 func (ex *exchange) Close(err error) error {
     var errOut error
     if err != nil {
-        errOut = ex.EncodeAll(err)
+        panic("not implemented")
+        // errOut = ex.EncodeAll(err)
     }
 
     for _, conn := range ex.conns {
@@ -182,18 +174,19 @@ func (ex *exchange) Init(ctx context.Context) error {
         Connect(addr, uid string) (net.Conn, error)
     })
 
-    targetNodes = allNodes
-    if ex.send == sendGather {
+    targetNodes := allNodes
+    if ex.SendTo == sendGather {
         targetNodes = []string{masterNode}
     }
 
     // open a connection to all target nodes
-    connsMap := map[Node]net.Conn{}
+    var conn net.Conn
+    connsMap := map[string]net.Conn{}
     for _, n := range targetNodes {
         isThisTarget = isThisTarget || n == thisNode // TODO: short-circuit
         conn, err = dist.Connect(n, ex.Uid)
         if err != nil {
-            return nil, err
+            return err
         }
 
         connsMap[n] = conn
@@ -203,7 +196,7 @@ func (ex *exchange) Init(ctx context.Context) error {
 
     // if we're also a destination, listen to all nodes
     for i := 0; isThisTarget && i < len(allNodes); i += 1 {
-        n := AllNodes[i]
+        n := allNodes[i]
 
         // if we already established a connection to this node from the targets,
         // re-use it. We don't need 2 uni-directional connections.
@@ -214,10 +207,12 @@ func (ex *exchange) Init(ctx context.Context) error {
 
         conn, err = dist.Connect(n, ex.Uid)
         if err != nil {
-            return
+            return err
         }
 
         ex.conns = append(ex.conns, conn)
-        ex.decs = append(ex.decs, gob.NewDeocder(conn))
+        ex.decs = append(ex.decs, gob.NewDecoder(conn))
     }
+    
+    return nil
 }
