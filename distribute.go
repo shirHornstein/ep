@@ -2,6 +2,9 @@ package ep
 
 import (
     "net"
+    "sync"
+    "context"
+    "encoding/gob"
 )
 
 var _ = registerGob(req{})
@@ -43,12 +46,13 @@ type Distributer interface {
 // Runners across multiple nodes in a cluster. Distributer must be started on
 // all node peers in order for them to receive work.
 func NewDistributer(transport Transport) Distributer {
-    return &distributer{transport, make(map[string]net.Conn)}
+    return &distributer{transport, make(map[string]chan net.Conn), &sync.Mutex{}}
 }
 
 type distributer struct {
     transport Transport
-    connsMap map[string]net.Conn
+    connsMap map[string]chan net.Conn
+    l sync.Locker
 }
 
 func (d *distributer) Start() error {
@@ -67,7 +71,7 @@ func (d *distributer) Close() error {
 }
 
 func (d *distributer) Distribute(runner Runner, addrs ...string) error {
-    for _, addr := range d.addrs {
+    for _, addr := range addrs {
         conn, err := d.transport.Dial(addr)
         if err != nil {
             return err
@@ -75,7 +79,7 @@ func (d *distributer) Distribute(runner Runner, addrs ...string) error {
 
         defer conn.Close()
         enc := gob.NewEncoder(conn)
-        err = enc.Encode(&req{d.transport.Address(), runner, addrs, nil})
+        err = enc.Encode(&req{d.transport.Addr().String(), runner, addrs, ""})
         if err != nil {
             return err
         }
@@ -89,16 +93,19 @@ func (d *distributer) Distribute(runner Runner, addrs ...string) error {
 // ensure that both sides of the connection, when used with the same Uid,
 // resolve to the same connection
 func (d *distributer) Connect(addr string, uid string) (net.Conn, error) {
-    from := d.transport.Address()
+    var err error
+    var conn net.Conn
 
+    from := d.transport.Addr().String()
     if from < addr {
         // dial
-        conn, err := d.transport.Dial(addr)
+        conn, err = d.transport.Dial(addr)
         if err != nil {
             return nil, err
         }
 
-        err = enc.Encode(&req{d.transport.Address(), nil, nil, uid})
+        enc := gob.NewEncoder(conn)
+        err = enc.Encode(&req{d.transport.Addr().String(), nil, nil, uid})
         if err != nil {
             return nil, err
         }
@@ -107,10 +114,11 @@ func (d *distributer) Connect(addr string, uid string) (net.Conn, error) {
 
     } else {
         // listen
-        conn := <- d.connCh(addr, uid)
+        conn = <- d.connCh(addr, uid)
 
         // send the ack
-        err = enc.Encode(&req{d.transport.Address(), nil, nil, uid})
+        enc := gob.NewEncoder(conn)
+        err = enc.Encode(&req{d.transport.Addr().String(), nil, nil, uid})
         if err != nil {
             return nil, err
         }
@@ -131,8 +139,13 @@ func (d *distributer) Serve(conn net.Conn) error {
         ctx := context.Background()
         ctx = context.WithValue(ctx, "ep.AllNodes", r.RunnerNodes)
         ctx = context.WithValue(ctx, "ep.MasterNodes", r.From)
-        ctx = context.WithValue(ctx, "ep.ThisNode", d.transport.Address())
-        return header.Runner.Run(ctx, inp, out)
+        ctx = context.WithValue(ctx, "ep.ThisNode", d.transport.Addr().String())
+
+        out := make(chan Dataset)
+        inp := make(chan Dataset, 1)
+        close(inp)
+
+        return r.Runner.Run(ctx, inp, out)
     } else {
 
         // wait for someone to claim it.
