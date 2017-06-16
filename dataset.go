@@ -1,7 +1,6 @@
 package ep
 
-var DatasetType = &datasetType{}
-var _ = registerGob(dataset{}, DatasetType)
+var _ = registerGob(dataset{}, &datasetType{})
 
 // Dataset is a composite Data interface, containing several internal Data
 // objects. It's a Data in itself, but allows traversing and manipulating the
@@ -96,7 +95,7 @@ func (set dataset) Strings() []string {
 
 // see Data.Data
 func (set dataset) Type() Type {
-    return DatasetType
+    return &datasetType{}
 }
 
 type datasetType struct {}
