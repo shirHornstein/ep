@@ -8,6 +8,19 @@ import (
     "encoding/gob"
 )
 
+var repo = map[string]Runner{}
+
+// Add a Runner to the global repository by name
+func Add(name string, r Runner) Runner {
+    repo[name] = r
+    return r
+}
+
+// Get a Runner by the global repository
+func Get(name string) Runner {
+    return repo[name]
+}
+
 func registerGob(es ...interface{}) bool {
     for _, e := range es {
         gob.Register(e)
