@@ -19,10 +19,10 @@ func (vs Strs) Strings() []string { return vs }
 func (vs Strs) Append(o Data) Data { return append(vs, o.(Strs)...) }
 
 
-func ExampleData() {
-    var strs Data = Strs([]string{"hello", "world", "foo", "bar"})
-    sort.Sort(strs)
-    strs = strs.Slice(0, 2)
-    fmt.Println(strs.Strings())
-    // Output: [bar foo]
-}
+// func ExampleData() {
+//     var strs Data = Strs([]string{"hello", "world", "foo", "bar"})
+//     sort.Sort(strs)
+//     strs = strs.Slice(0, 2)
+//     fmt.Println(strs.Strings())
+//     // Output: [bar foo]
+// }
