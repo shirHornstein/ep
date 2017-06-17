@@ -7,10 +7,15 @@
 //
 // In order to support modular systems design, ep ships with a builtin
 // registries for Runners and Types. These registries support simple Set and Get
-// functions:
+// operations:
 //
-//      func (reg typesReg) Get(name string) Type
-//      func (reg typesReg) Add(name string, t Type) int
+//      func (typesReg) Add(name string, t Type) int
+//      func (typesReg) Get(name string) Type
+//
+// And similarly for Runners:
+//
+//      func (runnersReg) Get(name string) Runner
+//      func (runnersReg) Add(name string, r Runner) int
 //
 package ep
 
