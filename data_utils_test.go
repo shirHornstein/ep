@@ -1,15 +1,27 @@
 package ep
 
-func ExampleClone() {
-    var strs1 Data = Strs([]string{"hello", "world"})
-    strs2 := Clone(strs1).(Strs)
+import (
+    "fmt"
+)
 
-    strs2[0] = "foo"
-    strs2[1] = "bar"
-    fmt.Println(strs2) // clone modified
-    fmt.Println(strs1) // original left intact
+func ExampleClone() {
+    var d1 Data = Strs([]string{"hello", "world"})
+    d2 := Clone(d1).(Strs)
+
+    d2[0] = "foo"
+    d2[1] = "bar"
+    fmt.Println(d2) // clone modified
+    fmt.Println(d1) // original left intact
 
     // Output:
     // [foo bar]
     // [hello world]
+}
+
+func ExampleCut() {
+    var d Data = Strs([]string{"hello", "world", "foo", "bar"})
+    data := Cut(d, 1, 3)
+    fmt.Println(data)
+    // Output:
+    // [[hello] [world foo] [bar]]
 }
