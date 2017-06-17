@@ -49,6 +49,13 @@ type Runner interface {
     Returns() []Type
 }
 
+// ArgsRunner is a Runner that also exposes a list of argument types that it
+// must accept as input.
+type ArgsRunner interface {
+    Runner
+    Args() []Type
+}
+
 // PassThrough returns a new runner that lets all of its input through as-is
 func PassThrough() Runner { return &passthrough{} }
 
