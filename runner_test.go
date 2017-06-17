@@ -25,7 +25,7 @@ func (*Question) Run(_ context.Context, inp, out chan Dataset) error {
     for data := range inp {
         res := make(Strs, data.Len())
         for i, v := range data.At(0).(Strs) {
-            res[i] = v + "?"
+            res[i] = "is " + v + "?"
         }
         out <- NewDataset(res)
     }
@@ -45,8 +45,6 @@ func ExampleRunner() {
     }()
 
     for data := range out {
-        fmt.Println(data.At(0))
+        fmt.Println(data.At(0)) // Output: [HELLO WORLD]
     }
-
-    // Output: [HELLO WORLD]
 }
