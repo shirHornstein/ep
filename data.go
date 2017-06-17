@@ -60,7 +60,11 @@ func Partition(data Data) Data {
     var last string
     var cutpoints []int
     for i, s := range data.Strings() {
-        if i == 0 || last != s {
+        if i == 0 {
+            last = s
+        }
+
+        if last != s {
             cutpoints = append(cutpoints, i)
             last = s
         }
