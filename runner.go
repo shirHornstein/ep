@@ -51,14 +51,15 @@ type Runner interface {
 
 // ArgsRunner is a Runner that also exposes a list of argument types that it
 // must accept as input.
-type ArgsRunner interface {
-    Runner
+type RunnerArgs interface {
+    Runner // it's a Runner.
+
+    // Args returns the list of types that the runner must accept as input
     Args() []Type
 }
 
 // PassThrough returns a new runner that lets all of its input through as-is
 func PassThrough() Runner { return &passthrough{} }
-
 type passthrough struct {}
 func (*passthrough) Returns() []Type { return []Type{Wildcard} }
 func (*passthrough) Run(_ context.Context, inp, out chan Dataset) (err error) {
