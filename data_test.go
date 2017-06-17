@@ -5,12 +5,13 @@ import (
     "fmt"
 )
 
+var Str = &StrType{}
 type StrType struct {}
 func (*StrType) Name() string { return "string" }
 func (*StrType) Data(n uint) Data { return make(Strs, n) }
 
 type Strs []string
-func (Strs) Type() Type { return &StrType{} }
+func (Strs) Type() Type { return Str }
 func (vs Strs) Len() int { return len(vs) }
 func (vs Strs) Less(i, j int) bool { return vs[i] < vs[j] }
 func (vs Strs) Swap(i, j int) { vs[i], vs[j] = vs[j], vs[i] }
