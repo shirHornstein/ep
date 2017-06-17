@@ -5,5 +5,5 @@ package ep
 // )
 
 func ExampleData() {
-    // hello
+    type Strings []string
 }
