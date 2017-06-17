@@ -10,9 +10,13 @@ func (reg typesReg) Add(name string, t Type) int {
     return len(reg)
 }
 
-type runnersReg map[string]Runner
-func (reg runnersReg) Get(name string) Runner { return reg[name] }
+type runnersReg map[string][]Runner
+func (reg runnersReg) Get(name string) []Runner { return reg[name] }
 func (reg runnersReg) Add(name string, r Runner) int {
-    reg[name] = r
+    if reg[name] == nil {
+        reg[name] = []Runner{}
+    }
+
+    reg[name] = append(reg[name], r)
     return len(reg)
 }
