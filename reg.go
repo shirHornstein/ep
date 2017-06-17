@@ -1,6 +1,5 @@
 package ep
 
-// Types utility registry. Use Type.Add() and Type.Get()
 var Types = typesReg{}
 var Runners = runnersReg{}
 
