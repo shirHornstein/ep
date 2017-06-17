@@ -1,8 +1,8 @@
 package ep
 
-// Types registry. Use Type.Add() and Type.Get()
-var Types = make(typesReg)
-
+// Types utility registry. Use Type.Add() and Type.Get()
+var Types = typesReg{}
+var Runners = runnersReg{}
 
 type typesReg map[string]Type
 func (reg typesReg) Get(name string) Type { return reg[name] }
