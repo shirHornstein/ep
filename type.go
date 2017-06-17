@@ -5,7 +5,16 @@ package ep
 // returns its input followed by an int column. It should never be used in the
 // datasets themselves, but only in API declaration.
 var Wildcard = &wildcardType{}
-var _ = registerGob(asType{}, Wildcard)
+
+// Any is a pseduo-type used to denote unknown or a varied data type that might
+// change from batch to batch. The actual batches must be typed (thus be
+// concrete Data implementations), as Any is not instantiatable, but no one type
+// can be determined ahead of time. Examples are JSON parser functions that may
+// produce different data types for each row. Some functions (CAST, COUNT, etc.)
+// may be able to support Any as input.
+var Any = &anyType{}
+
+var _ = registerGob(asType{}, Wildcard, Any)
 
 // Type is an interface that represnts specific data types
 type Type interface {
@@ -19,6 +28,10 @@ type Type interface {
 type wildcardType struct {}
 func (*wildcardType) Name() string { return "*" }
 func (*wildcardType) Data(uint) Data { panic("wildcard has no concrete data") }
+
+type anyType struct {}
+func (*anyType) Name() string { return "?" }
+func (*anyType) Data(uint) Data { panic("any has no concrete data") }
 
 // EqualTypes determines if two types are the same, and returns the first if
 // they are, or nil if they aren't.
