@@ -6,7 +6,7 @@ var _ = registerGob(dataset{}, &datasetType{})
 // objects. It's a Data in itself, but allows traversing and manipulating the
 // contained Data intstances
 type Dataset interface {
-    Data
+    Data // It's a Data - you can use it anywhere you'd use a Data object
 
     // Width returns the number of Data instances (columns) in the set
     Width() int
