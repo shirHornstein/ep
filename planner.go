@@ -6,19 +6,39 @@ import (
     "context"
 )
 
-
+// Plan a new Runner marked by an arbitrary argument that must've been
+// pre-registered using the .Runners() function. See Planning above.
 func Plan(ctx context.Context, arg interface{}) (Runner, error) {
-    return Planner.Plan(ctx, arg)
+    return plannerx.Plan(ctx, arg)
 }
 
+// Registry is a utility object that stores Types and Runners by an arbitrary
+// key argument. Its purpose is to destignate a lookup key used for finding the
+// relevant Runner or Type to be used. You can think of it like a key-value
+// store with the caveat that - if it's not a string - the key is first
+// reflected to the type name of the object, which is then used instead. This
+// means that we can register and use key objects, instead of simple strings.
+//
+// For example, if we're using SQL to construct Runners, we can bind an AST
+// node:
+//
+//      Registry.Runners(ast.SelectStmt{}, &SelectRunner{})
+//      Register.Runners(ast.SelectStmt{}) // returns &SelectRunner{}
+//
+
+// Type registers and returns a list of Types, marked by an arbitrary key.
+// Calling this function without any types will just return all of the
+// registered types for that key. See Planning above.
 func Types(k interface{}, types ...Type) []Type {
-    return Planner.Types(k, types...)
+    return plannerx.Types(k, types...)
 }
 
+// Runner registers and returns a list of Runners, marked by an arbitrary key.
+// Calling this function without any Runners will just return all of the
+// registered runners. See Planning above.
 func Runners(k interface{}, runners ...Runner) []Runner {
-    return Planner.Runners(k, runners...)
+    return plannerx.Runners(k, runners...)
 }
-
 
 // Planner implements Registry and RunnerPlan, and uses the registered Runners
 // for planning based on their configured key argument. Its Plan() function
@@ -35,7 +55,7 @@ func Runners(k interface{}, runners ...Runner) []Runner {
 // can.
 //
 // It cannot be directly used as a Runner
-var Planner = newPlanner() // Registry & RunnerPlan
+var plannerx = newPlanner() // Registry & RunnerPlan
 
 type planner struct {
     runners map[string][]Runner
