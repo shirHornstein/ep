@@ -6,6 +6,20 @@ import (
     "context"
 )
 
+
+func Plan(ctx context.Context, arg interface{}) (Runner, error) {
+    return Planner.Plan(ctx, arg)
+}
+
+func Types(k interface{}, types ...Type) []Type {
+    return Planner.Types(k, types...)
+}
+
+func Runners(k interface{}, runners ...Runner) []Runner {
+    return Planner.Runners(k, runners...)
+}
+
+
 // Planner implements Registry and RunnerPlan, and uses the registered Runners
 // for planning based on their configured key argument. Its Plan() function
 // creates a Runner for the provided arg. It uses the list of
