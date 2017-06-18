@@ -24,4 +24,5 @@ func ExampleData() {
     sort.Sort(strs)
     strs = strs.Slice(0, 2)
     fmt.Println(strs.Strings()) // Output: [bar foo]
+    
 }
