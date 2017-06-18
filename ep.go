@@ -11,7 +11,7 @@
 // Planning in Ep is a two step process:
 //
 // First, the Runners must be globally registered using the .Runners() function,
-// for an arbitrary key argument, for example:
+// for an arbitrary key argument:
 //
 //      ep.Runners(ast.SelectStmt{}, &SelectRunner{})
 //      ep.Runners("SUM", &SumRunner{})

@@ -38,7 +38,7 @@ func Plan(ctx context.Context, arg interface{}) (Runner, error) {
 
 // Runners registers and returns a list of Runners, marked by an arbitrary key.
 // Calling this function without any Runners will just return all of the
-// registered runners. See Planning above.
+// registered runners for that key. See Planning above.
 func Runners(k interface{}, runners ...Runner) []Runner {
     s := keyToString(k)
     for _, r := range runners {
@@ -49,7 +49,7 @@ func Runners(k interface{}, runners ...Runner) []Runner {
 
 // Types registers and returns a list of Types, marked by an arbitrary key.
 // Calling this function without any types will just return all of the
-// registered types for that key. See Planning above.
+// registered types for that key.
 func Types(k interface{}, types ...Type) []Type {
     s := keyToString(k)
     for _, t := range types {
