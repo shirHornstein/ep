@@ -23,7 +23,7 @@ func ExamplePipeline() {
 
 }
 
-func ExamplePipeline_Reverse() {
+func ExamplePipeline_reverse() {
     runner := Pipeline(&Question{}, &Upper{})
     inp := make(chan Dataset, 1)
     inp <- NewDataset(Strs([]string{"hello", "world"}))
@@ -38,5 +38,5 @@ func ExamplePipeline_Reverse() {
     for data := range out {
         fmt.Println(data.At(0)) // Output: [IS HELLO? IS WORLD?]
     }
-    
+
 }
