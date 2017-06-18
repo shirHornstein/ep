@@ -35,14 +35,12 @@ func (*Question) Run(_ context.Context, inp, out chan Dataset) error {
 func ExampleRunner() {
     upper := &Upper{}
     data := NewDataset(Strs([]string{"hello", "world"}))
-    data, err := testRun(nil, upper, data)
-    fmt.Println(data, err)
-
-    // Output: [[HELLO WORLD]] <nil>
+    data, err := testRun(upper, data)
+    fmt.Println(data, err) // Output: [[HELLO WORLD]] <nil>
 }
 
 // run a runner with the given input to completion
-func testRun(ctx context.Context, r Runner, data Dataset) (Dataset, error) {
+func testRun(r Runner, data Dataset) (Dataset, error) {
     var err error
 
     inp := make(chan Dataset, 1)
