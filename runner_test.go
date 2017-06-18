@@ -10,6 +10,11 @@ type Upper struct {}
 func (*Upper) Returns() []Type { return []Type{Str} }
 func (*Upper) Run(_ context.Context, inp, out chan Dataset) error {
     for data := range inp {
+        if data.At(0).Type() == Null {
+            out <- data
+            continue
+        }
+
         res := make(Strs, data.Len())
         for i, v := range data.At(0).(Strs) {
             res[i] = strings.ToUpper(v)
@@ -23,6 +28,11 @@ type Question struct {}
 func (*Question) Returns() []Type { return []Type{Str} }
 func (*Question) Run(_ context.Context, inp, out chan Dataset) error {
     for data := range inp {
+        if data.At(0).Type() == Null {
+            out <- data
+            continue
+        }
+
         res := make(Strs, data.Len())
         for i, v := range data.At(0).(Strs) {
             res[i] = "is " + v + "?"
