@@ -66,7 +66,7 @@ func (rs project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
         for _, s := range outputs {
             res, ok := <- s
             done = done || !ok
-            for i := 0; i < res.Width(); i++ {
+            for i := 0; ok && i < res.Width(); i++ {
                 result = append(result, res.At(i))
             }
         }
