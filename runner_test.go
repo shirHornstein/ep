@@ -45,6 +45,8 @@ func ExampleRunner() {
     }()
 
     for data := range out {
-        fmt.Println(data.At(0)) // Output: [HELLO WORLD]
+        fmt.Println(data)
     }
+
+    // Output: [[HELLO WORLD]]
 }

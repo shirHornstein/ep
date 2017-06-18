@@ -18,11 +18,9 @@ func ExampleProject() {
     }()
 
     for data := range out {
-        fmt.Println(data.At(0))
-        fmt.Println(data.At(1))
+        fmt.Println(data)
     }
 
     // Output:
-    // [HELLO WORLD]
-    // [is hello? is world?]
+    // [[HELLO WORLD] [is hello? is world?]]
 }

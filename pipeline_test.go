@@ -18,10 +18,10 @@ func ExamplePipeline() {
     }()
 
     for data := range out {
-        fmt.Println(data.At(0))
+        fmt.Println(data)
     }
 
-    // Output: [is HELLO? is WORLD?]
+    // Output: [[is HELLO? is WORLD?]]
 
 }
 
@@ -38,8 +38,8 @@ func ExamplePipeline_reverse() {
     }()
 
     for data := range out {
-        fmt.Println(data.At(0))
+        fmt.Println(data)
     }
 
-    // Output: [IS HELLO? IS WORLD?]
+    // Output: [[IS HELLO? IS WORLD?]]
 }
