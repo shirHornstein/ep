@@ -58,6 +58,18 @@ type RunnerArgs interface {
     Args() []Type
 }
 
+// RunnerPlan is a Runner that also acts as a Runner constructor. This is useful
+// for cases when the Runner needs to be somehow configured, or even replaced
+// altogher based on input arguments
+type RunnerPlan interface {
+    Runner // it's a Runner.
+
+    // Plan allows the Runner to plan itself given an arbitrary argument. The
+    // argument is context-dependent: it can be an AST node, or a composite
+    // object containing multiple properties.
+    Plan(ctx context.Context, arg interface{}) (Runner, error)
+}
+
 // PassThrough returns a new runner that lets all of its input through as-is
 func PassThrough() Runner { return &passthrough{} }
 type passthrough struct {}
