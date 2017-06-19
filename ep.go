@@ -7,31 +7,31 @@
 //
 // The basic design of ep is to implement and compose multiple Runner objects
 // where each performs a single transformation on its input datasets and
-// produces the modified datasets in return. These transformations can include
-// anything from mapping, reduction, filtering, etc.
+// produces modified datasets in return. These transformations can include
+// anything from mapping, reduction, filtering, expansion, etc.
 //
 // The input and output of the Runners are channels of Datasets. Each Dataset is
 // composed of several typed Data instance, each can be thought of as
 // representing a column of data of the same type, thus the whole Dataset
 // represents a batch of rows in a table. These batches are streamed via
-// channels, making each Runner a long-lived function that consumes its input,
-// transforms it and produces its output until the input channel is closed.
+// channels, making each Runner a long-lived function that exit when the input
+// channel is closed, or an error has occured.
 //
 // Manually executing the Run function on these runners is a bit cumbersome, as
 // care must be taken when constructing the input and output and handling the
 // errors, as you can see in the examples below. However, Runners should rarely
 // be executed manually - they're designed to be composed together into just a
 // single top-level Runner that actually needs to be run. Ep already includes
-// some composition implementations like Pipeline, Project, Union, etc. as well
+// some built-in compositions like Pipeline, Project, Union, etc. as well
 // as utility Runners that can be used for data exchange or otherwise. If you
 // encounter a use-case where a Runner must be composed in a new way, consider
 // if there's a generic version of it that can be included in this project for
 // re-use.
 //
-// Finally - the actual Data instances are left for user-space implementations.
+// Finally - the actual Data instances are left for user-space implementation.
 // Please review the example code below, or the Null type for reference. The
-// latter is part of the ep project, and provides the ability to transmit null-
-// data around without the overhead of passing around interfaces or pointers.
+// latter is a built-in type for handling null-data without the overhead of
+// interfaces or pointers.
 //
 // Registeries
 //
