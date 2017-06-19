@@ -3,7 +3,7 @@
 // query engines and data processing pipelines that are distributed across a
 // cluster of nodes.
 //
-// Runners & Data
+// Runners and Data
 //
 // The basic design of ep is to implement and compose multiple Runner objects
 // where each performs a single transformation on its input datasets and
