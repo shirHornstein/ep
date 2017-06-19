@@ -6,11 +6,16 @@ import (
     "context"
 )
 
+// Runners registry. See Registeries in the main doc.
 var Runners = make(runnersReg)
+
+// Types registry. See Registeries in the main doc.
 var Types = make(typesReg)
 
 // Plan a new Runner marked by an arbitrary argument that must've been
-// preregistered using the `Runners.Register()` function. See Planning above.
+// preregistered using the `Runners.Register()` function. if the arg is a
+// struct, it's first converted into a string by reflecting its full type name
+// and path. See Planning & Registeries in the main doc.
 func Plan(ctx context.Context, arg interface{}) (Runner, error) {
     var err error
     for _, r := range Runners.Get(arg) {
@@ -30,7 +35,7 @@ func Plan(ctx context.Context, arg interface{}) (Runner, error) {
     }
 
     if err == nil {
-        err = fmt.Errorf("Unsupported")
+        err = fmt.Errorf("Unregistered")
     }
 
     return nil, err
