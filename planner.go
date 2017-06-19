@@ -6,14 +6,14 @@ import (
     "context"
 )
 
-var runnersMap = make(map[string][]Runner)
-var typesMap = make(map[string][]Type)
+var Runners = make(runnersReg)
+var Types = make(typesReg)
 
 // Plan a new Runner marked by an arbitrary argument that must've been
-// preregistered using the .Runners() function. See Planning above.
+// preregistered using the `Runners.Register()` function. See Planning above.
 func Plan(ctx context.Context, arg interface{}) (Runner, error) {
     var err error
-    for _, r := range Runners(arg) {
+    for _, r := range Runners.Get(arg) {
 
         // check if the runner is plannable
         p, ok := r.(RunnerPlan)
@@ -36,37 +36,46 @@ func Plan(ctx context.Context, arg interface{}) (Runner, error) {
     return nil, err
 }
 
-// Runners registers and returns a list of Runners, marked by an arbitrary key.
-// Calling this function without any Runners will just return all of the
-// registered runners for that key. See Planning above.
-func Runners(k interface{}, runners ...Runner) []Runner {
-    s := keyToString(k)
-    for _, r := range runners {
-        runnersMap[s] = append(runnersMap[s], r)
-    }
-    return runnersMap[s]
+// registry of runners
+type runnersReg map[interface{}][]Runner
+func (reg runnersReg) Register(k interface{}, r Runner) runnersReg {
+    registerGob(r)
+    k = registryKey(k)
+    reg[k] = append(reg[k], r)
+    return reg
 }
 
-// Types registers and returns a list of Types, marked by an arbitrary key.
-// Calling this function without any types will just return all of the
-// registered types for that key.
-func Types(k interface{}, types ...Type) []Type {
-    s := keyToString(k)
-    for _, t := range types {
-        typesMap[s] = append(typesMap[s], t)
-    }
-
-    return typesMap[s]
+func (reg runnersReg) Get(k interface{}) []Runner {
+    return reg[registryKey(k)]
 }
 
-// convert an arbitrary key interface to a string - if it's an object, use the
-// object's unique path and name instead.
-func keyToString(k interface{}) string {
+// registry of types
+type typesReg map[interface{}][]Type
+func (reg typesReg) Register(k interface{}, t Type) typesReg {
+    registerGob(t, t.Data(0))
+    k = registryKey(k)
+    reg[k] = append(reg[k], t)
+    return reg
+}
+
+func (reg typesReg) Get(k interface{}) []Type {
+    return reg[registryKey(k)]
+}
+
+// Converts a key interface to a registry key according to the convention
+// mentioned in the Registries doc. if the key is a struct, it's first converted
+// into a string by reflecting its full type name and path
+func registryKey(k interface{}) interface{} {
+    // optimization - if it's just a string. Avoid the overhead of reflection.
     s, ok := k.(string)
     if ok {
         return s
     }
 
     t := reflect.TypeOf(k)
-    return t.PkgPath() + "." + t.Name()
+    if t.Kind() == reflect.Struct {
+        return t.PkgPath() + "." + t.Name()
+    }
+
+    return k
 }
