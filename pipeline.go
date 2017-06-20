@@ -45,7 +45,33 @@ func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
     return err
 }
 
-func (r pipeline) Returns() []Type {
-    panic("incorrect implementation")
-    return []Type{Wildcard}
+func (rs pipeline) Returns() []Type {
+    res := rs[len(rs) - 1].Returns() // start with the last returns
+
+    // walk backwards on all of the runners in the pipeline until no more
+    // wildcards are found. In many cases, this loop will just run once.
+    for j := len(rs) - 2; j >= 0; j-- {
+        hasWildcard := false
+
+        // fetch the types of the previous stream in the pipeline
+        prev := rs[j].Returns()
+
+        // check all of the types for wildcards, and replace as needed. Walk
+        // backwards to allow adding types without messing the iteration
+        for i := len(res) - 1; i >= 0; i-- {
+            if res[i] == Wildcard {
+                // wildcard found - replace it with the columns from the
+                // previous stream (which might also contain Wildcards)
+                res = append(res[:i], append(prev, res[i+1:]...)...)
+                hasWildcard = true
+            }
+        }
+
+        if !hasWildcard {
+            break // no wildcards remain to replace.
+        }
+
+    }
+
+    return res
 }
