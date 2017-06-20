@@ -35,7 +35,7 @@ func Plan(ctx context.Context, arg interface{}) (Runner, error) {
     }
 
     if err == nil {
-        err = fmt.Errorf("Unregistered")
+        err = &errUnregistered{arg} // fmt.Errorf("Unregistered: %s", reflect.TypeOf(arg))
     }
 
     return nil, err
@@ -83,4 +83,12 @@ func registryKey(k interface{}) interface{} {
     }
 
     return k
+}
+
+// error indicating that an unregistered argument was sent to Plan
+type errUnregistered struct { Arg interface{} }
+func (err *errUnregistered) Code() string { return "0A000" }
+func (err *errUnregistered) UnregisteredArg() interface{} { return err.Arg }
+func (err *errUnregistered) Error() string {
+    return fmt.Sprintf("Unregistered %s", reflect.TypeOf(err.Arg))
 }
