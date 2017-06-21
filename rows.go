@@ -102,8 +102,8 @@ func (r *rows) Next(dest []driver.Value) error {
 
     // transpose the columnar strings to rows of strings for the buffer.
     rows := make([][]string, data.Len())
-    row := make([]string, data.Width())
     for i, _ := range rows {
+        row := make([]string, data.Width())
         for j, _ := range row {
             row[j] = columnar[j][i]
         }
