@@ -15,7 +15,6 @@ type pipeline []Runner
 
 func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
     var wg sync.WaitGroup
-    defer wg.Wait()
 
     // don't let go-routines leak, for example LIMIT-clause may exit early
     ctx, cancel := context.WithCancel(ctx)
@@ -42,6 +41,8 @@ func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
     if err1 != nil && err == nil {
         err = err1
     }
+
+    wg.Wait()
     return err
 }
 
