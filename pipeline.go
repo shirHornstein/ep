@@ -1,89 +1,75 @@
 package ep
 
 import (
-    "sync"
     "context"
 )
 
-var _ = registerGob(pipeline{})
+var _ = registerGob(&pipeline{})
 
 // Pipeline returns a vertical composite pipeline runner where the output of
 // any one stream is passed as input to the next
 func Pipeline(runners ...Runner) Runner {
-    return pipeline(runners)
+    if len(runners) < 2 {
+        panic("ep: at least 2 runners are required for pipelining")
+    }
+
+    head := runners[:len(runners) - 1]
+    tail1 := runners[len(runners) - 1]
+    var from Runner
+    if len(head) == 1 {
+        from = head[0]
+    } else {
+        from = Pipeline(head...)
+    }
+
+    return &pipeline{from, tail1}
 }
 
-type pipeline []Runner
+type pipeline struct { From Runner; To Runner }
+func (rs *pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
+    // choose the error out from the To and From errors.
+    var err1 error
+    defer func() { if err == nil && err1 != nil { err = err1 } }()
 
-func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
-    var wg sync.WaitGroup
+    // middle chan is the output from the From runner and the input to the To
+    // Runner. Drain it until the go-routine has exited. Usually this will be a
+    // no-op, but other times there might still be left overs in the channel.
+    // This can happen if the top (To) runner has exited early due to an error
+    // or some other logic (LIMIT?). This prevents leaking go-routines
+    middle := make(chan Dataset)
+    defer func() { for _ = range middle {} }()
 
-    // don't let go-routines leak, for example LIMIT-clause may exit early
+    // cancel the From runner when we're done - just in case it's still running.
     ctx, cancel := context.WithCancel(ctx)
     defer cancel()
 
-    for _, r := range rs {
-        wg.Add(1)
-        middle := make(chan Dataset)
-        go func(r Runner, inp, out chan Dataset) {
-            defer wg.Done()
-            defer close(out)
-            err1 := r.Run(ctx, inp, out)
-            if err1 != nil && err == nil {
-                // This mid-stream runner has halted unexpectedly, which other
-                // previous runners might still be pushing data in, we might end
-                // up with a blocked channel. Cancel the context, to stop all
-                // producing runners and drain the channel of all blocking data.
-                cancel()
-                for _ = range inp {}
-                err = err1
-            }
-        }(r, inp, middle)
-        inp = middle
-    }
+    // start the From runner, writing data into the middle chan
+    go func() {
+        defer close(middle)
+        err1 = rs.From.Run(ctx, inp, middle)
+    }()
 
-    // passthrough from the last runner
-    for data := range inp {
-        out <- data
-    }
-
-    wg.Wait()
-    return err
+    return rs.To.Run(ctx, middle, out)
 }
 
 // The implementation isn't trivial because it has to account for Wildcard types
 // which indicate that the actual types should be retrieved from the input, thus
-// this function has to walk backwards from the last runner and replace all
-// Wildcard entries with the entire types from the previous runner. This is done
-// repetitively until there are no more Wildcard, or all of the runners were
-// accounted for.
+// when a Wildcard is found in the To runner, this function will replace it with
+// the entire return types of the From runner (which might be another pair -
+// calling this function recursively).
 // see Runner & Wildcard
-func (rs pipeline) Returns() []Type {
-    res := rs[len(rs) - 1].Returns() // start with the last runner
+func (rs *pipeline) Returns() []Type {
+    res := rs.To.Returns()
 
-    // walk backwards over all of the runners in the pipeline until no more
-    // wildcards are found. In many cases, this loop will just run once.
-    for j := len(rs) - 2; j >= 0; j-- {
-        hasWildcard := false
-
-        // fetch the types of the previous runner in the pipeline
-        prev := rs[j].Returns()
-
-        // check for wildcards, and replace as needed. Walk backwards to allow
-        // adding types in-place without messing the iteration
-        for i := len(res) - 1; i >= 0; i-- {
-            if res[i] == Wildcard {
-                // wildcard found - replace it with the types from the previous
-                // runner (which might also contain Wildcards)
-                res = append(res[:i], append(prev, res[i+1:]...)...)
-                hasWildcard = true
-            }
+    // check for wildcards, and replace as needed. Walk backwards to allow
+    // adding types in-place without messing the iteration
+    for i := len(res) - 1; i >= 0; i-- {
+        if res[i] == Wildcard {
+            // wildcard found - replace it with the types from the previous
+            // runner (which might also contain Wildcards)
+            prev := rs.From.Returns()
+            res = append(res[:i], append(prev, res[i+1:]...)...)
         }
-
-        if !hasWildcard {
-            break // no wildcards remain to replace.
-        }
-
     }
 
     return res
