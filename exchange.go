@@ -66,6 +66,8 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
                 return
             }
         }
+
+        err = ex.SendAll(nil)
     }()
 
     // listen to all nodes for incoming data
@@ -152,7 +154,7 @@ func (ex *exchange) DecodeNext(e Dataset) error {
 
     i := (ex.decsNext + 1) % len(ex.decs)
     err := ex.decs[i].Decode(e)
-    if err == io.EOF {
+    if err == io.EOF || e == nil {
         // remove the current decoder and try again
         ex.decs = append(ex.decs[:i], ex.decs[i + 1:]...)
         return ex.DecodeNext(e)
