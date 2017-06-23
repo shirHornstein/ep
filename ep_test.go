@@ -12,9 +12,14 @@ func (r *ErrRunner) Run(ctx context.Context, inp, out chan Dataset) error {
 }
 
 // InfinityRunner infinitely emits data until it's canceled
-type InfinityRunner struct {}
+type InfinityRunner struct { Running bool }
 func (*InfinityRunner) Returns() []Type { return []Type{Str} }
-func (*InfinityRunner) Run(ctx context.Context, inp, out chan Dataset) error {
+func (r *InfinityRunner) Run(ctx context.Context, inp, out chan Dataset) error {
+    // running flag helps tests ensure that the go-routine didn't leak
+    r.Running = true
+    defer func() { r.Running = false }()
+
+    // infinitely produce data, until canceled
     for {
         select {
         case _, _ = <- ctx.Done():

@@ -53,11 +53,13 @@ func TestPipelineErrOnTop(t *testing.T) {
 // Otherwise - this test will block indefinitely
 func TestPipelineErrCancel(t *testing.T) {
     err := fmt.Errorf("something bad happened")
-    runner := Pipeline(&InfinityRunner{}, &ErrRunner{err})
+    infinity := &InfinityRunner{}
+    runner := Pipeline(infinity, &ErrRunner{err})
     data := NewDataset(Strs([]string{"hello", "world"}))
     data, err = testRun(runner, data)
 
     require.Equal(t, 0, data.Width())
     require.Error(t, err)
     require.Equal(t, "something bad happened", err.Error())
+    require.Equal(t, false, infinity.Running, "Infinity go-routine leak")
 }
