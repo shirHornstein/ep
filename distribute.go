@@ -2,7 +2,9 @@ package ep
 
 import (
     "net"
+    "fmt"
     "sync"
+    "time"
     "context"
     "encoding/gob"
 )
@@ -117,8 +119,19 @@ func (d *distributer) Connect(addr string, uid string) (net.Conn, error) {
         // wait for an ack on the other side
 
     } else {
-        // listen
-        conn = <- d.connCh(addr, uid)
+        // listen, timeout after 1 second
+        timer := time.NewTimer(time.Second)
+        select {
+        case conn = <- d.connCh(addr, uid):
+            // let it through
+        case <- timer.C:
+            err = fmt.Errorf("ep: connect timeout; no incoming conn")
+        }
+
+        timer.Stop()
+        if err != nil {
+            return nil, err
+        }
 
         // send the ack
         enc := gob.NewEncoder(conn)
