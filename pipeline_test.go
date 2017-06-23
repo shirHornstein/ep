@@ -25,37 +25,13 @@ func ExamplePipeline_reverse() {
     // Output: [[IS HELLO? IS WORLD?]] <nil>
 }
 
-// errors at the bottom of the pipeline should propagate upwards
-func TestPipelineErrOnBottom(t *testing.T) {
-    err := fmt.Errorf("something bad happened")
-    runner := Pipeline(&ErrRunner{err}, PassThrough())
-    data := NewDataset(Null.Data(1))
-    data, err = testRun(runner, data)
-
-    require.Equal(t, 0, data.Width())
-    require.Error(t, err)
-    require.Equal(t, "something bad happened", err.Error())
-}
-
-// test that a top-level error doesn't block
-func TestPipelineErrOnTop(t *testing.T) {
-    err := fmt.Errorf("something bad happened")
-    runner := Pipeline(PassThrough(), &ErrRunner{err})
-    data := NewDataset(Null.Data(1))
-    data, err = testRun(runner, data)
-
-    require.Equal(t, 0, data.Width())
-    require.Error(t, err)
-    require.Equal(t, "something bad happened", err.Error())
-}
-
 // test that upon an error, the producing (infinity) runners are canceled.
 // Otherwise - this test will block indefinitely
-func TestPipelineErrCancel(t *testing.T) {
+func TestPipelineErr(t *testing.T) {
     err := fmt.Errorf("something bad happened")
     infinity := &InfinityRunner{}
     runner := Pipeline(infinity, &ErrRunner{err})
-    data := NewDataset(Strs([]string{"hello", "world"}))
+    data := NewDataset(Null.Data(1))
     data, err = testRun(runner, data)
 
     require.Equal(t, 0, data.Width())
