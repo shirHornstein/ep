@@ -16,16 +16,9 @@ func Project(runners ...Runner) Runner {
         return runners[0]
     }
 
-    head := runners[:len(runners) - 1]
+    head := Project(runners[:len(runners) - 1]...)
     tail1 := runners[len(runners) - 1]
-    var from Runner
-    if len(head) == 1 {
-        from = head[0]
-    } else {
-        from = Project(head...)
-    }
-
-    return &project{from, tail1}
+    return &project{head, tail1}
 }
 
 type project struct { Left Runner; Right Runner }

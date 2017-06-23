@@ -15,16 +15,10 @@ func Pipeline(runners ...Runner) Runner {
         return runners[0]
     }
 
-    head := runners[:len(runners) - 1]
+    head := Pipeline(runners[:len(runners) - 1]...)
     tail1 := runners[len(runners) - 1]
-    var from Runner
-    if len(head) == 1 {
-        from = head[0]
-    } else {
-        from = Pipeline(head...)
-    }
 
-    return &pipeline{from, tail1}
+    return &pipeline{head, tail1}
 }
 
 type pipeline struct { From Runner; To Runner }
