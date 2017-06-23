@@ -37,11 +37,11 @@ func TestErrOnBottom(t *testing.T) {
     require.Equal(t, "something bad happened", err.Error())
 }
 
-// test that a top-level error doesn't block cancels lower-level runners
-// func TestErrOnTop(t *testing.T) {
-//     err := fmt.Errorf("something bad happened")
-//     runner := Pipeline(PassThrough(), &ErrRunner{err})
-//     data := NewDataset(Strs([]string{"hello", "world"}))
-//     data, err = testRun(runner, data)
-//     fmt.Println(data, err)
-// }
+// test that a top-level error doesn't block
+func TestErrOnTop(t *testing.T) {
+    err := fmt.Errorf("something bad happened")
+    runner := Pipeline(PassThrough(), &ErrRunner{err})
+    data := NewDataset(Strs([]string{"hello", "world"}))
+    data, err = testRun(runner, data)
+    fmt.Println(data, err)
+}

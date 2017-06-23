@@ -33,6 +33,12 @@ func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
             defer close(out)
             err1 := r.Run(ctx, inp, out)
             if err1 != nil && err == nil {
+                // This mid-stream runner has halted unexpectedly, which other
+                // previous runners might still be pushing data in, we might end
+                // up with a blocked channel. Cancel the context, to stop all
+                // producing runners and drain the channel of all blocking data.
+                cancel()
+                for _ = range inp {}
                 err = err1
             }
         }(r, inp, middle)
@@ -41,6 +47,7 @@ func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 
     err1 := tail1.Run(ctx, inp, out)
     if err1 != nil && err == nil {
+        for _ = range inp {}
         err = err1
     }
 
