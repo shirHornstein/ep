@@ -3,6 +3,7 @@ package ep
 import (
     "fmt"
     "testing"
+    "github.com/stretchr/testify/require"
 )
 
 func ExamplePipeline() {
@@ -24,11 +25,23 @@ func ExamplePipeline_reverse() {
     // Output: [[IS HELLO? IS WORLD?]] <nil>
 }
 
-// test that a top-level error doesn't block cancels lower-level runners
-func TestErrOnTop(t *testing.T) {
+// errors at the bottom of the pipeline should propagate upwards
+func TestErrOnBottom(t *testing.T) {
     err := fmt.Errorf("something bad happened")
-    runner := Pipeline(&Question{}, &ErrRunner{err})
+    runner := Pipeline(&ErrRunner{err}, PassThrough())
     data := NewDataset(Strs([]string{"hello", "world"}))
     data, err = testRun(runner, data)
-    fmt.Println(data, err)
+
+    require.Equal(t, 0, data.Width())
+    require.Error(t, err)
+    require.Equal(t, "something bad happened", err.Error())
 }
+
+// test that a top-level error doesn't block cancels lower-level runners
+// func TestErrOnTop(t *testing.T) {
+//     err := fmt.Errorf("something bad happened")
+//     runner := Pipeline(PassThrough(), &ErrRunner{err})
+//     data := NewDataset(Strs([]string{"hello", "world"}))
+//     data, err = testRun(runner, data)
+//     fmt.Println(data, err)
+// }
