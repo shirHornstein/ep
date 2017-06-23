@@ -10,82 +10,95 @@ var _ = registerGob(project{})
 // its input to all of the internal runners, and joins the result into a single
 // dataset to return.
 func Project(runners ...Runner) Runner {
-    return project(runners)
+    if len(runners) == 0 {
+        panic("ep: at least 1 runner is required for projecting")
+    } else if len(runners) == 1 {
+        return runners[0]
+    }
+
+    head := runners[:len(runners) - 1]
+    tail1 := runners[len(runners) - 1]
+    var from Runner
+    if len(head) == 1 {
+        from = head[0]
+    } else {
+        from = Project(head...)
+    }
+
+    return &project{from, tail1}
 }
 
-type project []Runner
+type project struct { Left Runner; Right Runner }
+
+// Returns a concatenation of the left and right return types
+func (rs *project) Returns() []Type {
+    types := []Type{}
+    types = append(types, rs.Left.Returns()...)
+    types = append(types, rs.Right.Returns()...)
+    return types
+}
 
 // Run dispatches the same input to all inner runners, and then collects and
 // joins their results into a single dataset output
-func (rs project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
-    if len(rs) == 0 {
-        // NB Do we really want this? Shouldn't we just fail for an empty
-        // projection? At the time of writing it only happened due to bugs in
-        // the code - not due to any realistic use-case
-        for range inp {} // drain it to unblock sends to inp
-        return nil
-    }
+func (rs *project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
+    // choose the error out from the Left and Right errors.
+    var err1 error
+    defer func() { if err == nil && err1 != nil { err = err1 } }()
 
-    // Run all inner runners
-    inputs := make([]chan Dataset, len(rs))
-    outputs := make([]chan Dataset, len(rs))
-    for i := range rs {
-        inputs[i] = make(chan Dataset)
-        outputs[i] = make(chan Dataset)
+    //
+    inpLeft := make(chan Dataset)
+    left := make(chan Dataset)
+    defer func() { for _ = range left {} }()
 
-        go func(i int) {
-            defer close(outputs[i])
-            err1 := rs[i].Run(ctx, inputs[i], outputs[i])
-            if err1 != nil && err == nil {
-                err = err1
-            }
-        }(i)
-    }
+    inpRight := make(chan Dataset)
+    right := make(chan Dataset)
+    defer func() { for _ = range right {} }()
 
-    // Dispatch input to all inner runners
+    // cancel the From runner when we're done - just in case it's still running.
+    ctx, cancel := context.WithCancel(ctx)
+    defer cancel()
+
     go func() {
-        for data := range inp {
-            for _, s := range inputs {
-                s <- data
-            }
-        }
+        defer close(left)
+        err1 = rs.Left.Run(ctx, inpLeft, left)
+    }()
 
-        // close all inner runners
-        for _, s := range inputs {
-            close(s)
+    go func() {
+        defer close(right)
+        err = rs.Right.Run(ctx, inpRight, right)
+    }()
+
+    // dispatch (duplicate) input to both left and right runners
+    go func() {
+        defer close(inpLeft)
+        defer close(inpRight)
+        for data := range inp {
+            inpLeft <- data
+            inpRight <- data
         }
     }()
 
-    // collect the output from all inner runners, in order.
-    //
-    // TODO this assumes uniformity of all composed functions such that the
-    // datasets are of equal lengths. Of course this assumption is wrong, and
-    // the code should be adapted to support varying outputs of the individual
-    // functions
-    done := false
-    for !done {
+    // collect & join the output from the Left and Right runners, in order.
+    for {
         result := dataset{}
-        for _, s := range outputs {
-            res, ok := <- s
-            done = done || !ok
-            for i := 0; ok && i < res.Width(); i++ {
-                result = append(result, res.At(i))
-            }
+        dataLeft, okLeft := <- left
+        dataRight, okRight := <- right
+
+        if !okLeft || !okRight {
+            return // TODO: what if just one is done? error?
         }
 
-        if result.Width() > 0 && result.Len() > 0 {
-            out <- result
+        // TODO: what if there's a mismatch in Len()?
+        for i := 0; okLeft && i < dataLeft.Width(); i++ {
+            result = append(result, dataLeft.At(i))
         }
+
+        for i := 0; okRight && i < dataRight.Width(); i++ {
+            result = append(result, dataRight.At(i))
+        }
+
+        out <- result
     }
 
-    return err
-}
-
-// Returns a concatenation of all of the inner runners
-func (rs project) Returns() []Type {
-    rets := []Type{}
-    for _, r := range rs {
-        rets = append(rets, r.Returns()...)
-    }
-    return rets
+    return
 }

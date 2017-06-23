@@ -4,13 +4,15 @@ import (
     "context"
 )
 
-var _ = registerGob(&pipeline{})
+var _ = registerGob(pipeline{})
 
 // Pipeline returns a vertical composite pipeline runner where the output of
 // any one stream is passed as input to the next
 func Pipeline(runners ...Runner) Runner {
-    if len(runners) < 2 {
-        panic("ep: at least 2 runners are required for pipelining")
+    if len(runners) == 0 {
+        panic("ep: at least 1 runner is required for pipelining")
+    } else if len(runners) == 1 {
+        return runners[0]
     }
 
     head := runners[:len(runners) - 1]
@@ -27,7 +29,7 @@ func Pipeline(runners ...Runner) Runner {
 
 type pipeline struct { From Runner; To Runner }
 func (rs *pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
-    // choose the error out from the To and From errors.
+    // choose the error out from the From and To errors.
     var err1 error
     defer func() { if err == nil && err1 != nil { err = err1 } }()
 

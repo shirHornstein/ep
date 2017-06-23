@@ -26,7 +26,7 @@ func ExampleProject_reversed() {
     // [[is hello? is world?] [HELLO WORLD]] <nil>
 }
 
-// project should cancel
+// project error should cancel all inner runners
 func TestProjectErr(t *testing.T) {
     err := fmt.Errorf("something bad happened")
     infinity := &InfinityRunner{}
@@ -34,9 +34,8 @@ func TestProjectErr(t *testing.T) {
     data := NewDataset(Null.Data(1))
     data, err = testRun(runner, data)
 
+    require.Equal(t, 0, data.Width())
     require.Error(t, err)
     require.Equal(t, "something bad happened", err.Error())
     require.Equal(t, false, infinity.Running, "Infinity go-routine leak")
-
-    // fmt.Println(data, err)
 }
