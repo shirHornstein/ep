@@ -5,6 +5,7 @@ import (
     "net"
     "context"
     "encoding/gob"
+    "github.com/satori/go.uuid"
 )
 
 var _ = registerGob(exchange{})
@@ -20,7 +21,7 @@ const (
 // all other nodes such that the received datasets are dispatched in a round-
 // robin to the nodes.
 func Scatter() Runner {
-    return nil
+    return &exchange{Uid: uuid.NewV1().String(), SendTo: sendScatter}
 }
 
 // Gather returns an exchange Runner that gathers all of its input into a
@@ -49,6 +50,7 @@ type exchange struct {
     decsNext int // Decoders Round Robin next index
 }
 
+func (ex *exchange) Returns() []Type { return []Type{Wildcard} }
 func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) {
     defer func() { ex.Close(err) }()
     err = ex.Init(ctx)
@@ -213,6 +215,6 @@ func (ex *exchange) Init(ctx context.Context) error {
         ex.conns = append(ex.conns, conn)
         ex.decs = append(ex.decs, gob.NewDecoder(conn))
     }
-    
+
     return nil
 }

@@ -4,6 +4,8 @@ import (
     "context"
 )
 
+var _ = registerGob(union{})
+
 // Union returns a new composite Runner that dispatches its inputs to all of
 // its internal runners and collects their output into a single unified stream
 // of datasets. It is required the all of the individual runners returns the

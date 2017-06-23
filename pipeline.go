@@ -5,6 +5,8 @@ import (
     "context"
 )
 
+var _ = registerGob(pipeline{})
+
 // Pipeline returns a vertical composite pipeline runner where the output of
 // any one stream is passed as input to the next
 func Pipeline(runners ...Runner) Runner {
