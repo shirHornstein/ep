@@ -48,23 +48,30 @@ func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
     return err
 }
 
+// The implementation isn't trivial because it has to account for Wildcard types
+// which indicate that the actual types should be retrieved from the input, thus
+// this function has to walk backwards from the last runner and replace all
+// Wildcard entries with the entire types from the previous runner. This is done
+// repetitively until there are no more Wildcard, or all of the runners were
+// accounted for.
+// see Runner & Wildcard
 func (rs pipeline) Returns() []Type {
-    res := rs[len(rs) - 1].Returns() // start with the last returns
+    res := rs[len(rs) - 1].Returns() // start with the last runner
 
-    // walk backwards on all of the runners in the pipeline until no more
+    // walk backwards over all of the runners in the pipeline until no more
     // wildcards are found. In many cases, this loop will just run once.
     for j := len(rs) - 2; j >= 0; j-- {
         hasWildcard := false
 
-        // fetch the types of the previous stream in the pipeline
+        // fetch the types of the previous runner in the pipeline
         prev := rs[j].Returns()
 
-        // check all of the types for wildcards, and replace as needed. Walk
-        // backwards to allow adding types without messing the iteration
+        // check for wildcards, and replace as needed. Walk backwards to allow
+        // adding types in-place without messing the iteration
         for i := len(res) - 1; i >= 0; i-- {
             if res[i] == Wildcard {
-                // wildcard found - replace it with the columns from the
-                // previous stream (which might also contain Wildcards)
+                // wildcard found - replace it with the types from the previous
+                // runner (which might also contain Wildcards)
                 res = append(res[:i], append(prev, res[i+1:]...)...)
                 hasWildcard = true
             }
