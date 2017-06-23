@@ -43,9 +43,9 @@ type exchange struct {
     Uid string
     SendTo int
 
-    encs []*gob.Encoder // encoders to all destination connections
-    decs []*gob.Decoder // decoders from all source connections
-    conns []net.Conn // all open connections (used for closing)
+    encs []encoder // encoders to all destination connections
+    decs []decoder // decoders from all source connections
+    conns []io.Closer // all open connections (used for closing)
     encsNext int // Encoders Round Robin next index
     decsNext int // Decoders Round Robin next index
 }
@@ -67,7 +67,7 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
             }
         }
 
-        err = ex.SendAll(nil)
+        err = ex.EncodeAll(nil) // TODO: replace with a real marker Dataset
     }()
 
     // listen to all nodes for incoming data
@@ -220,3 +220,8 @@ func (ex *exchange) Init(ctx context.Context) error {
 
     return nil
 }
+
+
+// interfqace for gob.Encoder/Decoder. Used to also implement the short-circuit.
+type encoder interface { Encode(interface{}) error }
+type decoder interface { Decode(interface{}) error }
