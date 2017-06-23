@@ -3,6 +3,7 @@ package ep
 import (
     "io"
     "net"
+    "reflect"
     "context"
     "encoding/gob"
     "github.com/satori/go.uuid"
@@ -186,7 +187,15 @@ func (ex *exchange) Init(ctx context.Context) error {
     // open a connection to all target nodes
     var conn net.Conn
     connsMap := map[string]net.Conn{}
+    var shortCircuit *shortCircuit
     for _, n := range targetNodes {
+        if n == thisNode {
+            shortCircuit = newShortCircuit()
+            ex.conns = append(ex.conns, shortCircuit)
+            ex.encs = append(ex.encs, shortCircuit)
+            continue
+        }
+
         isThisTarget = isThisTarget || n == thisNode // TODO: short-circuit
         conn, err = dist.Connect(n, ex.Uid)
         if err != nil {
@@ -199,8 +208,13 @@ func (ex *exchange) Init(ctx context.Context) error {
     }
 
     // if we're also a destination, listen to all nodes
-    for i := 0; isThisTarget && i < len(allNodes); i += 1 {
+    for i := 0; shortCircuit != nil && i < len(allNodes); i += 1 {
         n := allNodes[i]
+
+        if n == thisNode {
+            ex.decs = append(ex.decs, shortCircuit)
+            continue
+        }
 
         // if we already established a connection to this node from the targets,
         // re-use it. We don't need 2 uni-directional connections.
@@ -225,3 +239,23 @@ func (ex *exchange) Init(ctx context.Context) error {
 // interfqace for gob.Encoder/Decoder. Used to also implement the short-circuit.
 type encoder interface { Encode(interface{}) error }
 type decoder interface { Decode(interface{}) error }
+
+// shortCircuit implements io.Closer, encoder and dedocder and provides the
+// means to short-circuit internal communications within the same node. This is
+// in order to not complicate the generic nature of the exchange code
+type shortCircuit struct { C chan interface{} }
+func (sc *shortCircuit) Close() error { close(sc.C); return nil }
+func (sc *shortCircuit) Encode(e interface{}) error { sc.C <- e; return nil }
+func (sc *shortCircuit) Decode(e interface{}) error {
+    v, ok := <- sc.C
+    if !ok {
+        return io.EOF
+    }
+
+    reflect.ValueOf(e).Set(reflect.ValueOf(v))
+    return nil
+}
+
+func newShortCircuit() *shortCircuit {
+    return &shortCircuit{make(chan interface{})}
+}
