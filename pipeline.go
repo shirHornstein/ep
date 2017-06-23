@@ -22,10 +22,7 @@ func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
     ctx, cancel := context.WithCancel(ctx)
     defer cancel()
 
-    l := len(rs)
-    head, tail1 := rs[:l - 1], rs[l - 1:][0]
-
-    for _, r := range head {
+    for _, r := range rs {
         wg.Add(1)
         middle := make(chan Dataset)
         go func(r Runner, inp, out chan Dataset) {
@@ -45,10 +42,9 @@ func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
         inp = middle
     }
 
-    err1 := tail1.Run(ctx, inp, out)
-    if err1 != nil && err == nil {
-        for _ = range inp {}
-        err = err1
+    // passthrough from the last runner
+    for data := range inp {
+        out <- data
     }
 
     wg.Wait()
