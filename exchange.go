@@ -170,7 +170,6 @@ func (ex *exchange) DecodeNext(e Dataset) error {
 // initialize the connections, encoders & decoders
 func (ex *exchange) Init(ctx context.Context) error {
     var err error
-    var isThisTarget bool // is this node also a destination?
 
     allNodes := ctx.Value("ep.AllNodes").([]string)
     thisNode := ctx.Value("ep.ThisNode").(string)
@@ -196,7 +195,6 @@ func (ex *exchange) Init(ctx context.Context) error {
             continue
         }
 
-        isThisTarget = isThisTarget || n == thisNode // TODO: short-circuit
         conn, err = dist.Connect(n, ex.Uid)
         if err != nil {
             return err
