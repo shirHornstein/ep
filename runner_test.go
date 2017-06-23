@@ -46,7 +46,9 @@ func ExampleRunner() {
     upper := &Upper{}
     data := NewDataset(Strs([]string{"hello", "world"}))
     data, err := testRun(upper, data)
-    fmt.Println(data, err) // Output: [[HELLO WORLD]] <nil>
+    fmt.Println(data, err) // [[HELLO WORLD]] <nil>
+
+    // Output: [[HELLO WORLD]] <nil>
 }
 
 // run a runner with the given input to completion
