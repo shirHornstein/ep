@@ -32,7 +32,7 @@ type Transport interface {
 type Distributer interface {
 
     // Distribute a Runner to multiple node addresses
-    Distribute(runner Runner, addrs ...string) error
+    Distribute(runner Runner, addrs ...string) (Runner, error)
 
     // Start listening for incoming Runners to run
     Start() error // blocks.
@@ -70,22 +70,26 @@ func (d *distributer) Close() error {
     return d.transport.Close()
 }
 
-func (d *distributer) Distribute(runner Runner, addrs ...string) error {
+func (d *distributer) Distribute(runner Runner, addrs ...string) (Runner, error) {
     for _, addr := range addrs {
         conn, err := d.transport.Dial(addr)
         if err != nil {
-            return err
+            return nil, err
         }
 
         defer conn.Close()
         enc := gob.NewEncoder(conn)
         err = enc.Encode(&req{d.transport.Addr().String(), runner, addrs, ""})
         if err != nil {
-            return err
+            return nil, err
         }
     }
 
-    return nil
+    runner = WithValue(runner, "ep.AllNodes", addrs)
+    runner = WithValue(runner, "ep.MasterNode", d.transport.Addr().String())
+    runner = WithValue(runner, "ep.ThisNode", d.transport.Addr().String())
+    runner = WithValue(runner, "ep.Distributer", d)
+    return runner, nil
 }
 
 // Connect to a node address for the given uid. Used by the individual exchange
@@ -137,15 +141,18 @@ func (d *distributer) Serve(conn net.Conn) error {
 
     if r.Runner != nil {
         ctx := context.Background()
-        ctx = context.WithValue(ctx, "ep.AllNodes", r.RunnerNodes)
-        ctx = context.WithValue(ctx, "ep.MasterNodes", r.From)
-        ctx = context.WithValue(ctx, "ep.ThisNode", d.transport.Addr().String())
+
+        runner := r.Runner
+        runner = WithValue(runner, "ep.AllNodes", r.RunnerNodes)
+        runner = WithValue(runner, "ep.MasterNode", r.From)
+        runner = WithValue(runner, "ep.ThisNode", d.transport.Addr().String())
+        runner = WithValue(runner, "ep.Distributer", d)
 
         out := make(chan Dataset)
         inp := make(chan Dataset, 1)
         close(inp)
 
-        return r.Runner.Run(ctx, inp, out)
+        return runner.Run(ctx, inp, out)
     } else {
 
         // wait for someone to claim it.
@@ -169,4 +176,15 @@ type req struct {
     Runner Runner
     RunnerNodes []string
     Uid string
+}
+
+// WithValue creates a new Runner that adds the key and value to the context
+// before calling its internal input Runner
+func WithValue(r Runner, k, v interface{}) Runner {
+    return &ctxRunner{r, k, v}
+}
+
+type ctxRunner struct { Runner; K interface{}; V interface{} }
+func (r *ctxRunner) Run(ctx context.Context, inp, out chan Dataset) error {
+    return r.Runner.Run(context.WithValue(ctx, r.K, r.V), inp, out)
 }
