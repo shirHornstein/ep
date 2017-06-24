@@ -62,6 +62,7 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
     }
 
     go func() {
+        defer ex.EncodeAll(nil)
         for data := range inp {
             err = ex.Send(data)
             if err != nil {
@@ -73,7 +74,9 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 
     for {
         data, err := ex.Receive()
-        if err != nil {
+        if err == io.EOF {
+            return nil
+        } else if err != nil {
             ex.Close(err)
             return err
         }
@@ -349,7 +352,7 @@ func (sc *shortCircuit) Decode(e interface{}) error {
         *data = nil
     } else {
         // fmt.Println("SC: Casting", v)
-        *data = v.(Dataset)
+        *data = *v.(*Dataset)
         // fmt.Println("SC: Casted")
     }
 
