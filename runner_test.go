@@ -52,11 +52,13 @@ func ExampleRunner() {
 }
 
 // run a runner with the given input to completion
-func testRun(r Runner, data Dataset) (Dataset, error) {
+func testRun(r Runner, datasets ...Dataset) (Dataset, error) {
     var err error
 
-    inp := make(chan Dataset, 1)
-    inp <- data
+    inp := make(chan Dataset, len(datasets))
+    for _, data := range datasets {
+        inp <- data
+    }
     close(inp)
 
     out := make(chan Dataset)
