@@ -40,12 +40,13 @@ type dialer interface {
 //          Dial(addr string) (net.Conn, error)
 //      }
 //
-func NewDistributer(listener net.Listener) Distributer {
-    return &distributer{listener, make(map[string]chan net.Conn), &sync.Mutex{}}
+func NewDistributer(addr string, listener net.Listener) Distributer {
+    return &distributer{listener, addr, make(map[string]chan net.Conn), &sync.Mutex{}}
 }
 
 type distributer struct {
     listener net.Listener
+    addr string
     connsMap map[string]chan net.Conn
     l sync.Locker
 }
@@ -76,6 +77,10 @@ func (d *distributer) dial(addr string) (net.Conn, error) {
 
 func (d *distributer) Distribute(runner Runner, this string, addrs ...string) (Runner, error) {
     for _, addr := range addrs {
+        if addr == this {
+            continue
+        }
+
         conn, err := d.dial(addr)
         if err != nil {
             return nil, err
@@ -104,7 +109,7 @@ func (d *distributer) Connect(addr string, uid string) (net.Conn, error) {
     var err error
     var conn net.Conn
 
-    from := d.listener.Addr().String()
+    from := d.addr
     if from < addr {
         // dial
         conn, err = d.dial(addr)
@@ -113,7 +118,7 @@ func (d *distributer) Connect(addr string, uid string) (net.Conn, error) {
         }
 
         enc := gob.NewEncoder(conn)
-        err = enc.Encode(&req{d.listener.Addr().String(), nil, nil, uid})
+        err = enc.Encode(&req{d.addr, nil, nil, uid})
         if err != nil {
             return nil, err
         }
@@ -137,7 +142,7 @@ func (d *distributer) Connect(addr string, uid string) (net.Conn, error) {
 
         // send the ack
         enc := gob.NewEncoder(conn)
-        err = enc.Encode(&req{d.listener.Addr().String(), nil, nil, uid})
+        err = enc.Encode(&req{d.addr, nil, nil, uid})
         if err != nil {
             return nil, err
         }
@@ -161,7 +166,7 @@ func (d *distributer) Serve(conn net.Conn) error {
         runner := r.Runner
         runner = WithValue(runner, "ep.AllNodes", r.RunnerNodes)
         runner = WithValue(runner, "ep.MasterNode", r.From)
-        runner = WithValue(runner, "ep.ThisNode", d.listener.Addr().String())
+        runner = WithValue(runner, "ep.ThisNode", d.addr)
         runner = WithValue(runner, "ep.Distributer", d)
 
         out := make(chan Dataset)
