@@ -62,10 +62,12 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
     }
 
     for {
-        _, err := ex.Receive()
+        data, err := ex.Receive()
         if err != nil {
             return err
         }
+
+        out <- data
     }
 
     return
