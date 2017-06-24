@@ -59,22 +59,13 @@ func TestScatterMulti(t *testing.T) {
     defer dist2.Close()
     go dist2.Start()
 
-    // data1 := NewDataset(Strs{"hello", "world"})
-    // data2 := NewDataset(Strs{"foo", "bar"})
-    // runner := Pipeline(PassThrough(), Scatter())
-    // runner, err = dist.Distribute(runner, ":5551", ":5551")
+    data1 := NewDataset(Strs{"hello", "world"})
+    data2 := NewDataset(Strs{"foo", "bar"})
+    runner, err := dist1.Distribute(Scatter(), ":5551", ":5551")
+    require.NoError(t, err)
 
+    data, err := testRun(runner, data1, data2)
+    require.NoError(t, err)
 
-
-
-//
-//     data1 := NewDataset(Strs{"hello", "world"})
-//     data2 := NewDataset(Strs{"foo", "bar"})
-//     runner := Pipeline(PassThrough(), Scatter())
-//     runner, err := dist.Distribute(runner, ":5551", ":5551")
-//     if err != nil { panic(err) }
-//
-//     data, err := testRun(runner, data1, data2)
-//     if err != nil { panic(err) }
-//     fmt.Println(data, err)
+    fmt.Println(data)
 }
