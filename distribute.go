@@ -33,8 +33,9 @@ type Transport interface {
 // multiple nodes.
 type Distributer interface {
 
-    // Distribute a Runner to multiple node addresses
-    Distribute(runner Runner, addrs ...string) (Runner, error)
+    // Distribute a Runner to multiple node addresses. `this` is the address of
+    // the current node issuing this distribution.
+    Distribute(runner Runner, this string, addrs ...string) (Runner, error)
 
     // Start listening for incoming Runners to run
     Start() error // blocks.
@@ -72,7 +73,7 @@ func (d *distributer) Close() error {
     return d.transport.Close()
 }
 
-func (d *distributer) Distribute(runner Runner, addrs ...string) (Runner, error) {
+func (d *distributer) Distribute(runner Runner, this string, addrs ...string) (Runner, error) {
     for _, addr := range addrs {
         conn, err := d.transport.Dial(addr)
         if err != nil {
@@ -81,15 +82,15 @@ func (d *distributer) Distribute(runner Runner, addrs ...string) (Runner, error)
 
         defer conn.Close()
         enc := gob.NewEncoder(conn)
-        err = enc.Encode(&req{d.transport.Addr().String(), runner, addrs, ""})
+        err = enc.Encode(&req{this, runner, addrs, ""})
         if err != nil {
             return nil, err
         }
     }
 
     runner = WithValue(runner, "ep.AllNodes", addrs)
-    runner = WithValue(runner, "ep.MasterNode", d.transport.Addr().String())
-    runner = WithValue(runner, "ep.ThisNode", d.transport.Addr().String())
+    runner = WithValue(runner, "ep.MasterNode", this)
+    runner = WithValue(runner, "ep.ThisNode", this)
     runner = WithValue(runner, "ep.Distributer", d)
     return runner, nil
 }
