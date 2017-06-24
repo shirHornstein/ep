@@ -4,7 +4,7 @@ import (
     "fmt"
 )
 
-func ExampleExchange() {
+func ExampleScatter() {
     runner := PassThrough()
     data1 := NewDataset(Strs{"hello", "world"})
     data2 := NewDataset(Strs{"foo", "bar"})
