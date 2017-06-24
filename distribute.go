@@ -11,24 +11,6 @@ import (
 
 var _ = registerGob(req{})
 
-// Transport provides an API to a network transport. It's used to open and
-// listen for connections that are handled by the Distributer to allocate and
-// synchronize Runners across multiple nodes in a cluster.
-//
-// NOTE It MUST be the case that all connections that were opened with Dial()
-// will arrive to the other side in the Listen() function
-type Transport interface {
-    // Transport is a listener, able to provide the Distributer with incoming
-    // connections. NOTE that the Address() will be matched against the
-    // addresses provided to the Distributer to determine which node is the
-    // one currently running
-    net.Listener
-
-    // Dial should open a connection to a remote address. The address will be
-    // the string address provided to the Distributer.
-    Dial(addr string) (net.Conn, error)
-}
-
 // Distributer is an object that can distribute Runners to run in parallel on
 // multiple nodes.
 type Distributer interface {
@@ -45,22 +27,32 @@ type Distributer interface {
     Close() error
 }
 
+type dialer interface {
+    Dial(addr string) (net.Conn, error)
+}
+
 // NewDistributer creates a Distributer that can be used to distribute work of
 // Runners across multiple nodes in a cluster. Distributer must be started on
-// all node peers in order for them to receive work.
-func NewDistributer(transport Transport) Distributer {
-    return &distributer{transport, make(map[string]chan net.Conn), &sync.Mutex{}}
+// all node peers in order for them to receive work. You can also implement the
+// dialer interface (below) in order to provide your own connections:
+//
+//      type dialer interface {
+//          Dial(addr string) (net.Conn, error)
+//      }
+//
+func NewDistributer(listener net.Listener) Distributer {
+    return &distributer{listener, make(map[string]chan net.Conn), &sync.Mutex{}}
 }
 
 type distributer struct {
-    transport Transport
+    listener net.Listener
     connsMap map[string]chan net.Conn
     l sync.Locker
 }
 
 func (d *distributer) Start() error {
     for {
-        conn, err := d.transport.Accept()
+        conn, err := d.listener.Accept()
         if err != nil {
             return err
         }
@@ -70,12 +62,21 @@ func (d *distributer) Start() error {
 }
 
 func (d *distributer) Close() error {
-    return d.transport.Close()
+    return d.listener.Close()
+}
+
+func (d *distributer) dial(addr string) (net.Conn, error) {
+    dialer, ok := d.listener.(dialer)
+    if ok {
+        return dialer.Dial(addr)
+    }
+
+    return net.Dial("tcp", addr)
 }
 
 func (d *distributer) Distribute(runner Runner, this string, addrs ...string) (Runner, error) {
     for _, addr := range addrs {
-        conn, err := d.transport.Dial(addr)
+        conn, err := d.dial(addr)
         if err != nil {
             return nil, err
         }
@@ -103,16 +104,16 @@ func (d *distributer) Connect(addr string, uid string) (net.Conn, error) {
     var err error
     var conn net.Conn
 
-    from := d.transport.Addr().String()
+    from := d.listener.Addr().String()
     if from < addr {
         // dial
-        conn, err = d.transport.Dial(addr)
+        conn, err = d.dial(addr)
         if err != nil {
             return nil, err
         }
 
         enc := gob.NewEncoder(conn)
-        err = enc.Encode(&req{d.transport.Addr().String(), nil, nil, uid})
+        err = enc.Encode(&req{d.listener.Addr().String(), nil, nil, uid})
         if err != nil {
             return nil, err
         }
@@ -136,7 +137,7 @@ func (d *distributer) Connect(addr string, uid string) (net.Conn, error) {
 
         // send the ack
         enc := gob.NewEncoder(conn)
-        err = enc.Encode(&req{d.transport.Addr().String(), nil, nil, uid})
+        err = enc.Encode(&req{d.listener.Addr().String(), nil, nil, uid})
         if err != nil {
             return nil, err
         }
@@ -159,7 +160,7 @@ func (d *distributer) Serve(conn net.Conn) error {
         runner := r.Runner
         runner = WithValue(runner, "ep.AllNodes", r.RunnerNodes)
         runner = WithValue(runner, "ep.MasterNode", r.From)
-        runner = WithValue(runner, "ep.ThisNode", d.transport.Addr().String())
+        runner = WithValue(runner, "ep.ThisNode", d.listener.Addr().String())
         runner = WithValue(runner, "ep.Distributer", d)
 
         out := make(chan Dataset)
