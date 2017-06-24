@@ -3,7 +3,6 @@ package ep
 import (
     "io"
     "net"
-    "reflect"
     "context"
     "encoding/gob"
     "github.com/satori/go.uuid"
@@ -245,12 +244,13 @@ type shortCircuit struct { C chan interface{} }
 func (sc *shortCircuit) Close() error { close(sc.C); return nil }
 func (sc *shortCircuit) Encode(e interface{}) error { sc.C <- e; return nil }
 func (sc *shortCircuit) Decode(e interface{}) error {
+    data := e.(*Dataset)
     v, ok := <- sc.C
     if !ok {
         return io.EOF
     }
 
-    reflect.ValueOf(e).Set(reflect.ValueOf(v))
+    *data = v.(Dataset)
     return nil
 }
 
