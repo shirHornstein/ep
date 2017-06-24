@@ -62,12 +62,8 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
     }
 
     for {
-        data, err := ex.Receive()
+        _, err := ex.Receive()
         if err != nil {
-            return err
-        }
-        err, ok := data.(*errorData)
-        if ok {
             return err
         }
     }
@@ -125,7 +121,15 @@ func (ex *exchange) Send(data Dataset) error {
 func (ex *exchange) Receive() (Dataset, error) {
     data := NewDataset()
     err := ex.DecodeNext(&data)
-    return data, err
+    if err != nil {
+        return nil, err
+    }
+
+    err, ok := data.(*errorData)
+    if ok {
+        return nil, err
+    }
+    return data, nil
 }
 
 // Close all open connections. If an error object is supplied, it's first
