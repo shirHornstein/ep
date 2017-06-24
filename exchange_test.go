@@ -15,8 +15,7 @@ func ExampleScatter_single() {
 
     data1 := NewDataset(Strs{"hello", "world"})
     data2 := NewDataset(Strs{"foo", "bar"})
-    runner := Pipeline(PassThrough(), Scatter())
-    runner, _ = dist.Distribute(runner, ":5551", ":5551")
+    runner, _ := dist.Distribute(Scatter(), ":5551", ":5551")
     data, err := testRun(runner, data1, data2)
     fmt.Println(data, err)
 
@@ -35,8 +34,7 @@ func TestScatterSingleNode(t *testing.T) {
 
     data1 := NewDataset(Strs{"hello", "world"})
     data2 := NewDataset(Strs{"foo", "bar"})
-    runner := Pipeline(PassThrough(), Scatter())
-    runner, err = dist.Distribute(runner, ":5551", ":5551")
+    runner, err := dist.Distribute(Scatter(), ":5551", ":5551")
     require.NoError(t, err)
 
     data, err := testRun(runner, data1, data2)
@@ -47,10 +45,26 @@ func TestScatterSingleNode(t *testing.T) {
 
 
 func TestScatterMulti(t *testing.T) {
-    ln, _ := net.Listen("tcp", ":5551")
-    dist := NewDistributer(ln)
-    defer dist.Close()
-    go dist.Start()
+    ln1, err := net.Listen("tcp", ":5551")
+    require.NoError(t, err)
+
+    dist1 := NewDistributer(ln1)
+    defer dist1.Close()
+    go dist1.Start()
+
+    ln2, err := net.Listen("tcp", ":5552")
+    require.NoError(t, err)
+
+    dist2 := NewDistributer(ln2)
+    defer dist2.Close()
+    go dist2.Start()
+
+    // data1 := NewDataset(Strs{"hello", "world"})
+    // data2 := NewDataset(Strs{"foo", "bar"})
+    // runner := Pipeline(PassThrough(), Scatter())
+    // runner, err = dist.Distribute(runner, ":5551", ":5551")
+
+
 
 
 //
