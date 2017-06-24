@@ -105,46 +105,27 @@ func (d *distributer) Distribute(runner Runner, this string, addrs ...string) (R
 // runners to synchronize a specific logical point in the code. We need to
 // ensure that both sides of the connection, when used with the same Uid,
 // resolve to the same connection
-func (d *distributer) Connect(addr string, uid string) (net.Conn, error) {
-    var err error
-    var conn net.Conn
-
+func (d *distributer) Connect(addr string, uid string) (conn net.Conn, err error) {
     from := d.addr
     if from < addr {
         // dial
         conn, err = d.dial(addr)
         if err != nil {
-            return nil, err
+            return
         }
 
         enc := gob.NewEncoder(conn)
         err = enc.Encode(&req{d.addr, nil, nil, uid})
-        if err != nil {
-            return nil, err
-        }
-
-        // wait for an ack on the other side
-
     } else {
         // listen, timeout after 1 second
         timer := time.NewTimer(time.Second)
+        defer timer.Stop()
+
         select {
         case conn = <- d.connCh(addr, uid):
             // let it through
         case <- timer.C:
             err = fmt.Errorf("ep: connect timeout; no incoming conn")
-        }
-
-        timer.Stop()
-        if err != nil {
-            return nil, err
-        }
-
-        // send the ack
-        enc := gob.NewEncoder(conn)
-        err = enc.Encode(&req{d.addr, nil, nil, uid})
-        if err != nil {
-            return nil, err
         }
     }
 

@@ -9,7 +9,7 @@ import (
 
 func ExampleScatter_single() {
     ln, _ := net.Listen("tcp", ":5551")
-    dist := NewDistributer(ln)
+    dist := NewDistributer(":5551", ln)
     go dist.Start()
     defer dist.Close()
 
@@ -22,13 +22,13 @@ func ExampleScatter_single() {
     // Output: [[hello world foo bar]] <nil>
 }
 
-// Tests the scattering when there's just one node - the whole thing should
+    // Tests the scattering when there's just one node - the whole thing should
 // be short-circuited to act as a pass-through
 func TestScatterSingleNode(t *testing.T) {
     ln, err := net.Listen("tcp", ":5551")
     require.NoError(t, err)
 
-    dist := NewDistributer(ln)
+    dist := NewDistributer(":5551", ln)
     go dist.Start()
     defer dist.Close()
 
@@ -48,14 +48,14 @@ func TestScatterMulti(t *testing.T) {
     ln1, err := net.Listen("tcp", ":5551")
     require.NoError(t, err)
 
-    dist1 := NewDistributer(ln1)
+    dist1 := NewDistributer(":5551", ln1)
     defer dist1.Close()
     go dist1.Start()
 
     ln2, err := net.Listen("tcp", ":5552")
     require.NoError(t, err)
 
-    dist2 := NewDistributer(ln2)
+    dist2 := NewDistributer(":5552", ln2)
     defer dist2.Close()
     go dist2.Start()
 

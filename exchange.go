@@ -3,6 +3,7 @@ package ep
 import (
     "io"
     "net"
+    "fmt"
     "context"
     "encoding/gob"
     "github.com/satori/go.uuid"
@@ -157,8 +158,8 @@ func (ex *exchange) DecodeNext(e *Dataset) error {
     }
 
     i := (ex.decsNext + 1) % len(ex.decs)
-
     err := ex.decs[i].Decode(e)
+    fmt.Println("DECODED", ex.conns[i], *e, err)
     if err == io.EOF || *e == nil {
         // remove the current decoder and try again
         ex.decs = append(ex.decs[:i], ex.decs[i + 1:]...)
