@@ -8,7 +8,7 @@ import (
     "github.com/satori/go.uuid"
 )
 
-var _ = registerGob(exchange{})
+var _ = registerGob(&exchange{})
 
 const (
     sendGather = 1

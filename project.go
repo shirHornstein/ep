@@ -4,7 +4,7 @@ import (
     "context"
 )
 
-var _ = registerGob(project{})
+var _ = registerGob(&project{})
 
 // Project returns a horizontal composite projection runner that dispatches
 // its input to all of the internal runners, and joins the result into a single
