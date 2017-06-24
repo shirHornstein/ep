@@ -75,6 +75,10 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
     for {
         data, err = ex.Receive()
         if err != nil {
+            if err == io.EOF {
+                err = nil
+            }
+
             return
         }
 
