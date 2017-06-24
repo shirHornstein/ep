@@ -310,6 +310,10 @@ func (sc *shortCircuit) Close() error {
 }
 
 func (sc *shortCircuit) Encode(e interface{}) error {
+    if sc.Closed {
+        return io.ErrClosedPipe
+    }
+
     // fmt.Println("SC: Encode", e)
     sc.C <- e;
     // fmt.Println("SC: Encoded", e)
@@ -317,6 +321,10 @@ func (sc *shortCircuit) Encode(e interface{}) error {
 }
 
 func (sc *shortCircuit) Decode(e interface{}) error {
+    if sc.Closed {
+        return io.ErrClosedPipe
+    }
+
     data := e.(*Dataset)
 
     // fmt.Println("SC: Decode")
@@ -338,7 +346,7 @@ func (sc *shortCircuit) Decode(e interface{}) error {
 }
 
 func newShortCircuit() *shortCircuit {
-    return &shortCircuit{make(chan interface{}, 1000), false}
+    return &shortCircuit{C: make(chan interface{}, 1000)}
 }
 
 
