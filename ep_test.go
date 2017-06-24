@@ -4,6 +4,8 @@ import (
     "context"
 )
 
+var _ = registerGob(Strs{})
+
 // ErrRunner is a Runner that immediately returns an error
 type ErrRunner struct { error }
 func (*ErrRunner) Returns() []Type { return []Type{} }
