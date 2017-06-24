@@ -64,11 +64,15 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
         for data := range inp {
             err = ex.Send(data)
             if err != nil {
+                fmt.Println("Err", err)
                 return
             }
         }
 
         err = ex.EncodeAll(nil) // TODO: replace with a real marker Dataset
+        if err != nil {
+            fmt.Println("Err", err)
+        }
     }()
 
     // listen to all nodes for incoming data
@@ -78,6 +82,8 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
         if err != nil {
             if err == io.EOF {
                 err = nil
+            } else {
+                fmt.Println("Err", err)
             }
 
             return
@@ -159,7 +165,6 @@ func (ex *exchange) DecodeNext(e *Dataset) error {
 
     i := (ex.decsNext + 1) % len(ex.decs)
     err := ex.decs[i].Decode(e)
-    fmt.Println("DECODED", ex.conns[i], *e, err)
     if err == io.EOF || *e == nil {
         // remove the current decoder and try again
         ex.decs = append(ex.decs[:i], ex.decs[i + 1:]...)
@@ -200,6 +205,8 @@ func (ex *exchange) Init(ctx context.Context) error {
             continue
         }
 
+        msg := "THIS " + thisNode + " OTHER " + n
+
         conn, err = dist.Connect(n, ex.Uid)
         if err != nil {
             return err
@@ -207,7 +214,7 @@ func (ex *exchange) Init(ctx context.Context) error {
 
         connsMap[n] = conn
         ex.conns = append(ex.conns, conn)
-        ex.encs = append(ex.encs, gob.NewEncoder(conn))
+        ex.encs = append(ex.encs, dbgEncoder{gob.NewEncoder(conn), msg})
     }
 
     // if we're also a destination, listen to all nodes
@@ -219,10 +226,12 @@ func (ex *exchange) Init(ctx context.Context) error {
             continue
         }
 
+        msg := "THIS " + thisNode + " OTHER " + n
+
         // if we already established a connection to this node from the targets,
         // re-use it. We don't need 2 uni-directional connections.
         if connsMap[n] != nil {
-            ex.decs = append(ex.decs, gob.NewDecoder(connsMap[n]))
+            ex.decs = append(ex.decs, dbgDecoder{gob.NewDecoder(connsMap[n]), msg})
             continue
         }
 
@@ -232,7 +241,7 @@ func (ex *exchange) Init(ctx context.Context) error {
         }
 
         ex.conns = append(ex.conns, conn)
-        ex.decs = append(ex.decs, gob.NewDecoder(conn))
+        ex.decs = append(ex.decs, dbgDecoder{gob.NewDecoder(conn), msg})
     }
 
     return nil
@@ -241,6 +250,22 @@ func (ex *exchange) Init(ctx context.Context) error {
 // interfqace for gob.Encoder/Decoder. Used to also implement the short-circuit.
 type encoder interface { Encode(interface{}) error }
 type decoder interface { Decode(interface{}) error }
+
+type dbgEncoder struct { encoder; msg string }
+func (enc dbgEncoder) Encode(e interface{}) error {
+    // fmt.Println("ENCODE", enc.msg, e)
+    err := enc.encoder.Encode(e)
+    // fmt.Println("ENCODE DONE", enc.msg, err)
+    return err
+}
+
+type dbgDecoder struct { decoder; msg string }
+func (dec dbgDecoder) Decode(e interface{}) error {
+    // fmt.Println("DECODE", dec.msg)
+    err := dec.decoder.Decode(e)
+    // fmt.Println("DECODE DONE", dec.msg, e, err)
+    return err
+}
 
 // shortCircuit implements io.Closer, encoder and dedocder and provides the
 // means to short-circuit internal communications within the same node. This is
