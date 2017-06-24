@@ -53,6 +53,8 @@ type exchange struct {
 
 func (ex *exchange) Returns() []Type { return []Type{Wildcard} }
 func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) {
+    thisNode := ctx.Value("ep.ThisNode").(string)
+
     defer func() { ex.Close(err) }()
     err = ex.Init(ctx)
     if err != nil {
@@ -64,26 +66,29 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
         for data := range inp {
             err = ex.Send(data)
             if err != nil {
-                fmt.Println("Err", err)
+                fmt.Println("Send Err", thisNode, err)
+                ex.Close(err)
                 return
             }
         }
 
         err = ex.EncodeAll(nil) // TODO: replace with a real marker Dataset
         if err != nil {
-            fmt.Println("Err", err)
+            fmt.Println("Send Nil Err", thisNode, err)
+            ex.Close(err)
         }
     }()
 
     // listen to all nodes for incoming data
-    var data Dataset
+    // var data Dataset
     for {
-        data, err = ex.Receive()
-        if err != nil {
-            if err == io.EOF {
+        data, err1 := ex.Receive()
+        if err1 != nil {
+            if err1 == io.EOF {
                 err = nil
-            } else {
-                fmt.Println("Err", err)
+            } else if err == nil {
+                fmt.Println("Receive Err", thisNode, err1, err)
+                err = err1
             }
 
             return
@@ -270,13 +275,20 @@ func (dec dbgDecoder) Decode(e interface{}) error {
 // shortCircuit implements io.Closer, encoder and dedocder and provides the
 // means to short-circuit internal communications within the same node. This is
 // in order to not complicate the generic nature of the exchange code
-type shortCircuit struct { C chan interface{} }
+type shortCircuit struct { C chan interface{}; Closed bool }
 func (sc *shortCircuit) Close() error {
-    close(sc.C); return nil
+    if sc.Closed {
+        return nil
+    }
+
+    sc.Closed = true
+    close(sc.C);
+    return nil
 }
 
 func (sc *shortCircuit) Encode(e interface{}) error {
-    sc.C <- e; return nil
+    sc.C <- e;
+    return nil
 }
 
 func (sc *shortCircuit) Decode(e interface{}) error {
@@ -296,5 +308,5 @@ func (sc *shortCircuit) Decode(e interface{}) error {
 }
 
 func newShortCircuit() *shortCircuit {
-    return &shortCircuit{make(chan interface{})}
+    return &shortCircuit{make(chan interface{}), false}
 }
