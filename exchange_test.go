@@ -22,7 +22,7 @@ func ExampleScatter_single() {
     // Output: [[hello world foo bar]] <nil>
 }
 
-    // Tests the scattering when there's just one node - the whole thing should
+// Tests the scattering when there's just one node - the whole thing should
 // be short-circuited to act as a pass-through
 func TestScatterSingleNode(t *testing.T) {
     ln, err := net.Listen("tcp", ":5551")
