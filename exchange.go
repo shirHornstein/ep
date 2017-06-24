@@ -9,7 +9,7 @@ import (
     "github.com/satori/go.uuid"
 )
 
-var _ = registerGob(&exchange{})
+var _ = registerGob(&exchange{}, &errorData{})
 
 const (
     sendGather = 1
@@ -54,14 +54,26 @@ type exchange struct {
 func (ex *exchange) Returns() []Type { return []Type{Wildcard} }
 func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) {
     thisNode := ctx.Value("ep.ThisNode").(string)
-
     defer func() { ex.Close(err) }()
+
     err = ex.Init(ctx)
     if err != nil {
         return
     }
 
-    // send the local data to the distributed target nodes
+    for {
+        data, err := ex.Receive()
+        if err != nil {
+            return err
+        }
+        err, ok := data.(*errorData)
+        if ok {
+            return err
+        }
+    }
+
+    return
+
     go func() {
         for data := range inp {
             err = ex.Send(data)
@@ -121,8 +133,8 @@ func (ex *exchange) Receive() (Dataset, error) {
 func (ex *exchange) Close(err error) error {
     var errOut error
     if err != nil {
-        // panic("not implemented")
-        // errOut = ex.EncodeAll(err)
+        var errData Dataset = &errorData{Err: err.Error()}
+        errOut = ex.EncodeAll(errData)
     }
 
     for _, conn := range ex.conns {
@@ -138,7 +150,7 @@ func (ex *exchange) Close(err error) error {
 // Encode an object to all destination connections
 func (ex *exchange) EncodeAll(e Dataset) (err error) {
     for _, enc := range ex.encs {
-        err1 := enc.Encode(e)
+        err1 := enc.Encode(&e)
         if err1 != nil {
             err = err1
         }
@@ -154,7 +166,7 @@ func (ex *exchange) EncodeNext(e Dataset) error {
     }
 
     ex.encsNext = (ex.encsNext + 1) % len(ex.encs)
-    return ex.encs[ex.encsNext].Encode(e)
+    return ex.encs[ex.encsNext].Encode(&e)
 }
 
 // Encode an object to a destination connection selected by partitioning
@@ -170,12 +182,12 @@ func (ex *exchange) DecodeNext(e *Dataset) error {
 
     i := (ex.decsNext + 1) % len(ex.decs)
     err := ex.decs[i].Decode(e)
-    if err == io.EOF || *e == nil {
+    if err != nil && err != io.EOF {
+        return err
+    } else if err == io.EOF || *e == nil {
         // remove the current decoder and try again
         ex.decs = append(ex.decs[:i], ex.decs[i + 1:]...)
         return ex.DecodeNext(e)
-    } else if err != nil {
-        return err
     }
 
     ex.decsNext = i
@@ -260,7 +272,7 @@ type dbgEncoder struct { encoder; msg string }
 func (enc dbgEncoder) Encode(e interface{}) error {
     // fmt.Println("ENCODE", enc.msg, e)
     err := enc.encoder.Encode(e)
-    // fmt.Println("ENCODE DONE", enc.msg, err)
+    // fmt.Println("ENCODE DONE", enc.msg, e, err)
     return err
 }
 
@@ -275,7 +287,11 @@ func (dec dbgDecoder) Decode(e interface{}) error {
 // shortCircuit implements io.Closer, encoder and dedocder and provides the
 // means to short-circuit internal communications within the same node. This is
 // in order to not complicate the generic nature of the exchange code
-type shortCircuit struct { C chan interface{}; Closed bool }
+type shortCircuit struct {
+    C chan interface{};
+    Closed bool
+}
+
 func (sc *shortCircuit) Close() error {
     if sc.Closed {
         return nil
@@ -283,17 +299,23 @@ func (sc *shortCircuit) Close() error {
 
     sc.Closed = true
     close(sc.C);
+    // fmt.Println("SC: Closed")
     return nil
 }
 
 func (sc *shortCircuit) Encode(e interface{}) error {
+    // fmt.Println("SC: Encode", e)
     sc.C <- e;
+    // fmt.Println("SC: Encoded", e)
     return nil
 }
 
 func (sc *shortCircuit) Decode(e interface{}) error {
     data := e.(*Dataset)
+
+    // fmt.Println("SC: Decode")
     v, ok := <- sc.C
+    // fmt.Println("SC: Decoded", v, ok)
     if !ok {
         return io.EOF
     }
@@ -301,12 +323,19 @@ func (sc *shortCircuit) Decode(e interface{}) error {
     if v == nil {
         *data = nil
     } else {
+        // fmt.Println("SC: Casting", v)
         *data = v.(Dataset)
+        // fmt.Println("SC: Casted")
     }
 
     return nil
 }
 
 func newShortCircuit() *shortCircuit {
-    return &shortCircuit{make(chan interface{}), false}
+    return &shortCircuit{make(chan interface{}, 1000), false}
 }
+
+
+type errorData struct { Dataset; Err string }
+func (*errorData) String() string { return "errorData" }
+func (data *errorData) Error() string { return data.Err }
