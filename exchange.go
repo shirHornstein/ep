@@ -61,9 +61,20 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
         return
     }
 
+    go func() {
+        for data := range inp {
+            err = ex.Send(data)
+            if err != nil {
+                ex.Close(err)
+                return
+            }
+        }
+    }()
+
     for {
         data, err := ex.Receive()
         if err != nil {
+            ex.Close(err)
             return err
         }
 
