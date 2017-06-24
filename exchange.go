@@ -96,7 +96,7 @@ func (ex *exchange) Send(data Dataset) error {
 
 func (ex *exchange) Receive() (Dataset, error) {
     data := NewDataset()
-    err := ex.DecodeNext(data)
+    err := ex.DecodeNext(&data)
     return data, err
 }
 
@@ -105,7 +105,7 @@ func (ex *exchange) Receive() (Dataset, error) {
 func (ex *exchange) Close(err error) error {
     var errOut error
     if err != nil {
-        panic("not implemented")
+        // panic("not implemented")
         // errOut = ex.EncodeAll(err)
     }
 
@@ -147,14 +147,15 @@ func (ex *exchange) EncodePartition(e Dataset) error {
 }
 
 // Decode an object from the next source connection in a round robin
-func (ex *exchange) DecodeNext(e Dataset) error {
+func (ex *exchange) DecodeNext(e *Dataset) error {
     if len(ex.decs) == 0 {
         return io.EOF
     }
 
     i := (ex.decsNext + 1) % len(ex.decs)
+
     err := ex.decs[i].Decode(e)
-    if err == io.EOF || e == nil {
+    if err == io.EOF || *e == nil {
         // remove the current decoder and try again
         ex.decs = append(ex.decs[:i], ex.decs[i + 1:]...)
         return ex.DecodeNext(e)
@@ -232,7 +233,6 @@ func (ex *exchange) Init(ctx context.Context) error {
     return nil
 }
 
-
 // interfqace for gob.Encoder/Decoder. Used to also implement the short-circuit.
 type encoder interface { Encode(interface{}) error }
 type decoder interface { Decode(interface{}) error }
@@ -241,8 +241,14 @@ type decoder interface { Decode(interface{}) error }
 // means to short-circuit internal communications within the same node. This is
 // in order to not complicate the generic nature of the exchange code
 type shortCircuit struct { C chan interface{} }
-func (sc *shortCircuit) Close() error { close(sc.C); return nil }
-func (sc *shortCircuit) Encode(e interface{}) error { sc.C <- e; return nil }
+func (sc *shortCircuit) Close() error {
+    close(sc.C); return nil
+}
+
+func (sc *shortCircuit) Encode(e interface{}) error {
+    sc.C <- e; return nil
+}
+
 func (sc *shortCircuit) Decode(e interface{}) error {
     data := e.(*Dataset)
     v, ok := <- sc.C
@@ -250,7 +256,12 @@ func (sc *shortCircuit) Decode(e interface{}) error {
         return io.EOF
     }
 
-    *data = v.(Dataset)
+    if v == nil {
+        *data = nil
+    } else {
+        *data = v.(Dataset)
+    }
+
     return nil
 }
 
