@@ -154,7 +154,11 @@ func (d *distributer) Serve(conn net.Conn) error {
         inp := make(chan Dataset, 1)
         close(inp)
 
-        return runner.Run(ctx, inp, out)
+        err = runner.Run(ctx, inp, out)
+        if err != nil {
+            fmt.Println("ep: runner error", err)
+            return err
+        }
     } else {
 
         // wait for someone to claim it.
