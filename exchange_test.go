@@ -61,7 +61,7 @@ func TestScatterMulti(t *testing.T) {
 
     data1 := NewDataset(Strs{"hello", "world"})
     data2 := NewDataset(Strs{"foo", "bar"})
-    runner, err := dist1.Distribute(Scatter(), ":5551", ":5551")
+    runner, err := dist1.Distribute(Scatter(), ":5551", ":5551", ":5552")
     require.NoError(t, err)
 
     data, err := testRun(runner, data1, data2)
