@@ -63,24 +63,24 @@ func (e *errDialer) Dial(addr string) (net.Conn, error) { return nil, e.Err }
 
 // Tests the scattering when there's just one node - the whole thing should
 // be short-circuited to act as a pass-through
-// func TestScatterSingleNode(t *testing.T) {
-//     ln, err := net.Listen("tcp", ":5551")
-//     require.NoError(t, err)
-//
-//     dist := NewDistributer(":5551", ln)
-//     go dist.Start()
-//     defer dist.Close()
-//
-//     data1 := NewDataset(Strs{"hello", "world"})
-//     data2 := NewDataset(Strs{"foo", "bar"})
-//     runner, err := dist.Distribute(Scatter(), ":5551", ":5551")
-//     require.NoError(t, err)
-//
-//     data, err := testRun(runner, data1, data2)
-//     require.NoError(t, err)
-//     require.Equal(t, 1, data.Width())
-//     require.Equal(t, 4, data.Len())
-// }
+func TestScatterSingleNode(t *testing.T) {
+    ln, err := net.Listen("tcp", ":5551")
+    require.NoError(t, err)
+
+    dist := NewDistributer(":5551", ln)
+    go dist.Start()
+    defer dist.Close()
+
+    data1 := NewDataset(Strs{"hello", "world"})
+    data2 := NewDataset(Strs{"foo", "bar"})
+    runner, err := dist.Distribute(Scatter(), ":5551", ":5551")
+    require.NoError(t, err)
+
+    data, err := testRun(runner, data1, data2)
+    require.NoError(t, err)
+    require.Equal(t, 1, data.Width())
+    require.Equal(t, 4, data.Len())
+}
 
 
 // func TestScatterMulti(t *testing.T) {
