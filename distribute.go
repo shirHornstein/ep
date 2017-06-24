@@ -151,6 +151,7 @@ func (d *distributer) Serve(conn net.Conn) error {
     dec := gob.NewDecoder(conn)
     err := dec.Decode(r)
     if err != nil {
+        fmt.Println("ep: distributer error", err)
         return err
     }
 
