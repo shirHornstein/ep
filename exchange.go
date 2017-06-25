@@ -29,14 +29,14 @@ func Scatter() Runner {
 // single node. In all other nodes it will produce no output, but on the main
 // node it will be passthrough from all of the other nodes
 func Gather() Runner {
-    return nil
+    return &exchange{Uid: uuid.NewV1().String(), SendTo: sendGather}
 }
 
 // Broadcast returns an exchange Runner that duplicates its input to all
 // other nodes. The output will be effectively a union of all of the inputs from
 // all nodes (order not guaranteed)
 func Broadcast() Runner {
-    return nil
+    return &exchange{Uid: uuid.NewV1().String(), SendTo: sendBroadcast}
 }
 
 // exchange is a Runner that exchanges data between peer nodes

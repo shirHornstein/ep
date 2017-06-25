@@ -4,6 +4,7 @@ import (
     "fmt"
     "net"
     "time"
+    "context"
     "testing"
     "github.com/stretchr/testify/require"
 )
@@ -28,9 +29,10 @@ func ExampleScatter() {
     go dist2.Start()
     defer dist2.Close()
 
+    runner, _ := dist1.Distribute(Scatter(), ":5551", ":5552")
+
     data1 := NewDataset(Strs{"hello", "world"})
     data2 := NewDataset(Strs{"foo", "bar"})
-    runner, _ := dist1.Distribute(Scatter(), ":5551", ":5552")
     data, err := testRun(runner, data1, data2)
     fmt.Println(data, err) // no gather - only one batch should return
 
@@ -64,11 +66,11 @@ func TestExchangeErr(t *testing.T) {
     defer dist3.Close()
     go dist3.Start()
 
-    data1 := NewDataset(Strs{"hello", "world"})
-    data2 := NewDataset(Strs{"foo", "bar"})
     runner, err := dist1.Distribute(Scatter(), ":5551", ":5552", ":5553")
     require.NoError(t, err)
 
+    data1 := NewDataset(Strs{"hello", "world"})
+    data2 := NewDataset(Strs{"foo", "bar"})
     data, err := testRun(runner, data1, data2)
     require.Equal(t, 0, data.Width())
     require.Error(t, err)
@@ -85,13 +87,64 @@ func TestScatterSingleNode(t *testing.T) {
     go dist.Start()
     defer dist.Close()
 
-    data1 := NewDataset(Strs{"hello", "world"})
-    data2 := NewDataset(Strs{"foo", "bar"})
     runner, err := dist.Distribute(Scatter(), ":5551")
     require.NoError(t, err)
 
+    data1 := NewDataset(Strs{"hello", "world"})
+    data2 := NewDataset(Strs{"foo", "bar"})
     data, err := testRun(runner, data1, data2)
     require.NoError(t, err)
     require.Equal(t, 1, data.Width())
     require.Equal(t, 4, data.Len())
+}
+
+func TestScatterGather(t *testing.T) {
+    ln1, err := net.Listen("tcp", ":5551")
+    require.NoError(t, err)
+
+    dist1 := NewDistributer(":5551", ln1)
+    defer dist1.Close()
+    go dist1.Start()
+
+    ln2, err := net.Listen("tcp", ":5552")
+    require.NoError(t, err)
+
+    dist2 := NewDistributer(":5552", ln2)
+    defer dist2.Close()
+    go dist2.Start()
+
+    runner := Pipeline(Scatter(), &nodeAddr{}, Gather())
+    runner, err = dist1.Distribute(runner, ":5551", ":5552")
+    require.NoError(t, err)
+
+    data1 := NewDataset(Strs{"hello", "world"})
+    data2 := NewDataset(Strs{"foo", "bar"})
+    data, err := testRun(runner, data1, data2)
+
+    require.NoError(t, err)
+    fmt.Println(data, err)
+    // require.Equal(t, 1, data.Width())
+    // require.Equal(t, 4, data.Len())
+}
+
+var _ = registerGob(&nodeAddr{})
+type nodeAddr struct {}
+func (*nodeAddr) Returns() []Type { return []Type{Wildcard, Str} }
+func (*nodeAddr) Run(ctx context.Context, inp, out chan Dataset) error {
+    addr := ctx.Value("ep.ThisNode").(string)
+    for data := range inp {
+        res := make(Strs, data.Len())
+        for i, _ := range res {
+            res[i] = addr
+        }
+
+        outset := []Data{}
+        for i := 0; i < data.Width(); i++ {
+            outset = append(outset, data.At(i))
+        }
+
+        outset = append(outset, res)
+        out <- NewDataset(outset...)
+    }
+    return nil
 }
