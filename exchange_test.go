@@ -8,6 +8,9 @@ import (
     "github.com/stretchr/testify/require"
 )
 
+type errDialer struct { net.Listener; Err error }
+func (e *errDialer) Dial(addr string) (net.Conn, error) { return nil, e.Err }
+
 func ExampleScatter_single() {
     ln, _ := net.Listen("tcp", ":5551")
     dist := NewDistributer(":5551", ln)
@@ -60,9 +63,6 @@ func TestExchangeErr(t *testing.T) {
     require.Error(t, err)
     require.Equal(t, "bad connection", err.Error())
 }
-
-type errDialer struct { net.Listener; Err error }
-func (e *errDialer) Dial(addr string) (net.Conn, error) { return nil, e.Err }
 
 // Tests the scattering when there's just one node - the whole thing should
 // be short-circuited to act as a pass-through
