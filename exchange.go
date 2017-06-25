@@ -4,6 +4,7 @@ import (
     "io"
     "net"
     "fmt"
+    "time"
     "context"
     "encoding/gob"
     "github.com/satori/go.uuid"
@@ -155,6 +156,11 @@ func (ex *exchange) Close(err error) error {
     if err != nil {
         var errData Dataset = &errorData{Err: err.Error()}
         errOut = ex.EncodeAll(errData)
+
+        // the error below is triggered very infrequently when we hang up too
+        // fast. 1ms timeout in case of error is a good tradeoff compared to
+        // the complexity of locks or a full hand-shake here.
+        time.Sleep(1 * time.Millisecond) // use of closed network connection
     }
 
     for _, conn := range ex.conns {
