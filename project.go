@@ -73,7 +73,7 @@ func (rs *project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 
     // collect & join the output from the Left and Right runners, in order.
     for {
-        result := dataset{}
+        result := []Data{}
         dataLeft, okLeft := <- left
         dataRight, okRight := <- right
 
@@ -90,7 +90,7 @@ func (rs *project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
             result = append(result, dataRight.At(i))
         }
 
-        out <- result
+        out <- NewDataset(result...)
     }
 
     return

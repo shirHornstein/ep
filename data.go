@@ -35,7 +35,7 @@ func Clone(data Data) Data {
 // effectlively the same as calling Data.Slice() multiple times. Dataset also
 // implements the Data interface is a valid input to this function.
 func Cut(data Data, cutpoints ...int) Data {
-    res := dataset{}
+    res := []Data{}
     var last int
     for _, i := range cutpoints {
         res = append(res, data.Slice(last, i))
@@ -46,7 +46,7 @@ func Cut(data Data, cutpoints ...int) Data {
         res = append(res, data.Slice(last, data.Len()))
     }
 
-    return res
+    return NewDataset(res...)
 }
 
 // Partition the Data into several sub-segments such that each segment contains

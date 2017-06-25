@@ -1,6 +1,6 @@
 package ep
 
-var _ = registerGob(dataset{}, &datasetType{})
+var _ = registerGob(NewDataset(), &datasetType{})
 
 // Dataset is a composite Data interface, containing several internal Data
 // objects. It's a Data in itself, but allows traversing and manipulating the
