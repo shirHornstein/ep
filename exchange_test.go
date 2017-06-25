@@ -11,6 +11,9 @@ import (
 type errDialer struct { net.Listener; Err error }
 func (e *errDialer) Dial(addr string) (net.Conn, error) { return nil, e.Err }
 
+// Example of Scatter with just 2 nodes. The datasets are scattered in round-
+// robin to the two nodes such that each node. Thus the output in the local node
+// just returns half of the output.
 func ExampleScatter() {
     ln1, _ := net.Listen("tcp", ":5551")
     dist1 := NewDistributer(":5551", ln1)
