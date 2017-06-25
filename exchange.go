@@ -5,6 +5,7 @@ import (
     "net"
     "fmt"
     "time"
+    "sync"
     "context"
     "encoding/gob"
     "github.com/satori/go.uuid"
@@ -54,6 +55,9 @@ type exchange struct {
 
 func (ex *exchange) Returns() []Type { return []Type{Wildcard} }
 func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) {
+    var wg sync.WaitGroup
+    defer wg.Wait() // don't leak the go-routine
+
     thisNode := ctx.Value("ep.ThisNode").(string)
     defer func() { ex.Close(err) }()
 
@@ -62,7 +66,9 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
         return
     }
 
+    wg.Add(1)
     go func() {
+        defer wg.Done()
         defer ex.EncodeAll(nil)
         for data := range inp {
             err = ex.Send(data)
