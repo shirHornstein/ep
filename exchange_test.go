@@ -9,7 +9,9 @@ import (
 )
 
 type errDialer struct { net.Listener; Err error }
-func (e *errDialer) Dial(addr string) (net.Conn, error) { return nil, e.Err }
+func (e *errDialer) Dial(net, addr string) (net.Conn, error) {
+    return nil, e.Err
+}
 
 // Example of Scatter with just 2 nodes. The datasets are scattered in
 // round-robin to the two nodes such that each node receives half of the

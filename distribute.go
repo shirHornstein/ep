@@ -28,16 +28,17 @@ type Distributer interface {
 }
 
 type dialer interface {
-    Dial(addr string) (net.Conn, error)
+    Dial(network, addr string) (net.Conn, error)
 }
 
 // NewDistributer creates a Distributer that can be used to distribute work of
 // Runners across multiple nodes in a cluster. Distributer must be started on
 // all node peers in order for them to receive work. You can also implement the
-// dialer interface (below) in order to provide your own connections:
+// dialer interface (implemented by net.Dialer) in order to provide your own
+// connections:
 //
 //      type dialer interface {
-//          Dial(addr string) (net.Conn, error)
+//          Dial(network, addr string) (net.Conn, error)
 //      }
 //
 func NewDistributer(addr string, listener net.Listener) Distributer {
@@ -69,7 +70,7 @@ func (d *distributer) Close() error {
 func (d *distributer) dial(addr string) (net.Conn, error) {
     dialer, ok := d.listener.(dialer)
     if ok {
-        return dialer.Dial(addr)
+        return dialer.Dial("tcp", addr)
     }
 
     return net.Dial("tcp", addr)
