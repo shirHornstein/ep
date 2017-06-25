@@ -86,28 +86,29 @@ func TestScatterSingleNode(t *testing.T) {
 }
 
 
-// func TestScatterMulti(t *testing.T) {
-//     ln1, err := net.Listen("tcp", ":5551")
-//     require.NoError(t, err)
-//
-//     dist1 := NewDistributer(":5551", ln1)
-//     defer dist1.Close()
-//     go dist1.Start()
-//
-//     ln2, err := net.Listen("tcp", ":5552")
-//     require.NoError(t, err)
-//
-//     dist2 := NewDistributer(":5552", ln2)
-//     defer dist2.Close()
-//     go dist2.Start()
-//
-//     data1 := NewDataset(Strs{"hello", "world"})
-//     data2 := NewDataset(Strs{"foo", "bar"})
-//     runner, err := dist1.Distribute(Scatter(), ":5551", ":5551", ":5552")
-//     require.NoError(t, err)
-//
-//     data, err := testRun(runner, data1, data2)
-//     require.NoError(t, err)
-//
-//     fmt.Println(data)
-// }
+func TestScatterMulti(t *testing.T) {
+    ln1, err := net.Listen("tcp", ":5551")
+    require.NoError(t, err)
+
+    dist1 := NewDistributer(":5551", ln1)
+    defer dist1.Close()
+    go dist1.Start()
+
+    ln2, err := net.Listen("tcp", ":5552")
+    require.NoError(t, err)
+
+    dist2 := NewDistributer(":5552", ln2)
+    defer dist2.Close()
+    go dist2.Start()
+
+    data1 := NewDataset(Strs{"hello", "world"})
+    data2 := NewDataset(Strs{"foo", "bar"})
+    runner, err := dist1.Distribute(Scatter(), ":5551", ":5551", ":5552")
+    require.NoError(t, err)
+
+    data, err := testRun(runner, data1, data2)
+    require.NoError(t, err)
+
+    // there's no gather, so only one of the batches should arrive here.
+    require.Equal(t, "[[foo bar]]", fmt.Sprintf("%v", data))
+}
