@@ -3,9 +3,7 @@ package ep
 import (
     "io"
     "net"
-    "fmt"
     "time"
-    "sync"
     "context"
     "encoding/gob"
     "github.com/satori/go.uuid"
@@ -55,10 +53,7 @@ type exchange struct {
 
 func (ex *exchange) Returns() []Type { return []Type{Wildcard} }
 func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) {
-    var wg sync.WaitGroup
-    defer wg.Wait() // don't leak the go-routine
-
-    thisNode := ctx.Value("ep.ThisNode").(string)
+    // thisNode := ctx.Value("ep.ThisNode").(string)
     defer func() { ex.Close(err) }()
 
     err = ex.Init(ctx)
@@ -66,67 +61,53 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
         return
     }
 
-    wg.Add(1)
+    // receive remote data from peers in a go-routine. Write the final error (or
+    // nil) to the channel when done.
+    errs := make(chan error)
     go func() {
-        defer wg.Done()
-        defer ex.EncodeAll(nil)
-        for data := range inp {
-            err = ex.Send(data)
-            if err != nil {
-                ex.Close(err)
+        defer close(errs)
+        for {
+            data, err := ex.Receive()
+            if err == io.EOF {
+                break
+            } else if err != nil {
+                errs <- err
                 return
             }
+
+            out <- data
         }
+
+        errs <- nil
     }()
 
-    for {
-        data, err := ex.Receive()
-        if err == io.EOF {
-            return nil
-        } else if err != nil {
-            ex.Close(err)
-            return err
-        }
+    // send the local data to the peers, until completion or error. Also listen
+    // for the completetion of the received go-routine above. When both sending
+    // and receiving is complete, exit. Upon error, exit early.
+    rcvDone := false
+    sndDone := false
+    for err == nil && (!rcvDone || !sndDone) {
+        select {
+        case data, ok := <- inp:
+            if !ok {
+                // the input is exhauted. Clean it up and notify peers that
+                // we're done sending data (they will use it to stop receiving
+                // from us).
+                sndDone = true
+                ex.EncodeAll(nil)
+                // inp = nil // block it in the next iteration (is it necessary?)
+                continue
+            }
 
-        out <- data
-    }
-
-    return
-
-    go func() {
-        for data := range inp {
             err = ex.Send(data)
-            if err != nil {
-                fmt.Println("Send Err", thisNode, err)
-                ex.Close(err)
-                return
-            }
+        case err = <- errs:
+            rcvDone = true // errors (or nil) from the receive go-routine
+        case <- ctx.Done():
+            err = ctx.Err() // context timeout or cancel
         }
-
-        err = ex.EncodeAll(nil) // TODO: replace with a real marker Dataset
-        if err != nil {
-            fmt.Println("Send Nil Err", thisNode, err)
-            ex.Close(err)
-        }
-    }()
-
-    // listen to all nodes for incoming data
-    // var data Dataset
-    for {
-        data, err1 := ex.Receive()
-        if err1 != nil {
-            if err1 == io.EOF {
-                err = nil
-            } else if err == nil {
-                fmt.Println("Receive Err", thisNode, err1, err)
-                err = err1
-            }
-
-            return
-        }
-
-        out <- data
     }
+
+    return err
 }
 
 // Send a dataset to destination nodes
