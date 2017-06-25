@@ -17,7 +17,7 @@ type Distributer interface {
 
     // Distribute a Runner to multiple node addresses. `this` is the address of
     // the current node issuing this distribution.
-    Distribute(runner Runner, this string, addrs ...string) (Runner, error)
+    Distribute(runner Runner, addrs ...string) (Runner, error)
 
     // Start listening for incoming Runners to run
     Start() error // blocks.
@@ -75,9 +75,9 @@ func (d *distributer) dial(addr string) (net.Conn, error) {
     return net.Dial("tcp", addr)
 }
 
-func (d *distributer) Distribute(runner Runner, this string, addrs ...string) (Runner, error) {
+func (d *distributer) Distribute(runner Runner, addrs ...string) (Runner, error) {
     for _, addr := range addrs {
-        if addr == this {
+        if addr == d.addr {
             continue
         }
 
@@ -88,15 +88,15 @@ func (d *distributer) Distribute(runner Runner, this string, addrs ...string) (R
 
         defer conn.Close()
         enc := gob.NewEncoder(conn)
-        err = enc.Encode(&req{this, runner, addrs, ""})
+        err = enc.Encode(&req{d.addr, runner, addrs, ""})
         if err != nil {
             return nil, err
         }
     }
 
     runner = WithValue(runner, "ep.AllNodes", addrs)
-    runner = WithValue(runner, "ep.MasterNode", this)
-    runner = WithValue(runner, "ep.ThisNode", this)
+    runner = WithValue(runner, "ep.MasterNode", d.addr)
+    runner = WithValue(runner, "ep.ThisNode", d.addr)
     runner = WithValue(runner, "ep.Distributer", d)
     return runner, nil
 }

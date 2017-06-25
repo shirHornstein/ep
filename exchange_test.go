@@ -28,7 +28,7 @@ func ExampleScatter() {
 
     data1 := NewDataset(Strs{"hello", "world"})
     data2 := NewDataset(Strs{"foo", "bar"})
-    runner, _ := dist1.Distribute(Scatter(), ":5551", ":5551", ":5552")
+    runner, _ := dist1.Distribute(Scatter(), ":5551", ":5552")
     data, err := testRun(runner, data1, data2)
     fmt.Println(data, err) // no gather - only one batch should return
 
@@ -64,7 +64,7 @@ func TestExchangeErr(t *testing.T) {
 
     data1 := NewDataset(Strs{"hello", "world"})
     data2 := NewDataset(Strs{"foo", "bar"})
-    runner, err := dist1.Distribute(Scatter(), ":5551", ":5551", ":5552", ":5553")
+    runner, err := dist1.Distribute(Scatter(), ":5551", ":5552", ":5553")
     require.NoError(t, err)
 
     data, err := testRun(runner, data1, data2)
@@ -85,7 +85,7 @@ func TestScatterSingleNode(t *testing.T) {
 
     data1 := NewDataset(Strs{"hello", "world"})
     data2 := NewDataset(Strs{"foo", "bar"})
-    runner, err := dist.Distribute(Scatter(), ":5551", ":5551")
+    runner, err := dist.Distribute(Scatter(), ":5551")
     require.NoError(t, err)
 
     data, err := testRun(runner, data1, data2)
