@@ -90,12 +90,15 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
         select {
         case data, ok := <- inp:
             if !ok {
-                // the input is exhauted. Clean it up and notify peers that
-                // we're done sending data (they will use it to stop receiving
-                // from us).
-                sndDone = true
+                // the input is exhauted. Notify peers that we're done sending
+                // data (they will use it to stop listening to data from us).
                 ex.EncodeAll(nil)
-                // inp = nil // block it in the next iteration (is it necessary?)
+                sndDone = true
+
+                // inp is closed. If we keep iterating, it will infinitely
+                // resolve to (nil, true). Nill-ify it to block it on the next
+                // iteration.
+                inp = nil
                 continue
             }
 
