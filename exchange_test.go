@@ -3,6 +3,7 @@ package ep
 import (
     "fmt"
     "net"
+    "time"
     "testing"
     "github.com/stretchr/testify/require"
 )
@@ -25,6 +26,8 @@ func ExampleScatter_single() {
 // Test that errors are transmitted across the network (an error in one node
 // is reported to the calling node).
 func TestExchangeErr(t *testing.T) {
+    defer time.Sleep(1 * time.Millisecond) // bind: address already in use
+
     ln1, err := net.Listen("tcp", ":5551")
     require.NoError(t, err)
 
