@@ -9,7 +9,7 @@ import (
     "github.com/satori/go.uuid"
 )
 
-var _ = registerGob(&exchange{}, &errorData{})
+var _ = registerGob(&exchange{}, &dataReq{}, &errMsg{})
 
 const (
     sendGather = 1
@@ -92,8 +92,7 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
             if !ok {
                 // the input is exhauted. Notify peers that we're done sending
                 // data (they will use it to stop listening to data from us).
-                var eof Dataset = &errorData{Err: io.EOF.Error()}
-                ex.EncodeAll(eof)
+                ex.EncodeAll(io.EOF)
                 sndDone = true
 
                 // inp is closed. If we keep iterating, it will infinitely
@@ -127,9 +126,7 @@ func (ex *exchange) Send(data Dataset) error {
 }
 
 func (ex *exchange) Receive() (Dataset, error) {
-    data := NewDataset()
-    err := ex.DecodeNext(&data)
-    return data, err
+    return ex.DecodeNext()
 }
 
 // Close all open connections. If an error object is supplied, it's first
@@ -137,8 +134,7 @@ func (ex *exchange) Receive() (Dataset, error) {
 func (ex *exchange) Close(err error) error {
     var errOut error
     if err != nil {
-        var errData Dataset = &errorData{Err: err.Error()}
-        errOut = ex.EncodeAll(errData)
+        errOut = ex.EncodeAll(err)
 
         // the error below is triggered very infrequently when we hang up too
         // fast. 1ms timeout in case of error is a good tradeoff compared to
@@ -157,9 +153,16 @@ func (ex *exchange) Close(err error) error {
 }
 
 // Encode an object to all destination connections
-func (ex *exchange) EncodeAll(e Dataset) (err error) {
+func (ex *exchange) EncodeAll(e interface{}) (err error) {
+    err, _ = e.(error)
+    if err != nil {
+        e = &errMsg{err.Error()}
+        err = nil
+    }
+
+    req := &dataReq{e}
     for _, enc := range ex.encs {
-        err1 := enc.Encode(&e)
+        err1 := enc.Encode(req)
         if err1 != nil {
             err = err1
         }
@@ -169,44 +172,50 @@ func (ex *exchange) EncodeAll(e Dataset) (err error) {
 }
 
 // Encode an object to the next destination connection in a round robin
-func (ex *exchange) EncodeNext(e Dataset) error {
+func (ex *exchange) EncodeNext(e interface{}) error {
     if len(ex.encs) == 0 {
         return io.ErrClosedPipe
     }
 
+    req := &dataReq{e}
     ex.encsNext = (ex.encsNext + 1) % len(ex.encs)
-    return ex.encs[ex.encsNext].Encode(&e)
+    return ex.encs[ex.encsNext].Encode(req)
 }
 
 // Encode an object to a destination connection selected by partitioning
-func (ex *exchange) EncodePartition(e Dataset) error {
+func (ex *exchange) EncodePartition(e interface{}) error {
     return nil
 }
 
 // Decode an object from the next source connection in a round robin
-func (ex *exchange) DecodeNext(e *Dataset) error {
+func (ex *exchange) DecodeNext() (Dataset, error) {
     if len(ex.decs) == 0 {
-        return io.EOF
+        return nil, io.EOF
     }
 
     i := (ex.decsNext + 1) % len(ex.decs)
-    err := ex.decs[i].Decode(e)
 
+    req := &dataReq{}
+    err := ex.decs[i].Decode(req)
+    data := req.Payload
     if err == nil {
-        err, _ = (*e).(error)
+        err, _ = data.(error)
     }
 
-    isEOF := err != nil && err.Error() == "EOF"
-    if err != nil && !isEOF {
-        return err
-    } else if isEOF {
+    if err != nil && err.Error() == io.EOF.Error() {
+        err = io.EOF
+    }
+
+    if err == io.EOF {
         // remove the current decoder and try again
         ex.decs = append(ex.decs[:i], ex.decs[i + 1:]...)
-        return ex.DecodeNext(e)
+        return ex.DecodeNext()
+    } else if err != nil {
+        return nil, err
     }
 
     ex.decsNext = i
-    return nil
+    return data.(Dataset), nil
 }
 
 // initialize the connections, encoders & decoders
@@ -305,6 +314,7 @@ func (dec dbgDecoder) Decode(e interface{}) error {
 type shortCircuit struct {
     C chan interface{};
     Closed bool
+    all []interface{}
 }
 
 func (sc *shortCircuit) Close() error {
@@ -323,34 +333,19 @@ func (sc *shortCircuit) Encode(e interface{}) error {
         return io.ErrClosedPipe
     }
 
-    // fmt.Println("SC: Encode", e)
     sc.C <- e;
     // fmt.Println("SC: Encoded", e)
     return nil
 }
 
 func (sc *shortCircuit) Decode(e interface{}) error {
-    if sc.Closed {
-        return io.ErrClosedPipe
-    }
-
-    data := e.(*Dataset)
-
-    // fmt.Println("SC: Decode")
+    req := e.(*dataReq)
     v, ok := <- sc.C
-    // fmt.Println("SC: Decoded", v, ok)
     if !ok {
         return io.EOF
     }
 
-    if v == nil {
-        *data = nil
-    } else {
-        // fmt.Println("SC: Casting", v)
-        *data = *v.(*Dataset)
-        // fmt.Println("SC: Casted")
-    }
-
+    req.Payload = v.(*dataReq).Payload
     return nil
 }
 
@@ -358,7 +353,6 @@ func newShortCircuit() *shortCircuit {
     return &shortCircuit{C: make(chan interface{}, 1000)}
 }
 
-
-type errorData struct { Dataset; Err string }
-func (*errorData) String() string { return "errorData" }
-func (data *errorData) Error() string { return data.Err }
+type dataReq struct { Payload interface{} }
+type errMsg struct { Msg string }
+func (err *errMsg) Error() string { return err.Msg }
