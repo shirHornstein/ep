@@ -108,7 +108,13 @@ func (d *distributer) Distribute(runner Runner, addrs ...string) (Runner, error)
             return nil, err
         }
 
+        _, err = conn.Write([]byte{'R'}) // Runner connection
+
         defer conn.Close()
+        if err != nil {
+            return nil, err
+        }
+
         enc := gob.NewEncoder(conn)
         err = enc.Encode(&req{d.addr, runner, addrs, ""})
         if err != nil {
@@ -136,6 +142,12 @@ func (d *distributer) Connect(addr string, uid string) (conn net.Conn, err error
             return
         }
 
+        _, err = conn.Write([]byte{'D'}) // Runner connection
+        if err != nil {
+            conn.Close()
+            return nil, err
+        }
+
         enc := gob.NewEncoder(conn)
         err = enc.Encode(&req{d.addr, nil, nil, uid})
     } else {
@@ -155,15 +167,21 @@ func (d *distributer) Connect(addr string, uid string) (conn net.Conn, err error
 }
 
 func (d *distributer) Serve(conn net.Conn) error {
-    r := &req{}
-    dec := gob.NewDecoder(conn)
-    err := dec.Decode(r)
+    b := []byte{0}
+    _, err := conn.Read(b)
     if err != nil {
-        fmt.Println("ep: distributer error", err)
         return err
     }
 
-    if r.Runner != nil {
+    if b[0] == 'R' {
+        r := &req{}
+        dec := gob.NewDecoder(conn)
+        err := dec.Decode(r)
+        if err != nil {
+            fmt.Println("ep: distributer error", err)
+            return err
+        }
+
         ctx := context.Background()
 
         runner := r.Runner
@@ -182,6 +200,14 @@ func (d *distributer) Serve(conn net.Conn) error {
             return err
         }
     } else {
+
+        r := &req{}
+        dec := gob.NewDecoder(conn)
+        err := dec.Decode(r)
+        if err != nil {
+            fmt.Println("ep: distributer error", err)
+            return err
+        }
 
         // wait for someone to claim it.
         d.connCh(r.From, r.Uid) <- conn
