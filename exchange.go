@@ -128,15 +128,7 @@ func (ex *exchange) Send(data Dataset) error {
 func (ex *exchange) Receive() (Dataset, error) {
     data := NewDataset()
     err := ex.DecodeNext(&data)
-    if err != nil {
-        return nil, err
-    }
-
-    err, ok := data.(*errorData)
-    if ok {
-        return nil, err
-    }
-    return data, nil
+    return data, err
 }
 
 // Close all open connections. If an error object is supplied, it's first
@@ -198,6 +190,11 @@ func (ex *exchange) DecodeNext(e *Dataset) error {
 
     i := (ex.decsNext + 1) % len(ex.decs)
     err := ex.decs[i].Decode(e)
+
+    if err == nil {
+        err, _ = (*e).(error)
+    }
+
     if err != nil && err != io.EOF {
         return err
     } else if err == io.EOF || *e == nil {
