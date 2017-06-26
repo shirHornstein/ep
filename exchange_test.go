@@ -127,6 +127,13 @@ func TestScatterGather(t *testing.T) {
     // require.Equal(t, 4, data.Len())
 }
 
+// regression - uniqueness in Uid generation per generated exchange function
+func TestScatterUnique(t *testing.T) {
+    s1 := Scatter().(*exchange)
+    s2 := Scatter().(*exchange)
+    require.NotEqual(t, s1.Uid, s2.Uid)
+}
+
 var _ = registerGob(&nodeAddr{})
 type nodeAddr struct {}
 func (*nodeAddr) Returns() []Type { return []Type{Wildcard, Str} }
