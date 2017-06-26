@@ -122,9 +122,7 @@ func TestScatterGather(t *testing.T) {
     data, err := testRun(runner, data1, data2)
 
     require.NoError(t, err)
-    fmt.Println(data, err)
-    // require.Equal(t, 1, data.Width())
-    // require.Equal(t, 4, data.Len())
+    require.Equal(t, "[[hello world foo bar] [:5552 :5552 :5551 :5551]]", fmt.Sprintf("%v", data))
 }
 
 // regression - uniqueness in Uid generation per generated exchange function
