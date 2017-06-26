@@ -92,8 +92,8 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
             if !ok {
                 // the input is exhauted. Notify peers that we're done sending
                 // data (they will use it to stop listening to data from us).
-                var errData Dataset = &errorData{Err: io.EOF.Error()}
-                ex.EncodeAll(errData)
+                var eof Dataset = &errorData{Err: io.EOF.Error()}
+                ex.EncodeAll(eof)
                 sndDone = true
 
                 // inp is closed. If we keep iterating, it will infinitely
