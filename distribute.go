@@ -5,6 +5,7 @@ import (
     "fmt"
     "sync"
     "time"
+    "strings"
     "context"
     "encoding/gob"
 )
@@ -148,8 +149,18 @@ func (d *distributer) Connect(addr string, uid string) (conn net.Conn, err error
             return nil, err
         }
 
-        enc := gob.NewEncoder(conn)
-        err = enc.Encode(&req{d.addr, nil, nil, uid})
+        key := d.addr + "^" + uid
+        _, err = conn.Write([]byte{byte(len(key))})
+        if err != nil {
+            conn.Close()
+            return nil, err
+        }
+
+        _, err = conn.Write([]byte(key))
+        if err != nil {
+            conn.Close()
+            return nil, err
+        }
     } else {
         // listen, timeout after 1 second
         timer := time.NewTimer(time.Second)
@@ -201,16 +212,26 @@ func (d *distributer) Serve(conn net.Conn) error {
         }
     } else {
 
-        r := &req{}
-        dec := gob.NewDecoder(conn)
-        err := dec.Decode(r)
+        // read the len byte
+        len := []byte{0}
+        _, err := conn.Read(len)
         if err != nil {
-            fmt.Println("ep: distributer error", err)
             return err
         }
 
+        keyb := make([]byte, int(len[0]))
+        _, err = conn.Read(keyb)
+        if err != nil {
+            return err
+        }
+
+        key := string(keyb)
+        comps := strings.Split(key, "^")
+        from := comps[0]
+        uid := comps[1]
+
         // wait for someone to claim it.
-        d.connCh(r.From, r.Uid) <- conn
+        d.connCh(from, uid) <- conn
     }
     return nil
 }
