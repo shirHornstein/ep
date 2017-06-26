@@ -42,7 +42,7 @@ type dialer interface {
 //      }
 //
 func NewDistributer(addr string, listener net.Listener) Distributer {
-    return &distributer{listener, addr, make(map[string]chan net.Conn), &sync.Mutex{}}
+    return &distributer{listener, addr, make(map[string]chan net.Conn), &sync.Mutex{}, make(chan error, 1)}
 }
 
 type distributer struct {
@@ -50,9 +50,11 @@ type distributer struct {
     addr string
     connsMap map[string]chan net.Conn
     l sync.Locker
+    closeCh chan error
 }
 
 func (d *distributer) Start() error {
+    defer close(d.closeCh)
     for {
         conn, err := d.listener.Accept()
         if err != nil {
@@ -64,7 +66,17 @@ func (d *distributer) Start() error {
 }
 
 func (d *distributer) Close() error {
-    return d.listener.Close()
+    err := d.listener.Close()
+    if err != nil {
+        return err
+    }
+
+    // wait for Listen() above it to actually close
+    // otherwise, tests or code that attempts to re-bind to the same address
+    // will infrequently fail with "bind: address already in use" because while
+    // the listener is closed, there's still one pending Accept()
+    <- d.closeCh
+    return nil
 }
 
 func (d *distributer) dial(addr string) (net.Conn, error) {
