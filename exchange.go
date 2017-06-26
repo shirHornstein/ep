@@ -195,9 +195,10 @@ func (ex *exchange) DecodeNext(e *Dataset) error {
         err, _ = (*e).(error)
     }
 
-    if err != nil && err != io.EOF {
+    isEOF := err != nil && err.Error() == "EOF"
+    if err != nil && !isEOF {
         return err
-    } else if err == io.EOF || *e == nil {
+    } else if isEOF || *e == nil {
         // remove the current decoder and try again
         ex.decs = append(ex.decs[:i], ex.decs[i + 1:]...)
         return ex.DecodeNext(e)
