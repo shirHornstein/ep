@@ -92,7 +92,8 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
             if !ok {
                 // the input is exhauted. Notify peers that we're done sending
                 // data (they will use it to stop listening to data from us).
-                ex.EncodeAll(nil)
+                var errData Dataset = &errorData{Err: io.EOF.Error()}
+                ex.EncodeAll(errData)
                 sndDone = true
 
                 // inp is closed. If we keep iterating, it will infinitely
@@ -198,7 +199,7 @@ func (ex *exchange) DecodeNext(e *Dataset) error {
     isEOF := err != nil && err.Error() == "EOF"
     if err != nil && !isEOF {
         return err
-    } else if isEOF || *e == nil {
+    } else if isEOF {
         // remove the current decoder and try again
         ex.decs = append(ex.decs[:i], ex.decs[i + 1:]...)
         return ex.DecodeNext(e)
