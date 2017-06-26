@@ -1,6 +1,7 @@
 package ep
 
 import (
+    "io"
     "net"
     "fmt"
     "sync"
@@ -109,7 +110,10 @@ func (d *distributer) Distribute(runner Runner, addrs ...string) (Runner, error)
             return nil, err
         }
 
-        _, err = conn.Write([]byte{'R'}) // Runner connection
+        err = writeStr(conn, "R") // runner connection
+        if err != nil {
+            return nil, err
+        }
 
         defer conn.Close()
         if err != nil {
@@ -143,23 +147,14 @@ func (d *distributer) Connect(addr string, uid string) (conn net.Conn, err error
             return
         }
 
-        _, err = conn.Write([]byte{'D'}) // Runner connection
+        err = writeStr(conn, "D") // Data connection
         if err != nil {
-            conn.Close()
-            return nil, err
+            return
         }
 
-        key := d.addr + "^" + uid
-        _, err = conn.Write([]byte{byte(len(key))})
+        err = writeStr(conn, d.addr + "^" + uid)
         if err != nil {
-            conn.Close()
-            return nil, err
-        }
-
-        _, err = conn.Write([]byte(key))
-        if err != nil {
-            conn.Close()
-            return nil, err
+            return
         }
     } else {
         // listen, timeout after 1 second
@@ -178,13 +173,12 @@ func (d *distributer) Connect(addr string, uid string) (conn net.Conn, err error
 }
 
 func (d *distributer) Serve(conn net.Conn) error {
-    b := []byte{0}
-    _, err := conn.Read(b)
+    type_, err := readStr(conn)
     if err != nil {
         return err
     }
 
-    if b[0] == 'R' {
+    if type_ == "R" {
         r := &req{}
         dec := gob.NewDecoder(conn)
         err := dec.Decode(r)
@@ -210,29 +204,23 @@ func (d *distributer) Serve(conn net.Conn) error {
             fmt.Println("ep: runner error", err)
             return err
         }
-    } else {
+    } else if type_ == "D" {
 
-        // read the len byte
-        len := []byte{0}
-        _, err := conn.Read(len)
+        key, err := readStr(conn)
         if err != nil {
             return err
         }
 
-        keyb := make([]byte, int(len[0]))
-        _, err = conn.Read(keyb)
-        if err != nil {
-            return err
-        }
-
-        key := string(keyb)
         comps := strings.Split(key, "^")
         from := comps[0]
         uid := comps[1]
 
         // wait for someone to claim it.
         d.connCh(from, uid) <- conn
+    } else {
+        return fmt.Errorf("Unrecognized connection type: ", type_)
     }
+
     return nil
 }
 
@@ -262,4 +250,24 @@ func WithValue(r Runner, k, v interface{}) Runner {
 type ctxRunner struct { Runner; K interface{}; V interface{} }
 func (r *ctxRunner) Run(ctx context.Context, inp, out chan Dataset) error {
     return r.Runner.Run(context.WithValue(ctx, r.K, r.V), inp, out)
+}
+
+// write a null-terminated string to a writer
+func writeStr(w io.Writer, s string) error {
+    _, err := w.Write(append([]byte(s), 0))
+    return err
+}
+
+func readStr(r io.Reader) (s string, err error) {
+    b := []byte{0}
+    for {
+        _, err = r.Read(b)
+        if err != nil {
+            return
+        } else if b[0] == 0 {
+            return
+        }
+
+        s += string(b[0])
+    }
 }
