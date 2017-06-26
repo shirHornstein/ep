@@ -6,7 +6,6 @@ import (
     "fmt"
     "sync"
     "time"
-    "strings"
     "context"
     "encoding/gob"
 )
@@ -152,7 +151,7 @@ func (d *distributer) Connect(addr string, uid string) (conn net.Conn, err error
             return
         }
 
-        err = writeStr(conn, d.addr + "^" + uid)
+        err = writeStr(conn, d.addr + ":" + uid)
         if err != nil {
             return
         }
@@ -162,7 +161,7 @@ func (d *distributer) Connect(addr string, uid string) (conn net.Conn, err error
         defer timer.Stop()
 
         select {
-        case conn = <- d.connCh(addr, uid):
+        case conn = <- d.connCh(addr + ":" + uid):
             // let it through
         case <- timer.C:
             err = fmt.Errorf("ep: connect timeout; no incoming conn")
@@ -211,12 +210,8 @@ func (d *distributer) Serve(conn net.Conn) error {
             return err
         }
 
-        comps := strings.Split(key, "^")
-        from := comps[0]
-        uid := comps[1]
-
         // wait for someone to claim it.
-        d.connCh(from, uid) <- conn
+        d.connCh(key) <- conn
     } else {
         return fmt.Errorf("Unrecognized connection type: ", type_)
     }
@@ -224,8 +219,8 @@ func (d *distributer) Serve(conn net.Conn) error {
     return nil
 }
 
-func (d *distributer) connCh(addr, uid string) (chan net.Conn) {
-    k := addr + ":" + uid
+func (d *distributer) connCh(k string) (chan net.Conn) {
+    // k := addr + ":" + uid
     d.l.Lock()
     defer d.l.Unlock()
     if d.connsMap[k] == nil {
