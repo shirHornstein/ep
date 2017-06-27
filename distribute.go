@@ -155,6 +155,8 @@ func (d *distributer) Serve(conn net.Conn) error {
         // wait for someone to claim it.
         d.connCh(key) <- conn
     } else if (type_ == "X") { // execute runner connection
+        defer conn.Close()
+
         r := &distRunner{d: d}
         dec := gob.NewDecoder(conn)
         err := dec.Decode(r)
@@ -173,6 +175,8 @@ func (d *distributer) Serve(conn net.Conn) error {
             return err
         }
     } else {
+        defer conn.Close()
+        
         err := fmt.Errorf("unrecognized connection type: %s", type_)
         fmt.Println("ep: " + err.Error())
         return err
@@ -245,6 +249,7 @@ func writeStr(w io.Writer, s string) error {
     return err
 }
 
+// read a null-terminated string from a reader
 func readStr(r io.Reader) (s string, err error) {
     b := []byte{0}
     for {
