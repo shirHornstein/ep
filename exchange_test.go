@@ -29,7 +29,7 @@ func ExampleScatter() {
     go dist2.Start()
     defer dist2.Close()
 
-    runner, _ := dist1.Distribute(Scatter(), ":5551", ":5552")
+    runner := dist1.Distribute(Scatter(), ":5551", ":5552")
 
     data1 := NewDataset(Strs{"hello", "world"})
     data2 := NewDataset(Strs{"foo", "bar"})
@@ -66,8 +66,7 @@ func TestExchangeErr(t *testing.T) {
     defer dist3.Close()
     go dist3.Start()
 
-    runner, err := dist1.Distribute(Scatter(), ":5551", ":5552", ":5553")
-    require.NoError(t, err)
+    runner := dist1.Distribute(Scatter(), ":5551", ":5552", ":5553")
 
     data1 := NewDataset(Strs{"hello", "world"})
     data2 := NewDataset(Strs{"foo", "bar"})
@@ -87,8 +86,7 @@ func TestScatterSingleNode(t *testing.T) {
     go dist.Start()
     defer dist.Close()
 
-    runner, err := dist.Distribute(Scatter(), ":5551")
-    require.NoError(t, err)
+    runner := dist.Distribute(Scatter(), ":5551")
 
     data1 := NewDataset(Strs{"hello", "world"})
     data2 := NewDataset(Strs{"foo", "bar"})
@@ -114,8 +112,7 @@ func TestScatterGather(t *testing.T) {
     go dist2.Start()
 
     runner := Pipeline(Scatter(), &nodeAddr{}, Gather())
-    runner, err = dist1.Distribute(runner, ":5551", ":5552")
-    require.NoError(t, err)
+    runner = dist1.Distribute(runner, ":5551", ":5552")
 
     data1 := NewDataset(Strs{"hello", "world"})
     data2 := NewDataset(Strs{"foo", "bar"})

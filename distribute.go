@@ -18,7 +18,7 @@ type Distributer interface {
 
     // Distribute a Runner to multiple node addresses. `this` is the address of
     // the current node issuing this distribution.
-    Distribute(runner Runner, addrs ...string) (Runner, error)
+    Distribute(runner Runner, addrs ...string) Runner
 
     // Start listening for incoming Runners to run
     Start() error // blocks.
@@ -98,8 +98,8 @@ func (d *distributer) dial(addr string) (net.Conn, error) {
     return net.Dial("tcp", addr)
 }
 
-func (d *distributer) Distribute(runner Runner, addrs ...string) (Runner, error) {
-    return &distRunner{runner, addrs, d.addr, d, true}, nil
+func (d *distributer) Distribute(runner Runner, addrs ...string) Runner {
+    return &distRunner{runner, addrs, d.addr, d, true}
 }
 
 // Connect to a node address for the given uid. Used by the individual exchange
@@ -191,17 +191,8 @@ func (d *distributer) connCh(k string) (chan net.Conn) {
     return d.connsMap[k]
 }
 
-// WithValue creates a new Runner that adds the key and value to the context
-// before calling its internal input Runner
-func WithValue(r Runner, k, v interface{}) Runner {
-    return &ctxRunner{r, k, v}
-}
-
-type ctxRunner struct { Runner; K interface{}; V interface{} }
-func (r *ctxRunner) Run(ctx context.Context, inp, out chan Dataset) error {
-    return r.Runner.Run(context.WithValue(ctx, r.K, r.V), inp, out)
-}
-
+// distRunner wraps around a runner, and upon the initial call to Run, it
+// distributes the runner to all nodes and runs them in parallel.
 type distRunner struct { Runner; Nodes []string; Master string; d *distributer; isMain bool }
 
 func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) error {
