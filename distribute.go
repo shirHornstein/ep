@@ -10,7 +10,7 @@ import (
     "encoding/gob"
 )
 
-var _ = registerGob(req{})
+var _ = registerGob(req{}, &distRunner{})
 
 // Distributer is an object that can distribute Runners to run in parallel on
 // multiple nodes.
@@ -99,6 +99,9 @@ func (d *distributer) dial(addr string) (net.Conn, error) {
 }
 
 func (d *distributer) Distribute(runner Runner, addrs ...string) (Runner, error) {
+    return &distRunner{runner, addrs, d.addr, d, true}, nil
+
+
     for _, addr := range addrs {
         if addr == d.addr {
             continue
@@ -177,7 +180,15 @@ func (d *distributer) Serve(conn net.Conn) error {
         return err
     }
 
-    if type_ == "R" {
+    if type_ == "D" { // data connection
+        key, err := readStr(conn)
+        if err != nil {
+            return err
+        }
+
+        // wait for someone to claim it.
+        d.connCh(key) <- conn
+    } else if (type_ == "X") { // execute runner connection
         r := &req{}
         dec := gob.NewDecoder(conn)
         err := dec.Decode(r)
@@ -186,34 +197,23 @@ func (d *distributer) Serve(conn net.Conn) error {
             return err
         }
 
-        ctx := context.Background()
-
-        runner := r.Runner
-        runner = WithValue(runner, "ep.AllNodes", r.RunnerNodes)
-        runner = WithValue(runner, "ep.MasterNode", r.From)
-        runner = WithValue(runner, "ep.ThisNode", d.addr)
-        runner = WithValue(runner, "ep.Distributer", d)
+        runner := r.Runner.(*distRunner)
+        runner.d = d
 
         out := make(chan Dataset)
         inp := make(chan Dataset, 1)
         close(inp)
 
-        err = runner.Run(ctx, inp, out)
+        err = runner.Run(context.Background(), inp, out)
         if err != nil {
             fmt.Println("ep: runner error", err)
             return err
         }
-    } else if type_ == "D" {
 
-        key, err := readStr(conn)
-        if err != nil {
-            return err
-        }
-
-        // wait for someone to claim it.
-        d.connCh(key) <- conn
     } else {
-        return fmt.Errorf("Unrecognized connection type: ", type_)
+        err := fmt.Errorf("unrecognized connection type: %s", type_)
+        fmt.Println("ep: " + err.Error())
+        return err
     }
 
     return nil
@@ -261,7 +261,7 @@ func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) error {
             return err
         }
 
-        err = writeStr(conn, "R") // runner connection
+        err = writeStr(conn, "X") // runner connection
         if err != nil {
             return err
         }
@@ -285,10 +285,6 @@ func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) error {
 
     return r.Runner.Run(ctx, inp, out)
 }
-
-
-
-
 
 
 // write a null-terminated string to a writer
