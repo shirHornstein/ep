@@ -247,6 +247,50 @@ func (r *ctxRunner) Run(ctx context.Context, inp, out chan Dataset) error {
     return r.Runner.Run(context.WithValue(ctx, r.K, r.V), inp, out)
 }
 
+type distRunner struct { Runner; Nodes []string; Master string; d *distributer; isMain bool }
+
+func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) error {
+    for i := 0 ; i < len(r.Nodes) && r.isMain ; i++ {
+        addr := r.Nodes[i]
+        if addr == r.d.addr {
+            continue
+        }
+
+        conn, err := r.d.dial(addr)
+        if err != nil {
+            return err
+        }
+
+        err = writeStr(conn, "R") // runner connection
+        if err != nil {
+            return err
+        }
+
+        defer conn.Close()
+        if err != nil {
+            return err
+        }
+
+        enc := gob.NewEncoder(conn)
+        err = enc.Encode(&req{r.d.addr, r, nil, ""})
+        if err != nil {
+            return err
+        }
+    }
+
+    ctx = context.WithValue(ctx, "ep.AllNodes", r.Nodes)
+    ctx = context.WithValue(ctx, "ep.MasterNode", r.Master)
+    ctx = context.WithValue(ctx, "ep.ThisNode", r.d.addr)
+    ctx = context.WithValue(ctx, "ep.Distributer", r.d)
+
+    return r.Runner.Run(ctx, inp, out)
+}
+
+
+
+
+
+
 // write a null-terminated string to a writer
 func writeStr(w io.Writer, s string) error {
     _, err := w.Write(append([]byte(s), 0))
