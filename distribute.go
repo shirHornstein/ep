@@ -10,7 +10,7 @@ import (
     "encoding/gob"
 )
 
-var _ = registerGob(req{}, &distRunner{})
+var _ = registerGob(&distRunner{})
 
 // Distributer is an object that can distribute Runners to run in parallel on
 // multiple nodes.
@@ -100,40 +100,6 @@ func (d *distributer) dial(addr string) (net.Conn, error) {
 
 func (d *distributer) Distribute(runner Runner, addrs ...string) (Runner, error) {
     return &distRunner{runner, addrs, d.addr, d, true}, nil
-
-
-    for _, addr := range addrs {
-        if addr == d.addr {
-            continue
-        }
-
-        conn, err := d.dial(addr)
-        if err != nil {
-            return nil, err
-        }
-
-        err = writeStr(conn, "R") // runner connection
-        if err != nil {
-            return nil, err
-        }
-
-        defer conn.Close()
-        if err != nil {
-            return nil, err
-        }
-
-        enc := gob.NewEncoder(conn)
-        err = enc.Encode(&req{d.addr, runner, addrs, ""})
-        if err != nil {
-            return nil, err
-        }
-    }
-
-    runner = WithValue(runner, "ep.AllNodes", addrs)
-    runner = WithValue(runner, "ep.MasterNode", d.addr)
-    runner = WithValue(runner, "ep.ThisNode", d.addr)
-    runner = WithValue(runner, "ep.Distributer", d)
-    return runner, nil
 }
 
 // Connect to a node address for the given uid. Used by the individual exchange
@@ -189,7 +155,7 @@ func (d *distributer) Serve(conn net.Conn) error {
         // wait for someone to claim it.
         d.connCh(key) <- conn
     } else if (type_ == "X") { // execute runner connection
-        r := &req{}
+        r := &distRunner{d: d}
         dec := gob.NewDecoder(conn)
         err := dec.Decode(r)
         if err != nil {
@@ -197,19 +163,15 @@ func (d *distributer) Serve(conn net.Conn) error {
             return err
         }
 
-        runner := r.Runner.(*distRunner)
-        runner.d = d
-
         out := make(chan Dataset)
         inp := make(chan Dataset, 1)
         close(inp)
 
-        err = runner.Run(context.Background(), inp, out)
+        err = r.Run(context.Background(), inp, out)
         if err != nil {
             fmt.Println("ep: runner error", err)
             return err
         }
-
     } else {
         err := fmt.Errorf("unrecognized connection type: %s", type_)
         fmt.Println("ep: " + err.Error())
@@ -227,13 +189,6 @@ func (d *distributer) connCh(k string) (chan net.Conn) {
         d.connsMap[k] = make(chan net.Conn)
     }
     return d.connsMap[k]
-}
-
-type req struct {
-    From string // Address of the transport issuing the request
-    Runner Runner
-    RunnerNodes []string
-    Uid string
 }
 
 // WithValue creates a new Runner that adds the key and value to the context
@@ -272,7 +227,7 @@ func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) error {
         }
 
         enc := gob.NewEncoder(conn)
-        err = enc.Encode(&req{r.d.addr, r, nil, ""})
+        err = enc.Encode(r)
         if err != nil {
             return err
         }
