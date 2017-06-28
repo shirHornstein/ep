@@ -5,15 +5,18 @@ branches:
     - master
 
 go:
-  - 1.7.4
+  - 1.8.3
 
 install:
   - go get -u github.com/golang/lint/golint
   - go get github.com/lfittl/pg_query_go
+  - go get github.com/satori/go.uuid
+  - go get github.com/stretchr/testify/require
   - export PATH=$PATH:$HOME/.local/bin
 
 script:
-  - golint -set_exit_status
+  - golint
+  - go tool vet -v .
   - go test -v ./... -cover
 
 notifications:

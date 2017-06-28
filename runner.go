@@ -49,7 +49,7 @@ type Runner interface {
     Returns() []Type
 }
 
-// ArgsRunner is a Runner that also exposes a list of argument types that it
+// RunnerArgs is a Runner that also exposes a list of argument types that it
 // must accept as input.
 type RunnerArgs interface {
     Runner // it's a Runner.
