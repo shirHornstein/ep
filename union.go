@@ -5,7 +5,7 @@ import (
     "context"
 )
 
-var _ = registerGob(union{})
+var _ = registerGob(&union{})
 
 // Union returns a new composite Runner that dispatches its inputs to all of
 // its internal runners and collects their output into a single unified stream
@@ -19,47 +19,53 @@ func Union(runners ...Runner) (Runner, error) {
         return runners[0], nil
     }
 
+    // determine the return types - skipping NULLS as they don't expose any
+    // information about the actual data types.
+
     // ensure that the return types are compatible
-    want := runners[0].Returns()
+    types := runners[0].Returns()
     for _, r := range runners {
         have := r.Returns()
-        if len(have) != len(want) {
-            return nil, fmt.Errorf("type mismatch %v and %v", want, have)
+        if len(have) != len(types) {
+            return nil, fmt.Errorf("mismatch number of columns: %v and %v", types, have)
         }
 
         for i, t := range have {
-            if t.Name() != want[i].Name() {
-                return nil, fmt.Errorf("type mismatch %v and %v", want, have)
+
+            // choose the first column type that isn't a null
+            if types[i] == Null {
+                types[i] = have[i]
+            } else if t != Null && t.Name() != types[i].Name() {
+                return nil, fmt.Errorf("type mismatch %v and %v", types, have)
             }
         }
     }
 
-    return union(runners), nil
+    return &union{types, runners}, nil
 }
 
-type union []Runner
+type union struct {
+    Types []Type
+    Runners []Runner
+}
 
 // see Runner. Assumes all runners has the same return types.
-func (rs union) Returns() []Type {
-    if rs == nil || len(rs) == 0 {
-        return nil
-    }
-
-    return rs[0].Returns()
+func (r *union) Returns() []Type {
+    return r.Types
 }
 
-func (rs union) Run(ctx context.Context, inp, out chan Dataset) (err error) {
+func (r *union) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 
     // start all inner runners
-    inputs := make([]chan Dataset, len(rs))
-    outputs := make([]chan Dataset, len(rs))
-    for i := range rs {
+    inputs := make([]chan Dataset, len(r.Runners))
+    outputs := make([]chan Dataset, len(r.Runners))
+    for i := range r.Runners {
         inputs[i] = make(chan Dataset)
         outputs[i] = make(chan Dataset)
 
         go func(i int) {
             defer close(outputs[i])
-            err1 := rs[i].Run(ctx, inputs[i], outputs[i])
+            err1 := r.Runners[i].Run(ctx, inputs[i], outputs[i])
             if err1 != nil && err == nil {
                 err = err1
             }

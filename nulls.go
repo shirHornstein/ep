@@ -11,6 +11,7 @@ var _ = registerGob(nullType{}, nulls(0))
 var Null = &nullType{}
 
 type nullType struct {}
+func (t *nullType) String() string { return t.Name() }
 func (*nullType) Data(n uint) Data { return nulls(n) }
 func (*nullType) Name() string { return "NULL" }
 
