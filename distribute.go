@@ -104,7 +104,7 @@ func (d *distributer) Distribute(runner Runner, addrs ...string) Runner {
 
 // Connect to a node address for the given uid. Used by the individual exchange
 // runners to synchronize a specific logical point in the code. We need to
-// ensure that both sides of the connection, when used with the same Uid,
+// ensure that both sides of the connection, when used with the same UID,
 // resolve to the same connection
 func (d *distributer) Connect(addr string, uid string) (conn net.Conn, err error) {
     from := d.addr
@@ -141,12 +141,12 @@ func (d *distributer) Connect(addr string, uid string) (conn net.Conn, err error
 }
 
 func (d *distributer) Serve(conn net.Conn) error {
-    type_, err := readStr(conn)
+    typee, err := readStr(conn)
     if err != nil {
         return err
     }
 
-    if type_ == "D" { // data connection
+    if typee == "D" { // data connection
         key, err := readStr(conn)
         if err != nil {
             return err
@@ -154,7 +154,7 @@ func (d *distributer) Serve(conn net.Conn) error {
 
         // wait for someone to claim it.
         d.connCh(key) <- conn
-    } else if (type_ == "X") { // execute runner connection
+    } else if (typee == "X") { // execute runner connection
         defer conn.Close()
 
         r := &distRunner{d: d}
@@ -177,7 +177,7 @@ func (d *distributer) Serve(conn net.Conn) error {
     } else {
         defer conn.Close()
         
-        err := fmt.Errorf("unrecognized connection type: %s", type_)
+        err := fmt.Errorf("unrecognized connection type: %s", typee)
         fmt.Println("ep: " + err.Error())
         return err
     }

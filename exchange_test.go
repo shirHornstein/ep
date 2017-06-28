@@ -122,11 +122,11 @@ func TestScatterGather(t *testing.T) {
     require.Equal(t, "[[hello world foo bar] [:5552 :5552 :5551 :5551]]", fmt.Sprintf("%v", data))
 }
 
-// regression - uniqueness in Uid generation per generated exchange function
+// regression - uniqueness in UID generation per generated exchange function
 func TestScatterUnique(t *testing.T) {
     s1 := Scatter().(*exchange)
     s2 := Scatter().(*exchange)
-    require.NotEqual(t, s1.Uid, s2.Uid)
+    require.NotEqual(t, s1.UID, s2.UID)
 }
 
 var _ = registerGob(&nodeAddr{})
@@ -136,7 +136,7 @@ func (*nodeAddr) Run(ctx context.Context, inp, out chan Dataset) error {
     addr := ctx.Value("ep.ThisNode").(string)
     for data := range inp {
         res := make(Strs, data.Len())
-        for i, _ := range res {
+        for i := range res {
             res[i] = addr
         }
 

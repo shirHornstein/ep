@@ -92,6 +92,4 @@ func (rs *project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 
         out <- NewDataset(result...)
     }
-
-    return
 }
