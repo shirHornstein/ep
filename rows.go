@@ -76,7 +76,7 @@ func (r *rows) Next(dest []driver.Value) error {
     // if we still have buffered rows, emit the first one and remove it
     if len(r.Buff) > 0 {
         row := r.Buff[0]
-        for i, _ := range dest {
+        for i := range dest {
             dest[i] = row[i]
         }
 
@@ -102,9 +102,9 @@ func (r *rows) Next(dest []driver.Value) error {
 
     // transpose the columnar strings to rows of strings for the buffer.
     rows := make([][]string, data.Len())
-    for i, _ := range rows {
+    for i := range rows {
         row := make([]string, data.Width())
-        for j, _ := range row {
+        for j := range row {
             row[j] = columnar[j][i]
         }
 

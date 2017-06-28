@@ -22,26 +22,26 @@ const (
 // all other nodes such that the received datasets are dispatched in a round-
 // robin to the nodes.
 func Scatter() Runner {
-    return &exchange{Uid: uuid.NewV4().String(), SendTo: sendScatter}
+    return &exchange{UID: uuid.NewV4().String(), SendTo: sendScatter}
 }
 
 // Gather returns an exchange Runner that gathers all of its input into a
 // single node. In all other nodes it will produce no output, but on the main
 // node it will be passthrough from all of the other nodes
 func Gather() Runner {
-    return &exchange{Uid: uuid.NewV4().String(), SendTo: sendGather}
+    return &exchange{UID: uuid.NewV4().String(), SendTo: sendGather}
 }
 
 // Broadcast returns an exchange Runner that duplicates its input to all
 // other nodes. The output will be effectively a union of all of the inputs from
 // all nodes (order not guaranteed)
 func Broadcast() Runner {
-    return &exchange{Uid: uuid.NewV4().String(), SendTo: sendBroadcast}
+    return &exchange{UID: uuid.NewV4().String(), SendTo: sendBroadcast}
 }
 
 // exchange is a Runner that exchanges data between peer nodes
 type exchange struct {
-    Uid string
+    UID    string
     SendTo int
 
     encs []encoder // encoders to all destination connections
@@ -248,7 +248,7 @@ func (ex *exchange) Init(ctx context.Context) error {
 
         msg := "THIS " + thisNode + " OTHER " + n
 
-        conn, err = dist.Connect(n, ex.Uid)
+        conn, err = dist.Connect(n, ex.UID)
         if err != nil {
             return err
         }
@@ -259,7 +259,7 @@ func (ex *exchange) Init(ctx context.Context) error {
     }
 
     // if we're also a destination, listen to all nodes
-    for i := 0; shortCircuit != nil && i < len(allNodes); i += 1 {
+    for i := 0; shortCircuit != nil && i < len(allNodes); i++ {
         n := allNodes[i]
 
         if n == thisNode {
@@ -276,7 +276,7 @@ func (ex *exchange) Init(ctx context.Context) error {
             continue
         }
 
-        conn, err = dist.Connect(n, ex.Uid)
+        conn, err = dist.Connect(n, ex.UID)
         if err != nil {
             return err
         }

@@ -6,7 +6,7 @@ import (
 
 var _ = registerGob(nullType{}, nulls(0))
 
-// Nulls is a Type representing NULL values. Use Nulls.Data(n) to create Data
+// Null is a Type representing NULL values. Use Nulls.Data(n) to create Data
 // instances of `n` nulls
 var Null = &nullType{}
 
