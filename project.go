@@ -11,7 +11,7 @@ var _ = registerGob(&project{})
 // dataset to return.
 func Project(runners ...Runner) Runner {
     if len(runners) == 0 {
-        panic("ep: at least 1 runner is required for projecting")
+        panic("at least 1 runner is required for projecting")
     } else if len(runners) == 1 {
         return runners[0]
     }

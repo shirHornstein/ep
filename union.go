@@ -1,6 +1,7 @@
 package ep
 
 import (
+    "fmt"
     "context"
 )
 
@@ -10,8 +11,30 @@ var _ = registerGob(union{})
 // its internal runners and collects their output into a single unified stream
 // of datasets. It is required the all of the individual runners returns the
 // same data types
-func Union(runners ...Runner) Runner {
-    return union(runners)
+func Union(runners ...Runner) (Runner, error) {
+    if len(runners) == 0 {
+        err := fmt.Errorf("at least 1 runner is required for union")
+        return nil, err
+    } else if len(runners) == 1 {
+        return runners[0], nil
+    }
+
+    // ensure that the return types are compatible
+    want := runners[0].Returns()
+    for _, r := range runners {
+        have := r.Returns()
+        if len(have) != len(want) {
+            return nil, fmt.Errorf("type mismatch %v and %v", want, have)
+        }
+
+        for i, t := range have {
+            if t.Name() != want[i].Name() {
+                return nil, fmt.Errorf("type mismatch %v and %v", want, have)
+            }
+        }
+    }
+
+    return union(runners), nil
 }
 
 type union []Runner

@@ -10,7 +10,7 @@ var _ = registerGob(&pipeline{})
 // any one stream is passed as input to the next
 func Pipeline(runners ...Runner) Runner {
     if len(runners) == 0 {
-        panic("ep: at least 1 runner is required for pipelining")
+        panic("at least 1 runner is required for pipelining")
     } else if len(runners) == 1 {
         return runners[0]
     }
