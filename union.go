@@ -33,9 +33,9 @@ func Union(runners ...Runner) (Runner, error) {
         for i, t := range have {
 
             // choose the first column type that isn't a null
-            if types[i] == Null {
+            if Null.Is(types[i]) {
                 types[i] = have[i]
-            } else if t != Null && t.Name() != types[i].Name() {
+            } else if !Null.Is(t) && t.Name() != types[i].Name() {
                 return nil, fmt.Errorf("type mismatch %v and %v", types, have)
             }
         }

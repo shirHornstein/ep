@@ -45,6 +45,5 @@ type asType struct {
     AsName string
 }
 
-func (t *asType) As() string {
-    return t.AsName
-}
+func (t *asType) String() string { return t.Type.Name() }
+func (t *asType) As() string { return t.AsName }

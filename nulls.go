@@ -14,6 +14,9 @@ type nullType struct {}
 func (t *nullType) String() string { return t.Name() }
 func (*nullType) Data(n uint) Data { return nulls(n) }
 func (*nullType) Name() string { return "NULL" }
+func (*nullType) Is(t Type) bool {
+    return t.Name() == "NULL"
+}
 
 // nulls is implemented to satisfy both the Type and Data interfaces
 type nulls int // number of nulls in the set
