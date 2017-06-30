@@ -2,6 +2,7 @@ package ep
 
 import (
     "io"
+    "fmt"
     "net"
     "time"
     "context"
@@ -222,12 +223,17 @@ func (ex *exchange) DecodeNext() (Dataset, error) {
 func (ex *exchange) Init(ctx context.Context) error {
     var err error
 
+    dist, _ := ctx.Value("ep.Distributer").(interface {
+        Connect(addr, uid string) (net.Conn, error)
+    })
+
+    if dist == nil {
+        return fmt.Errorf("exhcnage started without a distributor")
+    }
+
     allNodes := ctx.Value("ep.AllNodes").([]string)
     thisNode := ctx.Value("ep.ThisNode").(string)
     masterNode := ctx.Value("ep.MasterNode").(string)
-    dist := ctx.Value("ep.Distributer").(interface {
-        Connect(addr, uid string) (net.Conn, error)
-    })
 
     targetNodes := allNodes
     if ex.SendTo == sendGather {
