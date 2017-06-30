@@ -8,7 +8,7 @@ import (
 var Str = &StrType{}
 type StrType struct {}
 func (*StrType) Name() string { return "string" }
-func (*StrType) Data(n uint) Data { return make(Strs, n) }
+func (*StrType) Data(n int) Data { return make(Strs, n) }
 
 type Strs []string
 func (Strs) Type() Type { return Str }

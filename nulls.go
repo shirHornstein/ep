@@ -12,7 +12,7 @@ var Null = &nullType{}
 
 type nullType struct {}
 func (t *nullType) String() string { return t.Name() }
-func (*nullType) Data(n uint) Data { return nulls(n) }
+func (*nullType) Data(n int) Data { return nulls(n) }
 func (*nullType) Name() string { return "NULL" }
 func (*nullType) Is(t Type) bool {
     return t.Name() == "NULL"
@@ -27,6 +27,10 @@ func (nulls) Slice(i, j int) Data { return nulls(j - i) }
 func (vs nulls) Append(data Data) Data { return vs + data.(nulls) }
 func (vs nulls) Len() int { return int(vs) }
 func (vs nulls) Strings() []string { return make([]string, vs) }
+
+// implements Dataset as well.
+func (vs nulls) Width() int { return 0 }
+func (vs nulls) At(int) Data { panic("runtime error: index out of range") }
 
 // to-string, for debugging. Same as array of <nil>.
 func (vs nulls) String() string {

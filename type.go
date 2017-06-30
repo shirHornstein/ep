@@ -21,18 +21,18 @@ type Type interface {
     Name() string
 
     // Data returns a new Data object of this type, containing `n` zero-values
-    Data(n uint) Data
+    Data(n int) Data
 }
 
 // see Wildcard above.
 type wildcardType struct { Idx *int }
 func (*wildcardType) Name() string { return "*" }
-func (*wildcardType) Data(uint) Data { panic("wildcard has no concrete data") }
+func (*wildcardType) Data(int) Data { panic("wildcard has no concrete data") }
 func (*wildcardType) At(idx int) *wildcardType { return &wildcardType{&idx} }
 
 type anyType struct {}
 func (*anyType) Name() string { return "?" }
-func (*anyType) Data(uint) Data { panic("any has no concrete data") }
+func (*anyType) Data(int) Data { panic("any has no concrete data") }
 
 // As returns a new Type that's assigned a name, Useful for cases where the name
 // of the data represented by the type matters for later referencing. To fetch

@@ -101,7 +101,11 @@ func (r *pick) Run(_ context.Context, inp, out chan Dataset) error {
             res[i] = data.At(idx)
         }
 
-        out <- NewDataset(res...)
+        if len(res) == 0 {
+            out <- Null.Data(data.Len()).(Dataset)
+        } else {
+            out <- NewDataset(res...)
+        }
     }
     return nil
 }
