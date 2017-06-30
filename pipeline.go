@@ -60,10 +60,18 @@ func (rs *pipeline) Returns() []Type {
     // check for wildcards, and replace as needed. Walk backwards to allow
     // adding types in-place without messing the iteration
     for i := len(res) - 1; i >= 0; i-- {
-        if res[i] == Wildcard {
+        w, _ := res[i].(*wildcardType)
+
+        if w != nil {
             // wildcard found - replace it with the types from the previous
             // runner (which might also contain Wildcards)
             prev := rs.From.Returns()
+
+            if w.Idx != nil {
+                // wildcard for a specific column in the input
+                prev = prev[*w.Idx:*w.Idx + 1]
+            }
+
             res = append(res[:i], append(prev, res[i+1:]...)...)
         }
     }

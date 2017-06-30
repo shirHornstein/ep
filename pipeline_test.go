@@ -39,3 +39,26 @@ func TestPipelineErr(t *testing.T) {
     require.Equal(t, "something bad happened", err.Error())
     require.Equal(t, false, infinity.Running, "Infinity go-routine leak")
 }
+
+
+func TestPipelineReturnsWildcard(t *testing.T) {
+    runner := Project(&Upper{}, &Question{})
+    runner = Pipeline(runner, PassThrough())
+    types := runner.Returns()
+    require.Equal(t, 2, len(types))
+    require.Equal(t, Str.Name(), types[0].Name())
+    require.Equal(t, Str.Name(), types[1].Name())
+
+    runner = Project(&Upper{}, &Question{})
+    runner = Pipeline(runner, Pick(1))
+    types = runner.Returns()
+    require.Equal(t, 1, len(types))
+}
+
+func TestPipelineReturnsWildcardIdx(t *testing.T) {
+    runner := Project(&Upper{}, &Question{})
+    runner = Pipeline(runner, Pick(1))
+    types := runner.Returns()
+    require.Equal(t, 1, len(types))
+    require.Equal(t, Str.Name(), types[0].Name())
+}

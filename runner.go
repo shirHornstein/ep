@@ -80,3 +80,28 @@ func (*passthrough) Run(_ context.Context, inp, out chan Dataset) (err error) {
     }
     return nil
 }
+
+// Pick returns a new runner similar to PassThrough except that it picks and
+// returns just the data at the provided indices
+func Pick(indices ...int) Runner { return &pick{indices} }
+type pick struct { Indices []int }
+func (r *pick) Returns() []Type {
+    types := make([]Type, len(r.Indices))
+    for i, idx := range r.Indices {
+        types[i] = Wildcard.At(idx)
+    }
+
+    return types
+}
+
+func (r *pick) Run(_ context.Context, inp, out chan Dataset) error {
+    for data := range inp {
+        res := make([]Data, len(r.Indices))
+        for i, idx := range r.Indices {
+            res[i] = data.At(idx)
+        }
+
+        out <- NewDataset(res...)
+    }
+    return nil
+}
