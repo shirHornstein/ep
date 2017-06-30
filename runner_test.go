@@ -7,7 +7,7 @@ import (
 )
 
 type Upper struct {}
-func (*Upper) Returns() []Type { return []Type{Str} }
+func (*Upper) Returns() []Type { return []Type{As(Str, "upper")} }
 func (*Upper) Run(_ context.Context, inp, out chan Dataset) error {
     for data := range inp {
         if data.At(0).Type() == Null {
@@ -25,7 +25,7 @@ func (*Upper) Run(_ context.Context, inp, out chan Dataset) error {
 }
 
 type Question struct {}
-func (*Question) Returns() []Type { return []Type{Str} }
+func (*Question) Returns() []Type { return []Type{As(Str, "question")} }
 func (*Question) Run(_ context.Context, inp, out chan Dataset) error {
     for data := range inp {
         if data.At(0).Type() == Null {
