@@ -70,6 +70,10 @@ func (d *distributer) Start() error {
 }
 
 func (d *distributer) Close() error {
+    if d.closeCh == nil {
+        return nil
+    }
+
     err := d.listener.Close()
     if err != nil {
         return err
@@ -84,6 +88,7 @@ func (d *distributer) Close() error {
     defer d.l.Unlock()
     if d.closeCh != nil {
         <- d.closeCh
+        d.closeCh = nil
     }
     return nil
 }
