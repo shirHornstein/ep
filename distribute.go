@@ -76,13 +76,14 @@ func (d *distributer) start() error {
 
 func (d *distributer) Close() error {
     d.l.Lock()
-    defer d.l.Unlock()
-    if d.closeCh == nil { // not running.
+    closeCh := d.closeCh
+    d.closeCh = nil // prevent all future function calls
+    d.l.Unlock()
+
+    if closeCh == nil { // not running.
         return nil
     }
 
-    closeCh := d.closeCh
-    d.closeCh = nil // prevent all future function calls
     err := d.listener.Close()
     if err != nil {
         return err
