@@ -178,11 +178,23 @@ func (d *distributer) Serve(conn net.Conn) error {
             return err
         }
 
+        // drain the output
+        // generally - if we're always using Gather, the output will be empty
+        // perhaps we want to log/return an error when some of the data is
+        // discarded here?
         out := make(chan Dataset)
+        go func() { for _ = range out {} }()
+
         inp := make(chan Dataset, 1)
         close(inp)
 
         err = r.Run(context.Background(), inp, out)
+        enc := gob.NewEncoder(conn)
+        if err != nil {
+             err = &errMsg{err.Error()}
+        }
+
+        err = enc.Encode(&dataReq{err})
         if err != nil {
             fmt.Println("ep: runner error", err)
             return err
@@ -218,6 +230,7 @@ type distRunner struct {
 }
 
 func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) error {
+    decs := []*gob.Decoder{}
     isMain := r.d.addr == r.MasterAddr
     for i := 0 ; i < len(r.Addrs) && isMain ; i++ {
         addr := r.Addrs[i]
@@ -245,6 +258,8 @@ func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) error {
         if err != nil {
             return err
         }
+
+        decs = append(decs, gob.NewDecoder(conn))
     }
 
     ctx = context.WithValue(ctx, "ep.AllNodes", r.Addrs)
@@ -252,7 +267,26 @@ func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) error {
     ctx = context.WithValue(ctx, "ep.ThisNode", r.d.addr)
     ctx = context.WithValue(ctx, "ep.Distributer", r.d)
 
-    return r.Runner.Run(ctx, inp, out)
+    err := r.Runner.Run(ctx, inp, out)
+    if err != nil {
+        return err
+    }
+
+    // collect error responses
+    for _, dec := range decs {
+        req := &dataReq{}
+        err = dec.Decode(req)
+        data := req.Payload
+        if err == nil {
+            err, _ = data.(error)
+        }
+
+        if err != nil {
+            return err
+        }
+    }
+
+    return nil
 }
 
 
