@@ -10,7 +10,7 @@ import (
     "github.com/satori/go.uuid"
 )
 
-var _ = registerGob(&exchange{}, &dataReq{}, &errMsg{})
+var _ = registerGob(&exchange{}, &req{}, &errMsg{})
 
 const (
     sendGather = 1
@@ -161,7 +161,7 @@ func (ex *exchange) EncodeAll(e interface{}) (err error) {
         err = nil
     }
 
-    req := &dataReq{e}
+    req := &req{e}
     for _, enc := range ex.encs {
         err1 := enc.Encode(req)
         if err1 != nil {
@@ -178,7 +178,7 @@ func (ex *exchange) EncodeNext(e interface{}) error {
         return io.ErrClosedPipe
     }
 
-    req := &dataReq{e}
+    req := &req{e}
     ex.encsNext = (ex.encsNext + 1) % len(ex.encs)
     return ex.encs[ex.encsNext].Encode(req)
 }
@@ -196,7 +196,7 @@ func (ex *exchange) DecodeNext() (Dataset, error) {
 
     i := (ex.decsNext + 1) % len(ex.decs)
 
-    req := &dataReq{}
+    req := &req{}
     err := ex.decs[i].Decode(req)
     data := req.Payload
     if err == nil {
@@ -345,13 +345,13 @@ func (sc *shortCircuit) Encode(e interface{}) error {
 }
 
 func (sc *shortCircuit) Decode(e interface{}) error {
-    req := e.(*dataReq)
+    r := e.(*req)
     v, ok := <- sc.C
     if !ok {
         return io.EOF
     }
 
-    req.Payload = v.(*dataReq).Payload
+    r.Payload = v.(*req).Payload
     return nil
 }
 
@@ -359,6 +359,6 @@ func newShortCircuit() *shortCircuit {
     return &shortCircuit{C: make(chan interface{}, 1000)}
 }
 
-type dataReq struct { Payload interface{} }
+type req struct { Payload interface{} }
 type errMsg struct { Msg string }
 func (err *errMsg) Error() string { return err.Msg }

@@ -194,7 +194,7 @@ func (d *distributer) Serve(conn net.Conn) error {
              err = &errMsg{err.Error()}
         }
 
-        err = enc.Encode(&dataReq{err})
+        err = enc.Encode(&req{err})
         if err != nil {
             fmt.Println("ep: runner error", err)
             return err
@@ -279,9 +279,10 @@ func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) error {
     // also transmitted by the Distributer at the end of the remote Run. This
     // might be redundant - but in any case we need the top-level one here to
     // make sure we wait for all runners to complete, thus not leaving any open
-    // resources/goroutines.
+    // resources/goroutines (in case there's no error. Perhaps we should read
+    // the error in goroutines)
     for _, dec := range decs {
-        req := &dataReq{}
+        req := &req{}
         err = dec.Decode(req)
         data := req.Payload
         if err == nil {
