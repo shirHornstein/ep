@@ -273,6 +273,13 @@ func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) error {
     }
 
     // collect error responses
+    // NB. currently the errors will arrive here in two ways: the exchange
+    // Runners communicate errors between nodes such that this master node will
+    // always receive the errors from the individual nodes. The final error is
+    // also transmitted by the Distributer at the end of the remote Run. This
+    // might be redundant - but in any case we need the top-level one here to
+    // make sure we wait for all runners to complete, thus not leaving any open
+    // resources/goroutines.
     for _, dec := range decs {
         req := &dataReq{}
         err = dec.Decode(req)
