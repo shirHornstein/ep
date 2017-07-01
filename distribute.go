@@ -16,8 +16,7 @@ var _ = registerGob(&distRunner{})
 // multiple nodes.
 type Distributer interface {
 
-    // Distribute a Runner to multiple node addresses. `this` is the address of
-    // the current node issuing this distribution.
+    // Distribute a Runner to multiple node addresses
     Distribute(runner Runner, addrs ...string) Runner
 
     // Start listening for incoming Runners to run
@@ -176,7 +175,7 @@ func (d *distributer) Serve(conn net.Conn) error {
         }
     } else {
         defer conn.Close()
-        
+
         err := fmt.Errorf("unrecognized connection type: %s", typee)
         fmt.Println("ep: " + err.Error())
         return err
