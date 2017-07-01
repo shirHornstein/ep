@@ -19,9 +19,6 @@ type Distributer interface {
     // Distribute a Runner to multiple node addresses
     Distribute(runner Runner, addrs ...string) Runner
 
-    // Start listening for incoming Runners to run
-    Start() error // blocks.
-
     // Stop listening for incoming Runners to run, and close all open
     // connections.
     Close() error
@@ -42,7 +39,11 @@ type dialer interface {
 //      }
 //
 func NewDistributer(addr string, listener net.Listener) Distributer {
-    return &distributer{listener, addr, make(map[string]chan net.Conn), &sync.Mutex{}, nil}
+    connsMap := make(map[string]chan net.Conn)
+    closeCh := make(chan error, 1)
+    d := &distributer{listener, addr, connsMap, &sync.Mutex{}, closeCh}
+    go d.start()
+    return d
 }
 
 type distributer struct {
@@ -53,12 +54,16 @@ type distributer struct {
     closeCh chan error
 }
 
-func (d *distributer) Start() error {
+func (d *distributer) start() error {
     d.l.Lock()
-    d.closeCh = make(chan error, 1)
-    defer close(d.closeCh)
+    closeCh := d.closeCh
     d.l.Unlock()
 
+    if closeCh == nil {
+        return nil // closed.
+    }
+
+    defer close(closeCh)
     for {
         conn, err := d.listener.Accept()
         if err != nil {
@@ -70,30 +75,33 @@ func (d *distributer) Start() error {
 }
 
 func (d *distributer) Close() error {
-    if d.closeCh == nil {
+    d.l.Lock()
+    defer d.l.Unlock()
+    if d.closeCh == nil { // not running.
         return nil
     }
 
+    closeCh := d.closeCh
+    d.closeCh = nil // prevent all future function calls
     err := d.listener.Close()
     if err != nil {
         return err
     }
 
-    // wait for Start() above to exit. otherwise, tests or code that attempts to
+    // wait for start() above to exit. otherwise, tests or code that attempts to
     // re-bind to the same address will infrequently fail with "bind: address
     // already in use" because while the listener is closed, there's still one
     // pending Accept()
     // TODO: consider waiting for all served connections/runners?
-    d.l.Lock()
-    defer d.l.Unlock()
-    if d.closeCh != nil {
-        <- d.closeCh
-        d.closeCh = nil
-    }
+    <- closeCh
     return nil
 }
 
 func (d *distributer) dial(addr string) (net.Conn, error) {
+    if d.closeCh == nil {
+        return nil, io.ErrClosedPipe
+    }
+
     dialer, ok := d.listener.(dialer)
     if ok {
         return dialer.Dial("tcp", addr)
