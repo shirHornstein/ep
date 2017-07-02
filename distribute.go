@@ -10,6 +10,10 @@ import (
     "encoding/gob"
 )
 
+// MagicNumber used by the built-in Distributer to prefix all of its connections
+// It can be used for routing connections
+var MagicNumber = []byte("EP01")
+
 var _ = registerGob(&distRunner{})
 
 // Distributer is an object that can distribute Runners to run in parallel on
@@ -81,17 +85,28 @@ func (d *distributer) Close() error {
     return nil
 }
 
-func (d *distributer) Dial(network, addr string) (net.Conn, error) {
+func (d *distributer) Dial(network, addr string) (conn net.Conn, err error) {
     if d.closeCh == nil {
         return nil, io.ErrClosedPipe
     }
 
     dialer, ok := d.listener.(dialer)
     if ok {
-        return dialer.Dial(network, addr)
+        conn, err = dialer.Dial(network, addr)
+    } else {
+        conn, err = net.Dial(network, addr)
     }
 
-    return net.Dial(network, addr)
+    if err != nil {
+        return
+    }
+
+    _, err = conn.Write(MagicNumber)
+    if err != nil {
+        conn.Close()
+    }
+
+    return
 }
 
 func (d *distributer) Distribute(runner Runner, addrs ...string) Runner {
@@ -137,6 +152,16 @@ func (d *distributer) Connect(addr string, uid string) (conn net.Conn, err error
 }
 
 func (d *distributer) Serve(conn net.Conn) error {
+    prefix := make([]byte, 4)
+    _, err := io.ReadFull(conn, prefix)
+    if err != nil {
+        return err
+    }
+
+    if string(prefix) != string(MagicNumber) {
+        return fmt.Errorf("unrecognized connection. Missing MagicNumber prefix")
+    }
+
     typee, err := readStr(conn)
     if err != nil {
         return err
