@@ -81,17 +81,17 @@ func (d *distributer) Close() error {
     return nil
 }
 
-func (d *distributer) dial(addr string) (net.Conn, error) {
+func (d *distributer) Dial(network, addr string) (net.Conn, error) {
     if d.closeCh == nil {
         return nil, io.ErrClosedPipe
     }
 
     dialer, ok := d.listener.(dialer)
     if ok {
-        return dialer.Dial("tcp", addr)
+        return dialer.Dial(network, addr)
     }
 
-    return net.Dial("tcp", addr)
+    return net.Dial(network, addr)
 }
 
 func (d *distributer) Distribute(runner Runner, addrs ...string) Runner {
@@ -106,7 +106,7 @@ func (d *distributer) Connect(addr string, uid string) (conn net.Conn, err error
     from := d.addr
     if from < addr {
         // dial
-        conn, err = d.dial(addr)
+        conn, err = d.Dial("tcp", addr)
         if err != nil {
             return
         }
@@ -221,7 +221,7 @@ func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) (err error)
             continue
         }
 
-        conn, err := r.d.dial(addr)
+        conn, err := r.d.Dial("tcp", addr)
         if err != nil {
             return err
         }
