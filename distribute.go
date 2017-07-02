@@ -55,15 +55,7 @@ type distributer struct {
 }
 
 func (d *distributer) start() error {
-    d.l.Lock()
-    closeCh := d.closeCh
-    d.l.Unlock()
-
-    if closeCh == nil {
-        return nil // closed.
-    }
-
-    defer close(closeCh)
+    defer close(d.closeCh)
     for {
         conn, err := d.listener.Accept()
         if err != nil {
@@ -75,15 +67,6 @@ func (d *distributer) start() error {
 }
 
 func (d *distributer) Close() error {
-    d.l.Lock()
-    closeCh := d.closeCh
-    d.closeCh = nil // prevent all future function calls
-    d.l.Unlock()
-
-    if closeCh == nil { // not running.
-        return nil
-    }
-
     err := d.listener.Close()
     if err != nil {
         return err
@@ -94,7 +77,7 @@ func (d *distributer) Close() error {
     // already in use" because while the listener is closed, there's still one
     // pending Accept()
     // TODO: consider waiting for all served connections/runners?
-    <- closeCh
+    <- d.closeCh
     return nil
 }
 
@@ -229,7 +212,7 @@ type distRunner struct {
     d *distributer
 }
 
-func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) error {
+func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) (err error) {
     decs := []*gob.Decoder{}
     isMain := r.d.addr == r.MasterAddr
     for i := 0 ; i < len(r.Addrs) && isMain ; i++ {
@@ -267,7 +250,7 @@ func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) error {
     ctx = context.WithValue(ctx, "ep.ThisNode", r.d.addr)
     ctx = context.WithValue(ctx, "ep.Distributer", r.d)
 
-    err := r.Runner.Run(ctx, inp, out)
+    err = r.Runner.Run(ctx, inp, out)
     if err != nil {
         return err
     }
