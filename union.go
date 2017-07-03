@@ -34,7 +34,7 @@ type union []Runner
 func (rs union) Returns() []Type {
     types, err := rs.ReturnsErr()
     if err != nil {
-        panic("Union() should've prevented this error from ever returning")
+        panic("Union() should've prevented this error from panicking")
     }
 
     return types
