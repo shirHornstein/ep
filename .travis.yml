@@ -12,6 +12,7 @@ install:
   - go get github.com/lfittl/pg_query_go
   - go get github.com/satori/go.uuid
   - go get github.com/stretchr/testify/require
+  - go get github.com/davecgh/go-spew/spew
   - export PATH=$PATH:$HOME/.local/bin
 
 script:
