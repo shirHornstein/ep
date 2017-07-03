@@ -85,6 +85,7 @@ package ep
 
 import (
     "encoding/gob"
+    "github.com/davecgh/go-spew/spew"
 )
 
 func registerGob(es ...interface{}) bool {
@@ -92,4 +93,10 @@ func registerGob(es ...interface{}) bool {
         gob.Register(e)
     }
     return true
+}
+
+
+// Spew returns a debugging string showing the composition of runners
+func Spew(r Runner) string {
+    return spew.Sdump(r)
 }
