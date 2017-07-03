@@ -4,7 +4,7 @@ import (
     "context"
 )
 
-var _ = registerGob(&project{})
+var _ = registerGob(project([]Runner{}))
 
 // Project returns a horizontal composite projection runner that dispatches
 // its input to all of the internal runners, and joins the result into a single
@@ -16,24 +16,32 @@ func Project(runners ...Runner) Runner {
         return runners[0]
     }
 
-    head := Project(runners[:len(runners) - 1]...)
-    tail1 := runners[len(runners) - 1]
-    return &project{head, tail1}
+    return project(runners)
 }
 
-type project struct { Left Runner; Right Runner }
+
+type project []Runner
 
 // Returns a concatenation of the left and right return types
-func (rs *project) Returns() []Type {
+func (rs project) Returns() []Type {
     types := []Type{}
-    types = append(types, rs.Left.Returns()...)
-    types = append(types, rs.Right.Returns()...)
+    for _, r := range rs {
+        types = append(types, r.Returns()...)
+    }
     return types
 }
 
 // Run dispatches the same input to all inner runners, and then collects and
 // joins their results into a single dataset output
-func (rs *project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
+func (rs project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
+    return rs.runOne(len(rs) - 1, ctx, inp, out)
+}
+
+func (rs project) runOne(i int, ctx context.Context, inp, out chan Dataset) (err error) {
+    if i == 0 {
+        return rs[i].Run(ctx, inp, out)
+    }
+
     // choose the error out from the Left and Right errors.
     var err1 error
     defer func() { if err == nil && err1 != nil { err = err1 } }()
@@ -53,12 +61,12 @@ func (rs *project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 
     go func() {
         defer close(left)
-        err1 = rs.Left.Run(ctx, inpLeft, left)
+        err1 = rs.runOne(i - 1, ctx, inpLeft, left)
     }()
 
     go func() {
         defer close(right)
-        err = rs.Right.Run(ctx, inpRight, right)
+        err = rs[i].Run(ctx, inpRight, right)
     }()
 
     // dispatch (duplicate) input to both left and right runners
