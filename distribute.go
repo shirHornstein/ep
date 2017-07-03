@@ -275,10 +275,9 @@ func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) (err error)
     ctx = context.WithValue(ctx, "ep.ThisNode", r.d.addr)
     ctx = context.WithValue(ctx, "ep.Distributer", r.d)
 
+    errs := []error{}
     err = r.Runner.Run(ctx, inp, out)
-    if err != nil {
-        return err
-    }
+    errs = append(errs, err)
 
     // collect error responses
     // NB. currently the errors will arrive here in two ways: the exchange
@@ -287,8 +286,7 @@ func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) (err error)
     // also transmitted by the Distributer at the end of the remote Run. This
     // might be redundant - but in any case we need the top-level one here to
     // make sure we wait for all runners to complete, thus not leaving any open
-    // resources/goroutines (in case there's no error. Perhaps we should read
-    // the error in goroutines)
+    // resources/goroutines
     for _, dec := range decs {
         req := &req{}
         err = dec.Decode(req)
@@ -297,6 +295,12 @@ func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) (err error)
             err, _ = data.(error)
         }
 
+        if err != nil {
+            errs = append(errs, err)
+        }
+    }
+
+    for _, err := range errs {
         if err != nil {
             return err
         }
