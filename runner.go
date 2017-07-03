@@ -4,7 +4,7 @@ import (
     "context"
 )
 
-var _ = registerGob(&passthrough{})
+var _ = registerGob(&passthrough{}, &pick{})
 
 // Runner represents objects that can receive a stream of input datasets,
 // manipulate them in some way (filter, mapping, reduction, expansion, etc.) and
