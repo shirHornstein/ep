@@ -238,6 +238,8 @@ type distRunner struct {
 }
 
 func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) (err error) {
+    errs := []error{}
+
     decs := []*gob.Decoder{}
     isMain := r.d.addr == r.MasterAddr
     for i := 0 ; i < len(r.Addrs) && isMain ; i++ {
@@ -246,25 +248,25 @@ func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) (err error)
             continue
         }
 
-        conn, err := r.d.Dial("tcp", addr)
+        var conn net.Conn
+        conn, err = r.d.Dial("tcp", addr)
         if err != nil {
-            return err
-        }
-
-        err = writeStr(conn, "X") // runner connection
-        if err != nil {
-            return err
+            errs = append(errs, err)
+            break
         }
 
         defer conn.Close()
+        err = writeStr(conn, "X") // runner connection
         if err != nil {
-            return err
+            errs = append(errs, err)
+            break
         }
 
         enc := gob.NewEncoder(conn)
         err = enc.Encode(r)
         if err != nil {
-            return err
+            errs = append(errs, err)
+            break
         }
 
         decs = append(decs, gob.NewDecoder(conn))
@@ -275,9 +277,10 @@ func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) (err error)
     ctx = context.WithValue(ctx, "ep.ThisNode", r.d.addr)
     ctx = context.WithValue(ctx, "ep.Distributer", r.d)
 
-    errs := []error{}
-    err = r.Runner.Run(ctx, inp, out)
-    errs = append(errs, err)
+    if err == nil {
+        err = r.Runner.Run(ctx, inp, out)
+        errs = append(errs, err)
+    }
 
     // collect error responses
     // NB. currently the errors will arrive here in two ways: the exchange
@@ -300,6 +303,7 @@ func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) (err error)
         }
     }
 
+    // return the first error encountered
     for _, err := range errs {
         if err != nil {
             return err
