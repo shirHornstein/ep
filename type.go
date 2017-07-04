@@ -14,7 +14,7 @@ var Wildcard = &wildcardType{}
 // may be able to support Any as input.
 var Any = &anyType{}
 
-var _ = registerGob(asType{}, Wildcard, Any)
+var _ = registerGob(&modifierType{}, Wildcard, Any)
 
 // Type is an interface that represnts specific data types
 type Type interface {
@@ -36,17 +36,33 @@ func (*anyType) String() string { return "?" }
 func (*anyType) Name() string { return "?" }
 func (*anyType) Data(int) Data { panic("any has no concrete data") }
 
-// As returns a new Type that's assigned a name, Useful for cases where the name
-// of the data represented by the type matters for later referencing. To fetch
-// the name, cast the type to `interface { As() string }`
-func As(t Type, name string) Type {
-    return &asType{t, name}
+// Modifier returns a new Type that's assigned a key-value pair:
+//
+//  type modifier interface {
+//      Modifier(k interface) interface{}
+//  }
+//
+// This is useful for adding more modifiers/context to types, like type-length,
+// format (binary/text), alias, flags, etc.
+func Modify(t Type, k, v interface{}) Type {
+    return &modifierType{t, k, v}
 }
 
-type asType struct {
+type modifierType struct {
     Type
-    AsName string
+    K interface{}
+    V interface{}
 }
 
-func (t *asType) String() string { return t.Type.Name() }
-func (t *asType) As() string { return t.AsName }
+func (t *modifierType) Modifier(k interface{}) interface{} {
+    if t.K == k {
+        return t.V
+    }
+
+    modifier, ok := t.Type.(interface { Modifier(k interface{}) interface{} })
+    if ok && modifier != nil {
+        return modifier.Modifier(k)
+    }
+
+    return nil
+}
