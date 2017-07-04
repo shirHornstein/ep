@@ -26,11 +26,13 @@ type Type interface {
 
 // see Wildcard above.
 type wildcardType struct { Idx *int }
+func (*wildcardType) String() string { return "*" }
 func (*wildcardType) Name() string { return "*" }
 func (*wildcardType) Data(int) Data { panic("wildcard has no concrete data") }
 func (*wildcardType) At(idx int) *wildcardType { return &wildcardType{&idx} }
 
 type anyType struct {}
+func (*anyType) String() string { return "?" }
 func (*anyType) Name() string { return "?" }
 func (*anyType) Data(int) Data { panic("any has no concrete data") }
 
