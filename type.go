@@ -45,7 +45,9 @@ func (*anyType) Data(int) Data { panic("any has no concrete data") }
 // This is useful for adding more modifiers/context to types, like type-length,
 // format (binary/text), alias, flags, etc.
 func Modify(t Type, k, v interface{}) Type {
-    return &modifierType{t, k, v}
+    // we're only casting it here to benefit from compile-time verification that
+    // the interface isn't broken
+    return modifier(&modifierType{t, k, v})
 }
 
 type modifierType struct {
@@ -65,4 +67,10 @@ func (t *modifierType) Modifier(k interface{}) interface{} {
     }
 
     return nil
+}
+
+
+type modifier interface {
+    Type
+    Modifier(k interface{}) interface{}
 }

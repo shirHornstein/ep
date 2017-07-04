@@ -31,3 +31,21 @@ func (r *InfinityRunner) Run(ctx context.Context, inp, out chan Dataset) error {
         }
     }
 }
+
+type DataRunner struct {
+    Dataset
+}
+
+func (r *DataRunner) Returns() []Type {
+    types := []Type{}
+    for i := 0 ; i < r.Dataset.Len() ; i++ {
+        types = append(types, r.Dataset.At(i).Type())
+    }
+    return types
+}
+
+func (r *DataRunner) Run(ctx context.Context, inp, out chan Dataset) error {
+    for _ = range inp {} // drains input
+    out <- r.Dataset
+    return nil
+}
