@@ -84,19 +84,18 @@
 package ep
 
 import (
-    "encoding/gob"
-    "github.com/davecgh/go-spew/spew"
+	"encoding/gob"
+	"github.com/davecgh/go-spew/spew"
 )
 
 func registerGob(es ...interface{}) bool {
-    for _, e := range es {
-        gob.Register(e)
-    }
-    return true
+	for _, e := range es {
+		gob.Register(e)
+	}
+	return true
 }
-
 
 // Spew returns a debugging string showing the composition of runners
 func Spew(r Runner) string {
-    return spew.Sdump(r)
+	return spew.Sdump(r)
 }
