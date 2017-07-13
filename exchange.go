@@ -223,17 +223,17 @@ func (ex *exchange) DecodeNext() (Dataset, error) {
 func (ex *exchange) Init(ctx context.Context) error {
 	var err error
 
-	dist, _ := ctx.Value("ep.Distributer").(interface {
+	dist, _ := ctx.Value(distributerKey).(interface {
 		Connect(addr, uid string) (net.Conn, error)
 	})
 
 	if dist == nil {
-		return fmt.Errorf("exhcnage started without a distributor")
+		return fmt.Errorf("exhcnage started without a distributer")
 	}
 
-	allNodes := ctx.Value("ep.AllNodes").([]string)
-	thisNode := ctx.Value("ep.ThisNode").(string)
-	masterNode := ctx.Value("ep.MasterNode").(string)
+	allNodes := ctx.Value(allNodesKey).([]string)
+	thisNode := ctx.Value(thisNodeKey).(string)
+	masterNode := ctx.Value(masterNodeKey).(string)
 
 	targetNodes := allNodes
 	if ex.SendTo == sendGather {

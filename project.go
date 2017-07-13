@@ -33,10 +33,10 @@ func (rs project) Returns() []Type {
 // Run dispatches the same input to all inner runners, and then collects and
 // joins their results into a single dataset output
 func (rs project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
-	return rs.runOne(len(rs)-1, ctx, inp, out)
+	return rs.runOne(ctx, len(rs)-1, inp, out)
 }
 
-func (rs project) runOne(i int, ctx context.Context, inp, out chan Dataset) (err error) {
+func (rs project) runOne(ctx context.Context, i int, inp, out chan Dataset) (err error) {
 	if i == 0 {
 		return rs[i].Run(ctx, inp, out)
 	}
@@ -70,7 +70,7 @@ func (rs project) runOne(i int, ctx context.Context, inp, out chan Dataset) (err
 
 	go func() {
 		defer close(left)
-		err1 = rs.runOne(i-1, ctx, inpLeft, left)
+		err1 = rs.runOne(ctx, i-1, inpLeft, left)
 	}()
 
 	go func() {

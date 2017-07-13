@@ -275,10 +275,10 @@ func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) (err error)
 		decs = append(decs, gob.NewDecoder(conn))
 	}
 
-	ctx = context.WithValue(ctx, "ep.AllNodes", r.Addrs)
-	ctx = context.WithValue(ctx, "ep.MasterNode", r.MasterAddr)
-	ctx = context.WithValue(ctx, "ep.ThisNode", r.d.addr)
-	ctx = context.WithValue(ctx, "ep.Distributer", r.d)
+	ctx = context.WithValue(ctx, allNodesKey, r.Addrs)
+	ctx = context.WithValue(ctx, masterNodeKey, r.MasterAddr)
+	ctx = context.WithValue(ctx, thisNodeKey, r.d.addr)
+	ctx = context.WithValue(ctx, distributerKey, r.d)
 
 	if err == nil {
 		err = r.Runner.Run(ctx, inp, out)

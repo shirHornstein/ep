@@ -20,10 +20,10 @@ func Pipeline(runners ...Runner) Runner {
 type pipeline []Runner
 
 func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
-	return rs.runOne(len(rs)-1, ctx, inp, out)
+	return rs.runOne(ctx, len(rs)-1, inp, out)
 }
 
-func (rs pipeline) runOne(i int, ctx context.Context, inp, out chan Dataset) (err error) {
+func (rs pipeline) runOne(ctx context.Context, i int, inp, out chan Dataset) (err error) {
 	if i == 0 {
 		return rs[i].Run(ctx, inp, out)
 	}
@@ -54,7 +54,7 @@ func (rs pipeline) runOne(i int, ctx context.Context, inp, out chan Dataset) (er
 	// start the From runner, writing data into the middle chan
 	go func() {
 		defer close(middle)
-		err1 = rs.runOne(i-1, ctx, inp, middle)
+		err1 = rs.runOne(ctx, i-1, inp, middle)
 	}()
 
 	return rs[i].Run(ctx, middle, out)

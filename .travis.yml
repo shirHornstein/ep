@@ -14,7 +14,7 @@ install:
 
 script:
   - go tool vet .
-  - golint ./...
+  - golint -set_exit_status ./...
   - gofmt -l . | exit $(wc -l)
   - go test -v ./... -cover
 

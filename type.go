@@ -43,8 +43,8 @@ func (*anyType) Data(int) Data  { panic("any has no concrete data") }
 //  type modifier interface {
 //      Modifier(k interface) interface{}
 //  }
-//
-// This is useful for adding more modifiers/context to types, like type-length,
+
+// Modify is useful for adding more modifiers/context to types, like type-length,
 // format (binary/text), alias, flags, etc.
 func Modify(t Type, k, v interface{}) Type {
 	// we're only casting it here to benefit from compile-time verification that
