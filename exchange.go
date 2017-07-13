@@ -54,7 +54,6 @@ type exchange struct {
 
 func (ex *exchange) Returns() []Type { return []Type{Wildcard} }
 func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) {
-	// thisNode := ctx.Value("ep.ThisNode").(string)
 	defer func() { ex.Close(err) }()
 
 	err = ex.Init(ctx)

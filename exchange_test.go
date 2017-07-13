@@ -131,7 +131,7 @@ type nodeAddr struct{}
 
 func (*nodeAddr) Returns() []Type { return []Type{Wildcard, Str} }
 func (*nodeAddr) Run(ctx context.Context, inp, out chan Dataset) error {
-	addr := ctx.Value("ep.ThisNode").(string)
+	addr := ctx.Value(thisNodeKey).(string)
 	for data := range inp {
 		res := make(Strs, data.Len())
 		for i := range res {
