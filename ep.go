@@ -15,7 +15,7 @@
 // representing a column of data of the same type, thus the whole Dataset
 // represents a batch of rows in a table. These batches are streamed via
 // channels, making each Runner a long-lived function that exit when the input
-// channel is closed, or an error has occured.
+// channel is closed, or an error has occurred.
 //
 // Manually executing the Run function on these runners is a bit cumbersome, as
 // care must be taken when constructing the input and output and handling the
@@ -33,10 +33,10 @@
 // latter is a built-in type for handling null-data without the overhead of
 // interfaces or pointers.
 //
-// Registeries
+// Registries
 //
 // In order to support modular design, where Runners and Types are spread across
-// several different projects, ep includes global registeries that can be used
+// several different projects, ep includes global registries that can be used
 // to share access to these declared structures. These are available through
 // the global `Runners` and `Types` variables, and they share the same generic
 // interface:
@@ -68,7 +68,7 @@
 //      ep.Runners.Register("SUM", &SumRunner{})
 //
 // The key can be anything, but if it's a struct, it's first converted into a
-// string via reflection using the full type name and path (see Registeries
+// string via reflection using the full type name and path (see Registries
 // above). Then, using the same key (or new instances of the same key) you can
 // generate Runners of it via the .Plan() function:
 //
@@ -78,25 +78,34 @@
 // If the returned Runner implements RunnerPlan, it's first called with the same
 // arguments, in order to allow it to plan itself. In case of a planning error,
 // Plan will fallthrough to the next Runner of the same key, thus implementing a
-// kind of middlewares systems where atleast one RunnerPlan must succeed. This
+// kind of middleware systems where at least one RunnerPlan must succeed. This
 // allows an opportunistic design where several runners bind to the same node,
 // each planning it differently - if they can.
 package ep
 
 import (
-    "encoding/gob"
-    "github.com/davecgh/go-spew/spew"
+	"encoding/gob"
+	"github.com/davecgh/go-spew/spew"
 )
 
 func registerGob(es ...interface{}) bool {
-    for _, e := range es {
-        gob.Register(e)
-    }
-    return true
+	for _, e := range es {
+		gob.Register(e)
+	}
+	return true
 }
-
 
 // Spew returns a debugging string showing the composition of runners
 func Spew(r Runner) string {
-    return spew.Sdump(r)
+	return spew.Sdump(r)
 }
+
+// general cluster constants to manage cluster info
+type ctxKey string
+
+const (
+	allNodesKey    ctxKey = "ep.AllNodes"
+	masterNodeKey  ctxKey = "ep.MasterNode"
+	thisNodeKey    ctxKey = "ep.ThisNode"
+	distributerKey ctxKey = "ep.Distributer"
+)

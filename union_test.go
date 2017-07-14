@@ -1,15 +1,15 @@
 package ep
 
 import (
-    "fmt"
+	"fmt"
 )
 
 func ExampleUnion() {
-    runner, _ := Union(&Upper{}, &Question{})
-    data := NewDataset(Strs([]string{"hello", "world"}))
-    data, err := testRun(runner, data)
-    fmt.Println(data, err)
+	runner, _ := Union(&Upper{}, &Question{})
+	data := NewDataset(Strs([]string{"hello", "world"}))
+	data, err := testRun(runner, data)
+	fmt.Println(data, err)
 
-    // Output:
-    // [[HELLO WORLD is hello? is world?]] <nil>
+	// Output:
+	// [[HELLO WORLD is hello? is world?]] <nil>
 }

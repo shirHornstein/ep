@@ -8,19 +8,25 @@ go:
   - 1.8.3
 
 install:
+  - go get -t -v ./... # all deps
   - go get -u github.com/golang/lint/golint
-  - go get github.com/lfittl/pg_query_go
-  - go get github.com/satori/go.uuid
-  - go get github.com/stretchr/testify/require
-  - go get github.com/davecgh/go-spew/spew
   - export PATH=$PATH:$HOME/.local/bin
 
 script:
-  - golint
-  - go tool vet -v .
+  - go tool vet .
+  - golint -set_exit_status ./...
+  - gofmt -l . | exit $(wc -l)
   - go test -v ./... -cover
 
 notifications:
+  slack:
+    rooms:
+        - panoplyio:LeK4hoOIDsRiBBAhgXKnSAD0#builds
+    on_pull_requests: false
+    on_success: change
+    on_failure: always
   email:
+    recipients:
+      - hackers@panoply.io
     on_success: change
     on_failure: always

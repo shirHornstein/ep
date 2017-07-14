@@ -18,59 +18,62 @@ var _ = registerGob(&modifierType{}, Wildcard, Any)
 
 // Type is an interface that represnts specific data types
 type Type interface {
-    Name() string
+	Name() string
 
-    // Data returns a new Data object of this type, containing `n` zero-values
-    Data(n int) Data
+	// Data returns a new Data object of this type, containing `n` zero-values
+	Data(n int) Data
 }
 
 // see Wildcard above.
-type wildcardType struct { Idx *int }
-func (*wildcardType) String() string { return "*" }
-func (*wildcardType) Name() string { return "*" }
-func (*wildcardType) Data(int) Data { panic("wildcard has no concrete data") }
+type wildcardType struct{ Idx *int }
+
+func (*wildcardType) String() string           { return "*" }
+func (*wildcardType) Name() string             { return "*" }
+func (*wildcardType) Data(int) Data            { panic("wildcard has no concrete data") }
 func (*wildcardType) At(idx int) *wildcardType { return &wildcardType{&idx} }
 
-type anyType struct {}
+type anyType struct{}
+
 func (*anyType) String() string { return "?" }
-func (*anyType) Name() string { return "?" }
-func (*anyType) Data(int) Data { panic("any has no concrete data") }
+func (*anyType) Name() string   { return "?" }
+func (*anyType) Data(int) Data  { panic("any has no concrete data") }
 
 // Modifier returns a new Type that's assigned a key-value pair:
 //
 //  type modifier interface {
 //      Modifier(k interface) interface{}
 //  }
-//
-// This is useful for adding more modifiers/context to types, like type-length,
+
+// Modify is useful for adding more modifiers/context to types, like type-length,
 // format (binary/text), alias, flags, etc.
 func Modify(t Type, k, v interface{}) Type {
-    // we're only casting it here to benefit from compile-time verification that
-    // the interface isn't broken
-    return modifier(&modifierType{t, k, v})
+	// we're only casting it here to benefit from compile-time verification that
+	// the interface isn't broken
+	return modifier(&modifierType{t, k, v})
 }
 
 type modifierType struct {
-    Type
-    K interface{}
-    V interface{}
+	Type
+	K interface{}
+	V interface{}
 }
 
 func (t *modifierType) Modifier(k interface{}) interface{} {
-    if t.K == k {
-        return t.V
-    }
+	if t.K == k {
+		return t.V
+	}
 
-    modifier, ok := t.Type.(interface { Modifier(k interface{}) interface{} })
-    if ok && modifier != nil {
-        return modifier.Modifier(k)
-    }
+	modifier, ok := t.Type.(interface {
+		Modifier(k interface{}) interface{}
+	})
+	if ok && modifier != nil {
+		return modifier.Modifier(k)
+	}
 
-    return nil
+	return nil
 }
 
-
 type modifier interface {
-    Type
-    Modifier(k interface{}) interface{}
+	Type
+	Modifier(k interface{}) interface{}
 }
