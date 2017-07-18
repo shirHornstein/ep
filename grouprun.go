@@ -12,7 +12,8 @@ func GroupRun(runner Runner) Runner {
 	return &groupRun{runner}
 }
 
-type groupRun struct { Runner }
+type groupRun struct{ Runner }
+
 func (r *groupRun) Run(ctx context.Context, inp, out chan Dataset) error {
 	grps := map[string]chan Dataset{}
 	errs := map[string]chan error{}
@@ -27,7 +28,7 @@ func (r *groupRun) Run(ctx context.Context, inp, out chan Dataset) error {
 				}(s)
 			}
 
-			grps[s] <- data.Slice(i, i + 1).(Dataset)
+			grps[s] <- data.Slice(i, i+1).(Dataset)
 		}
 	}
 
@@ -39,7 +40,7 @@ func (r *groupRun) Run(ctx context.Context, inp, out chan Dataset) error {
 	// wait for all group runs to end
 	var err error
 	for _, errChan := range errs {
-		err1 := <- errChan
+		err1 := <-errChan
 		if err1 != nil {
 			err = err1
 		}
