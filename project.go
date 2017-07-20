@@ -2,13 +2,16 @@ package ep
 
 import (
 	"context"
+	"fmt"
 )
 
 var _ = registerGob(project([]Runner{}))
+var errMismatch = fmt.Errorf("ep.Project: mismatched number of rows")
 
 // Project returns a horizontal composite projection runner that dispatches
 // its input to all of the internal runners, and joins the result into a single
-// dataset to return.
+// dataset to return. It is required that all runners produce Datasets of the
+// same length.
 func Project(runners ...Runner) Runner {
 	if len(runners) == 0 {
 		panic("at least 1 runner is required for projecting")
@@ -43,31 +46,35 @@ func (rs project) runOne(ctx context.Context, i int, inp, out chan Dataset) (err
 
 	// choose the error out from the Left and Right errors.
 	var err1 error
+	var err2 error
 	defer func() {
-		if err == nil && err1 != nil {
+		if err1 != nil {
 			err = err1
+		} else if err2 != nil {
+			err = err2
 		}
 	}()
 
-	//
+	// set up the left and right channels
 	inpLeft := make(chan Dataset)
 	left := make(chan Dataset)
 	defer func() {
-		for range left {
+		for range left { // drain left until empty.
 		}
 	}()
 
 	inpRight := make(chan Dataset)
 	right := make(chan Dataset)
 	defer func() {
-		for range right {
+		for range right { // drain right until empty.
 		}
 	}()
 
-	// cancel the From runner when we're done - just in case it's still running.
+	// cancel the both runners when we're done - just in case it's still running
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
+	// run the left and right runners in go-routines
 	go func() {
 		defer close(left)
 		err1 = rs.runOne(ctx, i-1, inpLeft, left)
@@ -75,7 +82,7 @@ func (rs project) runOne(ctx context.Context, i int, inp, out chan Dataset) (err
 
 	go func() {
 		defer close(right)
-		err = rs[i].Run(ctx, inpRight, right)
+		err2 = rs[i].Run(ctx, inpRight, right)
 	}()
 
 	// dispatch (duplicate) input to both left and right runners
@@ -94,11 +101,20 @@ func (rs project) runOne(ctx context.Context, i int, inp, out chan Dataset) (err
 		dataLeft, okLeft := <-left
 		dataRight, okRight := <-right
 
-		if !okLeft || !okRight {
-			return // TODO: what if just one is done? error?
+		if okLeft != okRight {
+			return errMismatch // one's closed, the other is open
 		}
 
-		// TODO: what if there's a mismatch in Len()?
+		if !okLeft {
+			return // all done.
+		}
+
+		if dataLeft.Len() != dataRight.Len() {
+			return errMismatch
+		}
+
+		// TODO: what if there's a mismatch in Len()? Error may be best to
+		// identify runners that were incorrectly constructed?
 		for i := 0; okLeft && i < dataLeft.Width(); i++ {
 			result = append(result, dataLeft.At(i))
 		}

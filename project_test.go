@@ -39,3 +39,11 @@ func TestProjectErr(t *testing.T) {
 	require.Equal(t, "something bad happened", err.Error())
 	require.Equal(t, false, infinity.Running, "Infinity go-routine leak")
 }
+
+// Test that Projected runners always returns the same number of rows
+func TestProjectMismatchErr(t *testing.T) {
+	runner := Project(&Upper{}, &Count{})
+	data := NewDataset(Strs([]string{"hello", "world"}))
+	_, err := testRun(runner, data)
+	require.Error(t, err)
+}
