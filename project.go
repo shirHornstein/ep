@@ -49,25 +49,26 @@ func (rs project) runOne(ctx context.Context, i int, inp, out chan Dataset) (err
 		}
 	}()
 
-	//
+	// set up the left and right channels
 	inpLeft := make(chan Dataset)
 	left := make(chan Dataset)
 	defer func() {
-		for range left {
+		for range left { // drain left until empty.
 		}
 	}()
 
 	inpRight := make(chan Dataset)
 	right := make(chan Dataset)
 	defer func() {
-		for range right {
+		for range right { // drain right until empty.
 		}
 	}()
 
-	// cancel the From runner when we're done - just in case it's still running.
+	// cancel the both runners when we're done - just in case it's still running
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
+	// run the left and right runners in go-routines
 	go func() {
 		defer close(left)
 		err1 = rs.runOne(ctx, i-1, inpLeft, left)
