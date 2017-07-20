@@ -40,12 +40,10 @@ func TestProjectErr(t *testing.T) {
 	require.Equal(t, false, infinity.Running, "Infinity go-routine leak")
 }
 
-// Test how Project behaves on a mismatch in the number of columns
-func TestProjectMismatch(t *testing.T) {
+// Test that Projected runners always returns the same number of rows
+func TestProjectMismatchErr(t *testing.T) {
 	runner := Project(&Upper{}, &Count{})
 	data := NewDataset(Strs([]string{"hello", "world"}))
-	data, err := testRun(runner, data)
-	require.NoError(t, err)
-
-	fmt.Println("ROI", data)
+	_, err := testRun(runner, data)
+	require.Error(t, err)
 }
