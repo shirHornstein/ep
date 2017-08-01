@@ -20,7 +20,7 @@ func (*nullType) Is(t Type) bool {
 }
 
 // nulls is implemented to satisfy both the Type and Data interfaces
-type nulls int // number of nulls in the set
+type nulls int                         // number of nulls in the set
 func (nulls) Type() Type               { return Null }
 func (nulls) Less(int, int) bool       { return false }
 func (nulls) Swap(int, int)            {}
@@ -33,7 +33,7 @@ func (vs nulls) Strings() []string     { return make([]string, vs) }
 // implements Dataset as well
 func (vs nulls) Width() int                   { return 0 }
 func (vs nulls) At(int) Data                  { panic("runtime error: index out of range") }
-func (vs nulls) Expand(other Dataset) Dataset { return other}
+func (vs nulls) Expand(other Dataset) Dataset { return other }
 
 // to-string, for debugging. Same as array of <nil>.
 func (vs nulls) String() string {
