@@ -26,6 +26,7 @@ func (nulls) Less(int, int) bool       { return false }
 func (nulls) Swap(int, int)            {}
 func (nulls) Slice(i, j int) Data      { return nulls(j - i) }
 func (vs nulls) Append(data Data) Data { return vs + data.(nulls) }
+func (vs nulls) Duplicate(t int) Data  { return vs * nulls(t) }
 func (vs nulls) Len() int              { return int(vs) }
 func (vs nulls) Strings() []string     { return make([]string, vs) }
 

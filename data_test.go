@@ -21,6 +21,13 @@ func (vs Strs) Swap(i, j int)       { vs[i], vs[j] = vs[j], vs[i] }
 func (vs Strs) Slice(s, e int) Data { return vs[s:e] }
 func (vs Strs) Strings() []string   { return vs }
 func (vs Strs) Append(o Data) Data  { return append(vs, o.(Strs)...) }
+func (vs Strs) Duplicate(t int) Data {
+	ans := make(Strs, 0, vs.Len()*t)
+	for i := 0; i < t; i++ {
+		ans = append(ans, vs...)
+	}
+	return ans
+}
 
 func ExampleData() {
 	var strs Data = Strs([]string{"hello", "world", "foo", "bar"})
