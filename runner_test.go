@@ -6,20 +6,20 @@ import (
 	"strings"
 )
 
-type Upper struct{}
+type upper struct{}
 
-func (*Upper) Returns() []Type {
-	return []Type{Modify(Str, "As", "upper")}
+func (*upper) Returns() []Type {
+	return []Type{Modify(str, "As", "upper")}
 }
-func (*Upper) Run(_ context.Context, inp, out chan Dataset) error {
+func (*upper) Run(_ context.Context, inp, out chan Dataset) error {
 	for data := range inp {
 		if data.At(0).Type() == Null {
 			out <- data
 			continue
 		}
 
-		res := make(Strs, data.Len())
-		for i, v := range data.At(0).(Strs) {
+		res := make(strs, data.Len())
+		for i, v := range data.At(0).(strs) {
 			res[i] = strings.ToUpper(v)
 		}
 		out <- NewDataset(res)
@@ -27,20 +27,20 @@ func (*Upper) Run(_ context.Context, inp, out chan Dataset) error {
 	return nil
 }
 
-type Question struct{}
+type question struct{}
 
-func (*Question) Returns() []Type {
-	return []Type{Modify(Str, "As", "question")}
+func (*question) Returns() []Type {
+	return []Type{Modify(str, "As", "question")}
 }
-func (*Question) Run(_ context.Context, inp, out chan Dataset) error {
+func (*question) Run(_ context.Context, inp, out chan Dataset) error {
 	for data := range inp {
 		if data.At(0).Type() == Null {
 			out <- data
 			continue
 		}
 
-		res := make(Strs, data.Len())
-		for i, v := range data.At(0).(Strs) {
+		res := make(strs, data.Len())
+		for i, v := range data.At(0).(strs) {
 			res[i] = "is " + v + "?"
 		}
 		out <- NewDataset(res)
@@ -49,34 +49,10 @@ func (*Question) Run(_ context.Context, inp, out chan Dataset) error {
 }
 
 func ExampleRunner() {
-	upper := &Upper{}
-	data := NewDataset(Strs([]string{"hello", "world"}))
-	data, err := testRun(upper, data)
+	upper := &upper{}
+	data := NewDataset(strs([]string{"hello", "world"}))
+	data, err := TestRunner(upper, data)
 	fmt.Println(data, err) // [[HELLO WORLD]] <nil>
 
 	// Output: [[HELLO WORLD]] <nil>
-}
-
-// run a runner with the given input to completion
-func testRun(r Runner, datasets ...Dataset) (Dataset, error) {
-	var err error
-
-	inp := make(chan Dataset, len(datasets))
-	for _, data := range datasets {
-		inp <- data
-	}
-	close(inp)
-
-	out := make(chan Dataset)
-	go func() {
-		err = r.Run(context.Background(), inp, out)
-		close(out)
-	}()
-
-	var res = NewDataset()
-	for data := range out {
-		res = res.Append(data).(Dataset)
-	}
-
-	return res, err
 }

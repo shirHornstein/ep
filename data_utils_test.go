@@ -5,8 +5,8 @@ import (
 )
 
 func ExampleClone() {
-	var d1 Data = Strs([]string{"hello", "world"})
-	d2 := Clone(d1).(Strs)
+	var d1 Data = strs([]string{"hello", "world"})
+	d2 := Clone(d1).(strs)
 
 	d2[0] = "foo"
 	d2[1] = "bar"
@@ -19,7 +19,7 @@ func ExampleClone() {
 }
 
 func ExampleCut() {
-	var d Data = Strs([]string{"hello", "world", "foo", "bar"})
+	var d Data = strs([]string{"hello", "world", "foo", "bar"})
 	data := Cut(d, 1, 3)
 	fmt.Println(data)
 	// Output:
@@ -27,7 +27,7 @@ func ExampleCut() {
 }
 
 func ExamplePartition() {
-	var d Data = Strs([]string{"hello", "world", "hello", "bar"})
+	var d Data = strs([]string{"hello", "world", "hello", "bar"})
 	data := Partition(d)
 	fmt.Println(data)
 	// Output:
