@@ -33,9 +33,9 @@ func ExampleScatter() {
 
 	runner := dist1.Distribute(Scatter(), ":5551", ":5552")
 
-	data1 := NewDataset(Strs{"hello", "world"})
-	data2 := NewDataset(Strs{"foo", "bar"})
-	data, err := testRun(runner, data1, data2)
+	data1 := NewDataset(strs{"hello", "world"})
+	data2 := NewDataset(strs{"foo", "bar"})
+	data, err := TestRunner(runner, data1, data2)
 	fmt.Println(data, err) // no gather - only one batch should return
 
 	// Output: [[foo bar]] <nil>
@@ -67,9 +67,9 @@ func TestExchangeErr(t *testing.T) {
 
 	runner := dist1.Distribute(Scatter(), ":5551", ":5552", ":5553")
 
-	data1 := NewDataset(Strs{"hello", "world"})
-	data2 := NewDataset(Strs{"foo", "bar"})
-	data, err := testRun(runner, data1, data2)
+	data1 := NewDataset(strs{"hello", "world"})
+	data2 := NewDataset(strs{"foo", "bar"})
+	data, err := TestRunner(runner, data1, data2)
 	require.Equal(t, 0, data.Width())
 	require.Error(t, err)
 	require.Equal(t, "bad connection", err.Error())
@@ -86,9 +86,9 @@ func TestScatterSingleNode(t *testing.T) {
 
 	runner := dist.Distribute(Scatter(), ":5551")
 
-	data1 := NewDataset(Strs{"hello", "world"})
-	data2 := NewDataset(Strs{"foo", "bar"})
-	data, err := testRun(runner, data1, data2)
+	data1 := NewDataset(strs{"hello", "world"})
+	data2 := NewDataset(strs{"foo", "bar"})
+	data, err := TestRunner(runner, data1, data2)
 	require.NoError(t, err)
 	require.Equal(t, 1, data.Width())
 	require.Equal(t, 4, data.Len())
@@ -110,9 +110,9 @@ func TestScatterGather(t *testing.T) {
 	runner := Pipeline(Scatter(), &nodeAddr{}, Gather())
 	runner = dist1.Distribute(runner, ":5551", ":5552")
 
-	data1 := NewDataset(Strs{"hello", "world"})
-	data2 := NewDataset(Strs{"foo", "bar"})
-	data, err := testRun(runner, data1, data2)
+	data1 := NewDataset(strs{"hello", "world"})
+	data2 := NewDataset(strs{"foo", "bar"})
+	data, err := TestRunner(runner, data1, data2)
 
 	require.NoError(t, err)
 	require.Equal(t, "[[hello world foo bar] [:5552 :5552 :5551 :5551]]", fmt.Sprintf("%v", data))
@@ -129,11 +129,11 @@ var _ = registerGob(&nodeAddr{})
 
 type nodeAddr struct{}
 
-func (*nodeAddr) Returns() []Type { return []Type{Wildcard, Str} }
+func (*nodeAddr) Returns() []Type { return []Type{Wildcard, str} }
 func (*nodeAddr) Run(ctx context.Context, inp, out chan Dataset) error {
 	addr := ctx.Value(thisNodeKey).(string)
 	for data := range inp {
-		res := make(Strs, data.Len())
+		res := make(strs, data.Len())
 		for i := range res {
 			res[i] = addr
 		}

@@ -7,9 +7,9 @@ import (
 )
 
 func ExamplePipeline() {
-	runner := Pipeline(&Upper{}, &Question{})
-	data := NewDataset(Strs([]string{"hello", "world"}))
-	data, err := testRun(runner, data)
+	runner := Pipeline(&upper{}, &question{})
+	data := NewDataset(strs([]string{"hello", "world"}))
+	data, err := TestRunner(runner, data)
 	fmt.Println(data, err)
 
 	// Output: [[is HELLO? is WORLD?]] <nil>
@@ -17,9 +17,9 @@ func ExamplePipeline() {
 }
 
 func ExamplePipeline_reverse() {
-	runner := Pipeline(&Question{}, &Upper{})
-	data := NewDataset(Strs([]string{"hello", "world"}))
-	data, err := testRun(runner, data)
+	runner := Pipeline(&question{}, &upper{})
+	data := NewDataset(strs([]string{"hello", "world"}))
+	data, err := TestRunner(runner, data)
 	fmt.Println(data, err)
 
 	// Output: [[IS HELLO? IS WORLD?]] <nil>
@@ -29,10 +29,10 @@ func ExamplePipeline_reverse() {
 // Otherwise - this test will block indefinitely
 func TestPipelineErr(t *testing.T) {
 	err := fmt.Errorf("something bad happened")
-	infinity := &InfinityRunner{}
-	runner := Pipeline(infinity, &ErrRunner{err})
+	infinity := &infinityRunner{}
+	runner := Pipeline(infinity, &errRunner{err})
 	data := NewDataset(Null.Data(1))
-	data, err = testRun(runner, data)
+	data, err = TestRunner(runner, data)
 
 	require.Equal(t, 0, data.Width())
 	require.Error(t, err)
@@ -41,25 +41,25 @@ func TestPipelineErr(t *testing.T) {
 }
 
 func TestPipelineReturnsWildcard(t *testing.T) {
-	runner := Project(&Upper{}, &Question{})
+	runner := Project(&upper{}, &question{})
 	runner = Pipeline(runner, PassThrough())
 	types := runner.Returns()
 	require.Equal(t, 2, len(types))
-	require.Equal(t, Str.Name(), types[0].Name())
-	require.Equal(t, Str.Name(), types[1].Name())
+	require.Equal(t, str.Name(), types[0].Name())
+	require.Equal(t, str.Name(), types[1].Name())
 
-	runner = Project(&Upper{}, &Question{})
+	runner = Project(&upper{}, &question{})
 	runner = Pipeline(runner, Pick(1))
 	types = runner.Returns()
 	require.Equal(t, 1, len(types))
 }
 
 func TestPipelineReturnsWildcardIdx(t *testing.T) {
-	runner := Project(&Upper{}, &Question{})
+	runner := Project(&upper{}, &question{})
 	runner = Pipeline(runner, Pick(1))
 	types := runner.Returns()
 	require.Equal(t, 1, len(types))
-	require.Equal(t, Str.Name(), types[0].Name())
+	require.Equal(t, str.Name(), types[0].Name())
 
 	m := types[0].(interface {
 		Modifier(k interface{}) interface{}

@@ -5,9 +5,9 @@ import (
 )
 
 func ExampleUnion() {
-	runner, _ := Union(&Upper{}, &Question{})
-	data := NewDataset(Strs([]string{"hello", "world"}))
-	data, err := testRun(runner, data)
+	runner, _ := Union(&upper{}, &question{})
+	data := NewDataset(strs([]string{"hello", "world"}))
+	data, err := TestRunner(runner, data)
 	fmt.Println(data, err)
 
 	// Output:

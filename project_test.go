@@ -7,9 +7,9 @@ import (
 )
 
 func ExampleProject() {
-	runner := Project(&Upper{}, &Question{})
-	data := NewDataset(Strs([]string{"hello", "world"}))
-	data, err := testRun(runner, data)
+	runner := Project(&upper{}, &question{})
+	data := NewDataset(strs([]string{"hello", "world"}))
+	data, err := TestRunner(runner, data)
 	fmt.Println(data, err)
 
 	// Output:
@@ -17,9 +17,9 @@ func ExampleProject() {
 }
 
 func ExampleProject_reversed() {
-	runner := Project(&Question{}, &Upper{})
-	data := NewDataset(Strs([]string{"hello", "world"}))
-	data, err := testRun(runner, data)
+	runner := Project(&question{}, &upper{})
+	data := NewDataset(strs([]string{"hello", "world"}))
+	data, err := TestRunner(runner, data)
 	fmt.Println(data, err)
 
 	// Output:
@@ -29,10 +29,10 @@ func ExampleProject_reversed() {
 // project error should cancel all inner runners
 func TestProjectErr(t *testing.T) {
 	err := fmt.Errorf("something bad happened")
-	infinity := &InfinityRunner{}
-	runner := Project(infinity, &ErrRunner{err})
+	infinity := &infinityRunner{}
+	runner := Project(infinity, &errRunner{err})
 	data := NewDataset(Null.Data(1))
-	data, err = testRun(runner, data)
+	data, err = TestRunner(runner, data)
 
 	require.Equal(t, 0, data.Width())
 	require.Error(t, err)
@@ -42,8 +42,8 @@ func TestProjectErr(t *testing.T) {
 
 // Test that Projected runners always returns the same number of rows
 func TestProjectMismatchErr(t *testing.T) {
-	runner := Project(&Upper{}, &Count{})
-	data := NewDataset(Strs([]string{"hello", "world"}))
-	_, err := testRun(runner, data)
+	runner := Project(&upper{}, &count{})
+	data := NewDataset(strs([]string{"hello", "world"}))
+	_, err := TestRunner(runner, data)
 	require.Error(t, err)
 }
