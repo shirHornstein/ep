@@ -42,6 +42,7 @@ func Plan(ctx context.Context, arg interface{}) (Runner, error) {
 }
 
 // registry of runners
+// by convention - lowercase is function names, upper case is SQL constructs
 type runnersReg map[interface{}][]Runner
 
 func (reg runnersReg) Register(k interface{}, r Runner) runnersReg {
