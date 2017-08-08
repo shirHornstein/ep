@@ -6,16 +6,16 @@ import (
 	"reflect"
 )
 
-// Runners registry. See Registeries in the main doc.
+// Runners registry. See Registries in the main doc.
 var Runners = make(runnersReg)
 
-// Types registry. See Registeries in the main doc.
+// Types registry. See Registries in the main doc.
 var Types = make(typesReg)
 
 // Plan a new Runner marked by an arbitrary argument that must've been
 // preregistered using the `Runners.Register()` function. if the arg is a
 // struct, it's first converted into a string by reflecting its full type name
-// and path. See Planning & Registeries in the main doc.
+// and path. See Planning & Registries in the main doc.
 func Plan(ctx context.Context, arg interface{}) (Runner, error) {
 	var err error
 	for _, r := range Runners.Get(arg) {
@@ -35,13 +35,14 @@ func Plan(ctx context.Context, arg interface{}) (Runner, error) {
 	}
 
 	if err == nil {
-		err = &errUnregistered{arg} // fmt.Errorf("Unregistered: %s", reflect.TypeOf(arg))
+		err = &errUnregistered{arg}
 	}
 
 	return nil, err
 }
 
 // registry of runners
+// by convention - lowercase is function names, uppercase is SQL constructs
 type runnersReg map[interface{}][]Runner
 
 func (reg runnersReg) Register(k interface{}, r Runner) runnersReg {
@@ -73,7 +74,7 @@ func (reg typesReg) Get(k interface{}) []Type {
 // mentioned in the Registries doc. if the key is a struct, it's first converted
 // into a string by reflecting its full type name and path
 func registryKey(k interface{}) interface{} {
-	// optimization - if it's just a string. Avoid the overhead of reflection.
+	// optimization - if it's just a string. Avoid the overhead of reflection
 	s, ok := k.(string)
 	if ok {
 		return s
