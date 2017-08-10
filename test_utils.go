@@ -7,19 +7,24 @@ import (
 // TestRunner is helper function for tests, that runs given runner with given
 // list of input datasets. Output is consumed up to completion, then returned
 func TestRunner(r Runner, datasets ...Dataset) (Dataset, error) {
-	var err error
+	return TestRunnerWithContext(context.Background(), r, datasets...)
+}
 
+// TestRunnerWithContext is helper function for tests, doing the same as TestRunner
+// with given context
+func TestRunnerWithContext(ctx context.Context, r Runner, datasets ...Dataset) (Dataset, error) {
+	var err error
 	inp := make(chan Dataset, len(datasets))
+	out := make(chan Dataset)
+	go func() {
+		err = r.Run(ctx, inp, out)
+		close(out)
+	}()
+
 	for _, data := range datasets {
 		inp <- data
 	}
 	close(inp)
-
-	out := make(chan Dataset)
-	go func() {
-		err = r.Run(context.Background(), inp, out)
-		close(out)
-	}()
 
 	var res = NewDataset()
 	for data := range out {
