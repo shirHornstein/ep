@@ -9,7 +9,7 @@ import (
 type upper struct{}
 
 func (*upper) Returns() []Type {
-	return []Type{Modify(str, "As", "upper")}
+	return []Type{Modify(str, "LABEL", "upper")}
 }
 func (*upper) Run(_ context.Context, inp, out chan Dataset) error {
 	for data := range inp {
@@ -30,7 +30,7 @@ func (*upper) Run(_ context.Context, inp, out chan Dataset) error {
 type question struct{}
 
 func (*question) Returns() []Type {
-	return []Type{Modify(str, "As", "question")}
+	return []Type{Modify(str, "LABEL", "question")}
 }
 func (*question) Run(_ context.Context, inp, out chan Dataset) error {
 	for data := range inp {
