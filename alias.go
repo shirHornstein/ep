@@ -17,6 +17,8 @@ func GetAlias(col Type) string {
 	return "?column?" // un-named column
 }
 
+var _ = registerGob(&Scope{})
+
 // Scope wraps internal runner with scope alias
 type Scope struct {
 	Runner
