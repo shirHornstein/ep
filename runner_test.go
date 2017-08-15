@@ -8,9 +8,7 @@ import (
 
 type upper struct{}
 
-func (*upper) Returns() []Type {
-	return []Type{Modify(str, "LABEL", "upper")}
-}
+func (*upper) Returns() []Type { return []Type{SetAlias(str, "upper")} }
 func (*upper) Run(_ context.Context, inp, out chan Dataset) error {
 	for data := range inp {
 		if data.At(0).Type() == Null {
@@ -29,9 +27,7 @@ func (*upper) Run(_ context.Context, inp, out chan Dataset) error {
 
 type question struct{}
 
-func (*question) Returns() []Type {
-	return []Type{Modify(str, "LABEL", "question")}
-}
+func (*question) Returns() []Type { return []Type{SetAlias(str, "question")} }
 func (*question) Run(_ context.Context, inp, out chan Dataset) error {
 	for data := range inp {
 		if data.At(0).Type() == Null {
@@ -52,7 +48,7 @@ func ExampleRunner() {
 	upper := &upper{}
 	data := NewDataset(strs([]string{"hello", "world"}))
 	data, err := TestRunner(upper, data)
-	fmt.Println(data, err) // [[HELLO WORLD]] <nil>
+	fmt.Println(data, err)
 
 	// Output: [[HELLO WORLD]] <nil>
 }

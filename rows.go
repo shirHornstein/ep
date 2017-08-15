@@ -36,12 +36,7 @@ func (r *rows) Run(ctx context.Context, inp, out chan Dataset) error {
 func (r *rows) Columns() []string {
 	cols := []string{}
 	for _, t := range r.Returns() {
-		as := GetAlias(t)
-		if as != "" {
-			cols = append(cols, as)
-		} else {
-			cols = append(cols, "?column?") // un-named column
-		}
+		cols = append(cols, GetAlias(t))
 	}
 	return cols
 }
