@@ -1,5 +1,23 @@
 package ep
 
+// UnnamedColumn is used as defualt name for columns without alias
+const UnnamedColumn = "?column?"
+
+// Alias wraps internal runner's single return type with alias
+type Alias struct {
+	Runner
+	Label string
+}
+
+// Returns implements ep.Runner
+func (a *Alias) Returns() []Type {
+	inpTypes := a.Runner.Returns()
+	if len(inpTypes) == 1 {
+		return []Type{SetAlias(inpTypes[0], a.Label)}
+	}
+	panic("Invalid usage of alias. Consider use scope")
+}
+
 // SetAlias sets an alias for the given typed column
 func SetAlias(col Type, alias string) Type {
 	return Modify(col, "Alias", alias)
@@ -14,7 +32,7 @@ func GetAlias(col Type) string {
 			return alias
 		}
 	}
-	return "?column?" // un-named column
+	return ""
 }
 
 var _ = registerGob(&Scope{})
