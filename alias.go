@@ -1,6 +1,9 @@
 package ep
 
-// UnnamedColumn is used as defualt name for columns without alias
+var _ = registerGob(&Alias{})
+var _ = registerGob(&Scope{})
+
+// UnnamedColumn used as default name for columns without an alias
 const UnnamedColumn = "?column?"
 
 // Alias wraps internal runner's single return type with alias
@@ -34,8 +37,6 @@ func GetAlias(col Type) string {
 	}
 	return ""
 }
-
-var _ = registerGob(&Scope{})
 
 // Scope wraps internal runner with scope alias
 type Scope struct {
