@@ -1,19 +1,25 @@
 package ep
 
-var _ = registerGob(&Alias{})
-var _ = registerGob(&Scope{})
+var _ = registerGob(&alias{})
+var _ = registerGob(&scope{})
 
 // UnnamedColumn used as default name for columns without an alias
 const UnnamedColumn = "?column?"
 
-// Alias wraps internal runner's single return type with alias
-type Alias struct {
+// NewAlias wraps given runner's single return type with given alias.
+// Useful for planners that need to externally wrap a runner with alias
+// see Aliasing and Scoping
+func NewAlias(r Runner, label string) Runner {
+	return &alias{r, label}
+}
+
+type alias struct {
 	Runner
 	Label string
 }
 
 // Returns implements ep.Runner
-func (a *Alias) Returns() []Type {
+func (a *alias) Returns() []Type {
 	inpTypes := a.Runner.Returns()
 	if len(inpTypes) == 1 {
 		return []Type{SetAlias(inpTypes[0], a.Label)}
@@ -21,7 +27,8 @@ func (a *Alias) Returns() []Type {
 	panic("Invalid usage of alias. Consider use scope")
 }
 
-// SetAlias sets an alias for the given typed column
+// SetAlias sets an alias for the given typed column.
+// Useful for runner that need aliasing each column internally
 func SetAlias(col Type, alias string) Type {
 	return Modify(col, "Alias", alias)
 }
@@ -38,14 +45,21 @@ func GetAlias(col Type) string {
 	return ""
 }
 
-// Scope wraps internal runner with scope alias
-type Scope struct {
+// NewScope wraps given runner with scope alias to allow runner aliasing.
+// Useful to mark all returned columns with runner alias by planners that need
+// to externally wrap a runner with scope
+// see Aliasing and Scoping
+func NewScope(r Runner, label string) Runner {
+	return &scope{r, label}
+}
+
+type scope struct {
 	Runner
 	Label string
 }
 
 // Returns implements ep.Runner
-func (a *Scope) Returns() []Type {
+func (a *scope) Returns() []Type {
 	inpTypes := a.Runner.Returns()
 	outTypes := make([]Type, len(inpTypes))
 	for i, t := range inpTypes {
