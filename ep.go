@@ -93,7 +93,7 @@
 //
 // In that case, internal subselect will be wrapped with Scope runner to mark all its returned
 // columns as belonged to subselect.
-// See ep.NewScope, ep.NewAlias and ep.SetAlias for more details.
+// See ep.Scope, ep.Alias and ep.SetAlias for more details.
 package ep
 
 import (

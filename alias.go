@@ -6,10 +6,10 @@ var _ = registerGob(&scope{})
 // UnnamedColumn used as default name for columns without an alias
 const UnnamedColumn = "?column?"
 
-// NewAlias wraps given runner's single return type with given alias.
+// Alias wraps given runner's single return type with given alias.
 // Useful for planners that need to externally wrap a runner with alias
 // see Aliasing and Scoping
-func NewAlias(r Runner, label string) Runner {
+func Alias(r Runner, label string) Runner {
 	return &alias{r, label}
 }
 
@@ -45,11 +45,11 @@ func GetAlias(col Type) string {
 	return ""
 }
 
-// NewScope wraps given runner with scope alias to allow runner aliasing.
+// Scope wraps given runner with scope alias to allow runner aliasing.
 // Useful to mark all returned columns with runner alias by planners that need
 // to externally wrap a runner with scope
 // see Aliasing and Scoping
-func NewScope(r Runner, label string) Runner {
+func Scope(r Runner, label string) Runner {
 	return &scope{r, label}
 }
 
