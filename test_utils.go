@@ -2,8 +2,8 @@ package ep
 
 import (
 	"context"
-	"time"
 	"math/rand"
+	"time"
 )
 
 // TestRunner is helper function for tests, that runs given runner with given
