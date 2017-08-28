@@ -81,6 +81,19 @@
 // kind of middleware systems where at least one RunnerPlan must succeed. This
 // allows an opportunistic design where several runners bind to the same node,
 // each planning it differently - if they can.
+//
+// Aliasing and Scoping
+//
+// Allows renaming a table or a column temporarily by giving another name. Renaming is
+// a temporary change and the actual table/column name does not change outside of the current
+// statement scope.
+// Runners' returned values can be named by runner itself, or externally by planners.
+// E.g:
+// 		SELECT scope.col1 AS alias FROM (..) AS scope
+//
+// In that case, internal subselect will be wrapped with Scope runner to mark all its returned
+// columns as belonged to subselect.
+// See ep.Scope, ep.Alias and ep.SetAlias for more details.
 package ep
 
 import (

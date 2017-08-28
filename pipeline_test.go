@@ -60,9 +60,5 @@ func TestPipelineReturnsWildcardIdx(t *testing.T) {
 	types := runner.Returns()
 	require.Equal(t, 1, len(types))
 	require.Equal(t, str.Name(), types[0].Name())
-
-	m := types[0].(interface {
-		Modifier(k interface{}) interface{}
-	})
-	require.Equal(t, "question", m.Modifier("As"))
+	require.Equal(t, "question", GetAlias(types[0]))
 }
