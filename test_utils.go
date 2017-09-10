@@ -2,6 +2,8 @@ package ep
 
 import (
 	"context"
+	"math/rand"
+	"time"
 )
 
 // TestRunner is helper function for tests, that runs given runner with given
@@ -14,17 +16,23 @@ func TestRunner(r Runner, datasets ...Dataset) (Dataset, error) {
 // with given context
 func TestRunnerWithContext(ctx context.Context, r Runner, datasets ...Dataset) (Dataset, error) {
 	var err error
-	inp := make(chan Dataset, len(datasets))
+	inp := make(chan Dataset)
 	out := make(chan Dataset)
 	go func() {
 		err = r.Run(ctx, inp, out)
 		close(out)
 	}()
 
-	for _, data := range datasets {
-		inp <- data
-	}
-	close(inp)
+	go func() {
+		for _, data := range datasets {
+			// randomly sleep 0 or 1 second
+			if rand.Intn(2) > 0 {
+				time.Sleep(time.Second)
+			}
+			inp <- data
+		}
+		close(inp)
+	}()
 
 	var res = NewDataset()
 	for data := range out {

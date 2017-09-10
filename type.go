@@ -16,12 +16,17 @@ var Any = &anyType{}
 
 var _ = registerGob(&modifierType{}, Wildcard, Any)
 
-// Type is an interface that represnts specific data types
+// Type is an interface that represents specific data types
 type Type interface {
 	Name() string
 
 	// Data returns a new Data object of this type, containing `n` zero-values
 	Data(n int) Data
+}
+
+// AreEqualTypes compares types and returns true if they are equal
+func AreEqualTypes(t1, t2 Type) bool {
+	return (t1 == nil && t2 == nil) || t1.Name() == t2.Name()
 }
 
 // see Wildcard above.
