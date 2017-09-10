@@ -24,9 +24,19 @@ type Type interface {
 	Data(n int) Data
 }
 
-// AreEqualTypes compares types and returns true if they are equal
-func AreEqualTypes(t1, t2 Type) bool {
-	return (t1 == nil && t2 == nil) || t1.Name() == t2.Name()
+// AreEqualTypes compares types and returns true if types arrays are deep equal
+func AreEqualTypes(ts1, ts2 []Type) bool {
+	if len(ts1) != len(ts2) {
+		return false // mismatching number of types
+	}
+
+	for i, t1 := range ts1 {
+		if t1.Name() != ts2[i].Name() && !isAny(t1) && !isAny(ts2[i]) {
+			return false // mismatching type name
+		}
+	}
+
+	return true
 }
 
 // see Wildcard above.
@@ -42,6 +52,9 @@ type anyType struct{}
 func (*anyType) String() string { return "?" }
 func (*anyType) Name() string   { return "?" }
 func (*anyType) Data(int) Data  { panic("any has no concrete data") }
+func isAny(t Type) bool {
+	return t.Name() == "?"
+}
 
 // Modifier returns a new Type that's assigned a key-value pair:
 //
