@@ -75,11 +75,11 @@ func (set dataset) Append(data Data) Data {
 		panic("Unable to append mismatching number of columns")
 	}
 
+	res := make(dataset, set.Width())
 	for i := range set {
-		set[i] = set[i].Append(other[i])
+		res[i] = set[i].Append(other[i])
 	}
-
-	return set
+	return res
 }
 
 // see Data.Duplicate. Returns a dataset
@@ -88,11 +88,11 @@ func (set dataset) Duplicate(t int) Data {
 		return set
 	}
 
-	ans := make(dataset, set.Width())
+	res := make(dataset, set.Width())
 	for i := 0; i < set.Width(); i++ {
-		ans[i] = set[i].Duplicate(t)
+		res[i] = set[i].Duplicate(t)
 	}
-	return ans
+	return res
 }
 
 // see sort.Interface. Uses the last column
