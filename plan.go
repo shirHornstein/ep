@@ -70,6 +70,15 @@ func (reg typesReg) Get(k interface{}) []Type {
 	return reg[registryKey(k)]
 }
 
+// All returns all registered types. useful for tests and code generation
+func (reg typesReg) All() []Type {
+	types := make([]Type, 0, len(reg))
+	for k := range reg {
+		types = append(types, reg.Get(k)...)
+	}
+	return types
+}
+
 // Converts a key interface to a registry key according to the convention
 // mentioned in the Registries doc. if the key is a struct, it's first converted
 // into a string by reflecting its full type name and path
