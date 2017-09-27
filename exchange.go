@@ -121,7 +121,6 @@ func (ex *exchange) Send(data Dataset) error {
 	case sendPartition:
 		return ex.EncodePartition(data)
 	default:
-		fmt.Printf("%s %s sending %d rows to %d peers\n", time.Now(), ex.UID, data.Len(), len(ex.encs))
 		return ex.EncodeAll(data)
 	}
 }
@@ -216,8 +215,6 @@ func (ex *exchange) DecodeNext() (Dataset, error) {
 	}
 
 	ex.decsNext = i
-	fmt.Printf("%s %s receiving %d rows from %d peer (out of %d peers left)\n", time.Now(), ex.UID, data.(Dataset).Len(), i, len(ex.decs))
-
 	return data.(Dataset), nil
 }
 
