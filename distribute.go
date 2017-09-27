@@ -41,7 +41,6 @@ type dialer interface {
 //      type dialer interface {
 //          Dial(network, addr string) (net.Conn, error)
 //      }
-//
 func NewDistributer(addr string, listener net.Listener) Distributer {
 	connsMap := make(map[string]chan net.Conn)
 	closeCh := make(chan error, 1)

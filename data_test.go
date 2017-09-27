@@ -5,25 +5,32 @@ import (
 	"sort"
 )
 
-var Str = &StrType{}
+var str = &strType{}
 
-type StrType struct{}
+type strType struct{}
 
-func (*StrType) Name() string    { return "string" }
-func (*StrType) Data(n int) Data { return make(Strs, n) }
+func (*strType) Name() string    { return "string" }
+func (*strType) Data(n int) Data { return make(strs, n) }
 
-type Strs []string
+type strs []string
 
-func (Strs) Type() Type             { return Str }
-func (vs Strs) Len() int            { return len(vs) }
-func (vs Strs) Less(i, j int) bool  { return vs[i] < vs[j] }
-func (vs Strs) Swap(i, j int)       { vs[i], vs[j] = vs[j], vs[i] }
-func (vs Strs) Slice(s, e int) Data { return vs[s:e] }
-func (vs Strs) Strings() []string   { return vs }
-func (vs Strs) Append(o Data) Data  { return append(vs, o.(Strs)...) }
+func (strs) Type() Type             { return str }
+func (vs strs) Len() int            { return len(vs) }
+func (vs strs) Less(i, j int) bool  { return vs[i] < vs[j] }
+func (vs strs) Swap(i, j int)       { vs[i], vs[j] = vs[j], vs[i] }
+func (vs strs) Slice(s, e int) Data { return vs[s:e] }
+func (vs strs) Strings() []string   { return vs }
+func (vs strs) Append(o Data) Data  { return append(vs, o.(strs)...) }
+func (vs strs) Duplicate(t int) Data {
+	ans := make(strs, 0, vs.Len()*t)
+	for i := 0; i < t; i++ {
+		ans = append(ans, vs...)
+	}
+	return ans
+}
 
 func ExampleData() {
-	var strs Data = Strs([]string{"hello", "world", "foo", "bar"})
+	var strs Data = strs([]string{"hello", "world", "foo", "bar"})
 	sort.Sort(strs)
 	strs = strs.Slice(0, 2)
 	fmt.Println(strs.Strings()) // [bar foo]

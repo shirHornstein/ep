@@ -4,21 +4,21 @@ import (
 	"context"
 )
 
-var _ = registerGob(Strs{})
+var _ = registerGob(strs{})
 
-// ErrRunner is a Runner that immediately returns an error
-type ErrRunner struct{ error }
+// errRunner is a Runner that immediately returns an error
+type errRunner struct{ error }
 
-func (*ErrRunner) Returns() []Type { return []Type{} }
-func (r *ErrRunner) Run(ctx context.Context, inp, out chan Dataset) error {
+func (*errRunner) Returns() []Type { return []Type{} }
+func (r *errRunner) Run(ctx context.Context, inp, out chan Dataset) error {
 	return r.error
 }
 
-// InfinityRunner infinitely emits data until it's canceled
-type InfinityRunner struct{ Running bool }
+// infinityRunner infinitely emits data until it's canceled
+type infinityRunner struct{ Running bool }
 
-func (*InfinityRunner) Returns() []Type { return []Type{Str} }
-func (r *InfinityRunner) Run(ctx context.Context, inp, out chan Dataset) error {
+func (*infinityRunner) Returns() []Type { return []Type{str} }
+func (r *infinityRunner) Run(ctx context.Context, inp, out chan Dataset) error {
 	// running flag helps tests ensure that the go-routine didn't leak
 	r.Running = true
 	defer func() { r.Running = false }()
@@ -29,24 +29,23 @@ func (r *InfinityRunner) Run(ctx context.Context, inp, out chan Dataset) error {
 		case _, _ = <-ctx.Done():
 			return nil
 		default:
-			out <- NewDataset(Strs{"data"})
+			out <- NewDataset(strs{"data"})
 		}
 	}
 }
 
-type DataRunner struct {
+type dataRunner struct {
 	Dataset
 }
 
-func (r *DataRunner) Returns() []Type {
+func (r *dataRunner) Returns() []Type {
 	types := []Type{}
 	for i := 0; i < r.Dataset.Len(); i++ {
 		types = append(types, r.Dataset.At(i).Type())
 	}
 	return types
 }
-
-func (r *DataRunner) Run(ctx context.Context, inp, out chan Dataset) error {
+func (r *dataRunner) Run(ctx context.Context, inp, out chan Dataset) error {
 	for range inp {
 	} // drains input
 	out <- r.Dataset

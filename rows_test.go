@@ -9,8 +9,8 @@ import (
 )
 
 func TestRows(t *testing.T) {
-	data := NewDataset(Strs([]string{"hello", "world"}))
-	runner := Pipeline(&DataRunner{data}, &Upper{})
+	data := NewDataset(strs([]string{"hello", "world"}))
+	runner := Pipeline(&dataRunner{data}, &upper{})
 	rows := Rows(context.Background(), runner).(driver.Rows)
 	cols := rows.Columns()
 	require.Equal(t, 1, len(cols))

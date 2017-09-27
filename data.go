@@ -21,6 +21,10 @@ type Data interface {
 	// panic
 	Append(Data) Data
 
+	// Duplicate duplicates this object t times and returns new data with
+	// Len() * t rows
+	Duplicate(t int) Data
+
 	// Strings returns the string representation of all of the Data values
 	Strings() []string
 }
