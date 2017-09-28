@@ -70,11 +70,19 @@ func (reg typesReg) Get(k interface{}) []Type {
 	return reg[registryKey(k)]
 }
 
-// All returns all registered types. useful for tests and code generation
+// All returns all registered types without duplications. useful for
+// tests and code generation
 func (reg typesReg) All() []Type {
-	types := make([]Type, 0, len(reg))
-	for k := range reg {
-		types = append(types, reg.Get(k)...)
+	typesSet := make(map[Type]bool)
+	for _, list := range reg {
+		for _, t := range list {
+			typesSet[t] = true
+		}
+	}
+
+	types := make([]Type, 0, len(typesSet))
+	for t := range typesSet {
+		types = append(types, t)
 	}
 	return types
 }
