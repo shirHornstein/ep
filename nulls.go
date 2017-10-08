@@ -12,9 +12,10 @@ var Null = &nullType{}
 
 type nullType struct{}
 
-func (t *nullType) String() string { return t.Name() }
-func (*nullType) Data(n int) Data  { return nulls(n) }
-func (*nullType) Name() string     { return "NULL" }
+func (t *nullType) String() string     { return t.Name() }
+func (*nullType) Data(n int) Data      { return nulls(n) }
+func (*nullType) DataEmpty(n int) Data { return nulls(n) }
+func (*nullType) Name() string         { return "NULL" }
 func (*nullType) Is(t Type) bool {
 	return t.Name() == "NULL"
 }
