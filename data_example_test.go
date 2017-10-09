@@ -9,8 +9,9 @@ var str = &strType{}
 
 type strType struct{}
 
-func (*strType) Name() string    { return "string" }
-func (*strType) Data(n int) Data { return make(strs, n) }
+func (*strType) Name() string         { return "string" }
+func (*strType) Data(n int) Data      { return make(strs, n) }
+func (*strType) DataEmpty(n int) Data { return make(strs, 0, n) }
 
 type strs []string
 

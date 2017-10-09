@@ -22,6 +22,9 @@ type Type interface {
 
 	// Data returns a new Data object of this type, containing `n` zero-values
 	Data(n int) Data
+
+	// DataEmpty returns a new empty Data object of this type, with allocated size 'n'
+	DataEmpty(n int) Data
 }
 
 // AreEqualTypes compares types and returns true if types arrays are deep equal
@@ -45,13 +48,15 @@ type wildcardType struct{ Idx *int }
 func (*wildcardType) String() string           { return "*" }
 func (*wildcardType) Name() string             { return "*" }
 func (*wildcardType) Data(int) Data            { panic("wildcard has no concrete data") }
+func (*wildcardType) DataEmpty(int) Data       { panic("wildcard has no concrete data") }
 func (*wildcardType) At(idx int) *wildcardType { return &wildcardType{&idx} }
 
 type anyType struct{}
 
-func (*anyType) String() string { return "?" }
-func (*anyType) Name() string   { return "?" }
-func (*anyType) Data(int) Data  { panic("any has no concrete data") }
+func (*anyType) String() string     { return "?" }
+func (*anyType) Name() string       { return "?" }
+func (*anyType) Data(int) Data      { panic("any has no concrete data") }
+func (*anyType) DataEmpty(int) Data { panic("any has no concrete data") }
 func isAny(t Type) bool {
 	return t.Name() == "?"
 }
