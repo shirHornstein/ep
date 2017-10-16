@@ -133,5 +133,6 @@ func (set dataset) Type() Type {
 type datasetType struct{}
 
 func (sett *datasetType) Name() string         { return "Dataset" }
+func (sett *datasetType) String() string       { return sett.Name() }
 func (sett *datasetType) Data(n int) Data      { return make(dataset, n) }
 func (sett *datasetType) DataEmpty(n int) Data { return make(dataset, 0, n) }

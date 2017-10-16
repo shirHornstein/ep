@@ -19,6 +19,7 @@ var _ = registerGob(&modifierType{}, Wildcard, Any)
 // Type is an interface that represents specific data types
 type Type interface {
 	Name() string
+	String() string
 
 	// Data returns a new Data object of this type, containing `n` zero-values
 	Data(n int) Data
