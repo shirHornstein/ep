@@ -58,7 +58,7 @@ func (rs union) ReturnsErr() ([]Type, error) {
 			if Null.Is(types[i]) {
 				types[i] = have[i]
 			} else if !Null.Is(t) && t.Name() != types[i].Name() {
-				return nil, fmt.Errorf("type mismatch %v and %v", types, have)
+				return nil, fmt.Errorf("type mismatch %s and %s", types, have)
 			}
 		}
 	}
