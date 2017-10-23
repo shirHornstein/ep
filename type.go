@@ -62,18 +62,9 @@ func isAny(t Type) bool {
 	return t.Name() == "?"
 }
 
-// Modifier returns a new Type that's assigned a key-value pair:
-//
-//  type modifier interface {
-//      Modifier(k interface) interface{}
-//  }
-
-// Modify is useful for adding more modifiers/context to types, like type-length,
-// format (binary/text), alias, flags, etc.
-func Modify(t Type, k, v interface{}) Type {
-	// we're only casting it here to benefit from compile-time verification that
-	// the interface isn't broken
-	return modifier(&modifierType{t, k, v})
+type modifier interface {
+	Type
+	getModifier(k interface{}) interface{}
 }
 
 type modifierType struct {
@@ -82,22 +73,27 @@ type modifierType struct {
 	V interface{}
 }
 
-func (t *modifierType) Modifier(k interface{}) interface{} {
+func (t *modifierType) getModifier(k interface{}) interface{} {
 	if t.K == k {
 		return t.V
 	}
-
-	modifier, ok := t.Type.(interface {
-		Modifier(k interface{}) interface{}
-	})
-	if ok && modifier != nil {
-		return modifier.Modifier(k)
-	}
-
-	return nil
+	return Modifier(t.Type, k)
 }
 
-type modifier interface {
-	Type
-	Modifier(k interface{}) interface{}
+// Modify returns a new Type that's assigned a key-value pair. Useful for adding
+// modifiers/context to types (like type-length, format (binary/text), alias, flags, etc.)
+func Modify(t Type, k, v interface{}) Type {
+	// we're only casting it here to benefit from compile-time verification that
+	// the interface isn't broken
+	return modifier(&modifierType{t, k, v})
+}
+
+// Modifier is useful for getting pre-added modifiers/context of types, using Modify function
+func Modifier(t Type, k interface{}) interface{} {
+	modifier, ok := t.(modifier)
+	if !ok || modifier == nil {
+		return nil
+	}
+
+	return modifier.getModifier(k)
 }

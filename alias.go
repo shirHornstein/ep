@@ -35,12 +35,9 @@ func SetAlias(col Type, alias string) Type {
 
 // GetAlias returns the alias of the given typed column
 func GetAlias(col Type) string {
-	m, ok := col.(modifier)
+	alias, ok := Modifier(col, "Alias").(string)
 	if ok {
-		alias, ok := m.Modifier("Alias").(string)
-		if ok {
-			return alias
-		}
+		return alias
 	}
 	return ""
 }
@@ -73,12 +70,9 @@ func (a *scope) Returns() []Type {
 
 // GetScope returns the scope alias of the given typed column
 func GetScope(col Type) string {
-	m, ok := col.(modifier)
+	scope, ok := Modifier(col, "Scope").(string)
 	if ok {
-		alias, ok := m.Modifier("Scope").(string)
-		if ok {
-			return alias
-		}
+		return scope
 	}
 	return ""
 }
