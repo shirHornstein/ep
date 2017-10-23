@@ -1,6 +1,7 @@
 package ep
 
 import (
+	"context"
 	"fmt"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -46,4 +47,17 @@ func TestProjectMismatchErr(t *testing.T) {
 	data := NewDataset(strs([]string{"hello", "world"}))
 	_, err := TestRunner(runner, data)
 	require.Error(t, err)
+}
+
+type count struct{}
+
+func (*count) Returns() []Type { return []Type{str} }
+func (*count) Run(_ context.Context, inp, out chan Dataset) error {
+	c := 0
+	for data := range inp {
+		c += data.Len()
+	}
+
+	out <- NewDataset(strs{fmt.Sprintf("%d", c)})
+	return nil
 }
