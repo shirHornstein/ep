@@ -27,7 +27,13 @@ type rows struct {
 }
 
 func (r *rows) Run(ctx context.Context, inp, out chan Dataset) error {
-	r.Out = out                                   // save it for Next()
+	if r.Out != nil {
+		if r.Out != out {
+			panic("rows already have out")
+		}
+	} else {
+		r.Out = out // save it for Next()
+	}
 	r.Ctx, r.CancelFunc = context.WithCancel(ctx) // for Close()
 	return r.Runner.Run(r.Ctx, inp, out)
 }
