@@ -75,7 +75,7 @@ func PassThrough() Runner { return &passthrough{} }
 
 type passthrough struct{}
 
-func (*passthrough) Args() []Type { return []Type{Wildcard} }
+func (*passthrough) Args() []Type    { return []Type{Wildcard} }
 func (*passthrough) Returns() []Type { return []Type{Wildcard} }
 func (*passthrough) Run(_ context.Context, inp, out chan Dataset) (err error) {
 	for data := range inp {
