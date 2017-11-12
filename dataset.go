@@ -17,6 +17,10 @@ type Dataset interface {
 	// Expand returns new dataset composed of this dataset's columns and other's
 	// columns. Number of rows of both datasets should be equal
 	Expand(other Dataset) Dataset
+
+	// Split divides dataset to two parts, where the second part length determined by
+	// secondLen argument
+	Split(secondLen int) (Dataset, Dataset)
 }
 
 type dataset []Data
@@ -50,6 +54,15 @@ func (set dataset) Expand(other Dataset) Dataset {
 
 	otherCols := other.(dataset)
 	return append(set, otherCols...)
+}
+
+// Split returns two datasets, with requested second length
+func (set dataset) Split(secondLen int) (Dataset, Dataset) {
+	if set.Width() < secondLen {
+		panic("Unable to split dataset - not enough columns")
+	}
+	firstLen := set.Width() - secondLen
+	return set[:firstLen], set[firstLen:]
 }
 
 // Len of the dataset (number of rows). Assumed that all columns are of equal
