@@ -1,5 +1,10 @@
 package ep
 
+import (
+	"fmt"
+	"strings"
+)
+
 var _ = registerGob(NewDataset(), &datasetType{})
 
 // Dataset is a composite Data interface, containing several internal Data
@@ -21,6 +26,9 @@ type Dataset interface {
 	// Split divides dataset to two parts, where the second part length determined by
 	// secondLen argument
 	Split(secondLen int) (Dataset, Dataset)
+
+	// GetSortable returns sortable version/extension for this dataset
+	GetSortable() Dataset
 }
 
 type dataset []Data
@@ -63,6 +71,11 @@ func (set dataset) Split(secondLen int) (Dataset, Dataset) {
 	}
 	firstLen := set.Width() - secondLen
 	return set[:firstLen], set[firstLen:]
+}
+
+// GetSortable returns sortable version/extension for this dataset
+func (set dataset) GetSortable() Dataset {
+	return newSortableDataset(set)
 }
 
 // Len of the dataset (number of rows). Assumed that all columns are of equal
@@ -108,20 +121,14 @@ func (set dataset) Duplicate(t int) Data {
 	return res
 }
 
-// see sort.Interface. Uses the last column
+// see sort.Interface. Uses the last column. use sortableDataset.Less instead
 func (set dataset) Less(i, j int) bool {
-	if set == nil || len(set) == 0 {
-		return false
-	}
-
-	return set[len(set)-1].Less(i, j)
+	panic("dataset is not sortable. use sortableDataset type")
 }
 
-// see sort.Interface
+// see sort.Interface. use sortableDataset.Swap instead
 func (set dataset) Swap(i, j int) {
-	for _, data := range set {
-		data.Swap(i, j)
-	}
+	panic("dataset is not sortable. use sortableDataset type")
 }
 
 // see Data.Slice. Returns a dataset
@@ -135,7 +142,12 @@ func (set dataset) Slice(start, end int) Data {
 
 // see Data.Strings(). Currently not implemented
 func (set dataset) Strings() []string {
-	panic("Dataset cannot be cast to strings")
+	var res []string
+	for _, d := range set {
+		res = append(res, strings.Join(d.Strings(), ","))
+	}
+
+	return res
 }
 
 // see Data.Data
@@ -149,3 +161,64 @@ func (sett *datasetType) Name() string         { return "Dataset" }
 func (sett *datasetType) String() string       { return sett.Name() }
 func (sett *datasetType) Data(n int) Data      { return make(dataset, n) }
 func (sett *datasetType) DataEmpty(n int) Data { return make(dataset, 0, n) }
+
+// Sortable version of dataset.
+// Note: this type isn't gob-ed on purpose! Only actual dataset should be used
+// and sent between peers. Use this version for local sorting, then send original/new
+// dataset object
+type sortableDataset struct {
+	dataset
+	uniqueColumns []int
+}
+
+// newSortableDataset creates a sortable wrapper of the provided dataset
+func newSortableDataset(data dataset) Dataset {
+	uniqueColumns := []int{}
+	// in case dataset contains recurring columns - find unique columns indices to
+	// avoid double Swapping during sort
+	for i := range data {
+		unique := true
+		for j := 0; j < i; j++ {
+			// for efficiency - avoid reflection and check address of underlying array
+			if fmt.Sprintf("%p", data[i]) == fmt.Sprintf("%p", data[j]) {
+				unique = false
+			}
+		}
+		if unique {
+			uniqueColumns = append(uniqueColumns, i)
+		}
+	}
+	return sortableDataset{data, uniqueColumns}
+}
+
+// see sort.Interface
+func (s sortableDataset) Swap(i, j int) {
+	for _, idx := range s.uniqueColumns {
+		s.At(idx).Swap(i, j)
+	}
+}
+
+// see sort.Interface. Uses the last column
+func (s sortableDataset) Less(i, j int) bool {
+	if s.dataset == nil || s.dataset.Width() == 0 {
+		return false
+	}
+
+	return s.dataset.At(s.dataset.Width()-1).Less(i, j)
+}
+
+// Expand returns new dataset with s.dataset and other's columns
+func (s sortableDataset) Expand(other Dataset) Dataset {
+	expanded := s.dataset.Expand(other).(dataset)
+	return newSortableDataset(expanded)
+}
+
+// Append a data (assumed by interface spec to be a Dataset)
+func (s sortableDataset) Append(data Data) Data {
+	dataset := data
+	other, isSortable := data.(sortableDataset)
+	if isSortable {
+		dataset = other.dataset
+	}
+	return s.dataset.Append(dataset)
+}

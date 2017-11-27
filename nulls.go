@@ -36,6 +36,7 @@ func (vs nulls) Width() int                             { return 0 }
 func (vs nulls) At(int) Data                            { panic("runtime error: index out of range") }
 func (vs nulls) Expand(other Dataset) Dataset           { return other }
 func (vs nulls) Split(secondLen int) (Dataset, Dataset) { panic("runtime error: not splitable") }
+func (vs nulls) GetSortable() Dataset                   { return vs }
 
 // to-string, for debugging. Same as array of <nil>.
 func (vs nulls) String() string {
