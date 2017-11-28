@@ -43,7 +43,7 @@ func ExampleScatter() {
 
 // Test that errors are transmitted across the network (an error in one node
 // is reported to the calling node).
-func TestExchangeErr(t *testing.T) {
+func TestExchange_error(t *testing.T) {
 	defer time.Sleep(1 * time.Millisecond) // bind: address already in use
 
 	ln1, err := net.Listen("tcp", ":5551")
@@ -77,7 +77,7 @@ func TestExchangeErr(t *testing.T) {
 
 // Tests the scattering when there's just one node - the whole thing should
 // be short-circuited to act as a pass-through
-func TestScatterSingleNode(t *testing.T) {
+func TestScatter_singleNode(t *testing.T) {
 	ln, err := net.Listen("tcp", ":5551")
 	require.NoError(t, err)
 
@@ -94,7 +94,7 @@ func TestScatterSingleNode(t *testing.T) {
 	require.Equal(t, 4, data.Len())
 }
 
-func TestScatterGather(t *testing.T) {
+func TestScatter_and_Gather(t *testing.T) {
 	ln1, err := net.Listen("tcp", ":5551")
 	require.NoError(t, err)
 
@@ -118,8 +118,8 @@ func TestScatterGather(t *testing.T) {
 	require.Equal(t, "[[hello world foo bar] [:5552 :5552 :5551 :5551]]", fmt.Sprintf("%v", data))
 }
 
-// regression - uniqueness in UID generation per generated exchange function
-func TestScatterUnique(t *testing.T) {
+// UID should be unique per generated exchange function
+func TestScatter_unique(t *testing.T) {
 	s1 := Scatter().(*exchange)
 	s2 := Scatter().(*exchange)
 	require.NotEqual(t, s1.UID, s2.UID)

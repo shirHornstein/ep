@@ -35,8 +35,8 @@ func Clone(data Data) Data {
 	return data.Type().Data(0).Append(data)
 }
 
-// Cut the Data into several sub-segments at the provided cutpoint indices. It's
-// effectlively the same as calling Data.Slice() multiple times. Dataset also
+// Cut the Data into several sub-segments at the provided cut-point indices. It's
+// effectively the same as calling Data.Slice() multiple times. Dataset also
 // implements the Data interface is a valid input to this function.
 func Cut(data Data, cutpoints ...int) Data {
 	res := []Data{}
@@ -57,7 +57,7 @@ func Cut(data Data, cutpoints ...int) Data {
 // the same value, repeated multiple times. Dataset also implements the Data
 // interface is a valid input to this function.
 //
-// NOTE that partitioing will re-order to data to create the minimum number of
+// NOTE that partitioning will re-order the data to create the minimum number of
 // batches. Thus is does not maintain order
 func Partition(data Data) Data {
 	sort.Sort(data)

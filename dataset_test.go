@@ -12,7 +12,7 @@ func TestDataInterface(t *testing.T) {
 	VerifyDataInvariant(t, dataset)
 }
 
-func TestDatasetSort(t *testing.T) {
+func TestDataset_Sort(t *testing.T) {
 	var d1 Data = strs([]string{"hello", "world", "foo", "bar"})
 	var d2 Data = strs([]string{"1", "2", "4", "3"})
 
@@ -22,7 +22,7 @@ func TestDatasetSort(t *testing.T) {
 	require.Equal(t, 4, dataset.Len())
 	require.Equal(t, 4, dataset.Width())
 
-	// sorting always done according last column
+	// sorting always done according to last column
 	require.Equal(t, "[1 2 3 4]", fmt.Sprintf("%+v", dataset.At(dataset.Width()-1)))
 	// verify other columns were updated as well
 	require.Equal(t, "[hello world bar foo]", fmt.Sprintf("%+v", dataset.At(0)))

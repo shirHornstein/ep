@@ -78,6 +78,11 @@ func (set dataset) GetSortable() Dataset {
 	return newSortableDataset(set)
 }
 
+// see Data.Type
+func (set dataset) Type() Type {
+	return &datasetType{}
+}
+
 // Len of the dataset (number of rows). Assumed that all columns are of equal
 // length, and thus only checks the first
 func (set dataset) Len() int {
@@ -86,6 +91,25 @@ func (set dataset) Len() int {
 	}
 
 	return set[0].Len()
+}
+
+// see sort.Interface. Uses the last column. use sortableDataset.Less instead
+func (set dataset) Less(i, j int) bool {
+	panic("dataset is not sortable. use sortableDataset type")
+}
+
+// see sort.Interface. use sortableDataset.Swap instead
+func (set dataset) Swap(i, j int) {
+	panic("dataset is not sortable. use sortableDataset type")
+}
+
+// see Data.Slice. Returns a dataset
+func (set dataset) Slice(start, end int) Data {
+	res := make(dataset, len(set))
+	for i := range set {
+		res[i] = set[i].Slice(start, end)
+	}
+	return res
 }
 
 // Append a data (assumed by interface spec to be a Dataset)
@@ -121,25 +145,6 @@ func (set dataset) Duplicate(t int) Data {
 	return res
 }
 
-// see sort.Interface. Uses the last column. use sortableDataset.Less instead
-func (set dataset) Less(i, j int) bool {
-	panic("dataset is not sortable. use sortableDataset type")
-}
-
-// see sort.Interface. use sortableDataset.Swap instead
-func (set dataset) Swap(i, j int) {
-	panic("dataset is not sortable. use sortableDataset type")
-}
-
-// see Data.Slice. Returns a dataset
-func (set dataset) Slice(start, end int) Data {
-	res := make(dataset, len(set))
-	for i := range set {
-		res[i] = set[i].Slice(start, end)
-	}
-	return res
-}
-
 // see Data.Strings(). Currently not implemented
 func (set dataset) Strings() []string {
 	var res []string
@@ -148,11 +153,6 @@ func (set dataset) Strings() []string {
 	}
 
 	return res
-}
-
-// see Data.Data
-func (set dataset) Type() Type {
-	return &datasetType{}
 }
 
 type datasetType struct{}
