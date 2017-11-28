@@ -1,6 +1,8 @@
 package ep
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestNullsInvariant(t *testing.T) {
 	VerifyDataInvariant(t, Null.Data(10))

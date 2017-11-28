@@ -1,12 +1,12 @@
 package ep
 
-// Wildcard is a pseduo-type used to denote types that are dependent on their
+// Wildcard is a pseudo-type used to denote types that are dependent on their
 // input type. For example, a function returning [Wildcard, Int] effectively
 // returns its input followed by an int column. It should never be used in the
 // datasets themselves, but only in API declaration.
 var Wildcard = &wildcardType{}
 
-// Any is a pseduo-type used to denote unknown or a varied data type that might
+// Any is a pseudo-type used to denote unknown or a varied data type that might
 // change from batch to batch. The actual batches must be typed (thus be
 // concrete Data implementations), as Any is not instantiatable, but no one type
 // can be determined ahead of time. Examples are JSON parser functions that may

@@ -28,7 +28,7 @@ func ExampleProject_reversed() {
 }
 
 // project error should cancel all inner runners
-func TestProjectErr(t *testing.T) {
+func TestProject_error(t *testing.T) {
 	err := fmt.Errorf("something bad happened")
 	infinity := &infinityRunner{}
 	runner := Project(infinity, &errRunner{err})
@@ -42,7 +42,7 @@ func TestProjectErr(t *testing.T) {
 }
 
 // Test that Projected runners always returns the same number of rows
-func TestProjectMismatchErr(t *testing.T) {
+func TestProject_mismatchErr(t *testing.T) {
 	runner := Project(&upper{}, &count{})
 	data := NewDataset(strs([]string{"hello", "world"}))
 	_, err := TestRunner(runner, data)

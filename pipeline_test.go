@@ -27,7 +27,7 @@ func ExamplePipeline_reverse() {
 
 // test that upon an error, the producing (infinity) runners are canceled.
 // Otherwise - this test will block indefinitely
-func TestPipelineErr(t *testing.T) {
+func TestPipeline_err(t *testing.T) {
 	err := fmt.Errorf("something bad happened")
 	infinity := &infinityRunner{}
 	runner := Pipeline(infinity, &errRunner{err})
@@ -40,7 +40,7 @@ func TestPipelineErr(t *testing.T) {
 	require.Equal(t, false, infinity.Running, "Infinity go-routine leak")
 }
 
-func TestPipelineReturnsWildcard(t *testing.T) {
+func TestPipeline_Returns_wildcard(t *testing.T) {
 	runner := Project(&upper{}, &question{})
 	runner = Pipeline(runner, PassThrough())
 	types := runner.Returns()
@@ -54,7 +54,7 @@ func TestPipelineReturnsWildcard(t *testing.T) {
 	require.Equal(t, 1, len(types))
 }
 
-func TestPipelineReturnsWildcardIdx(t *testing.T) {
+func TestPipeline_Returns_wildcardIdx(t *testing.T) {
 	runner := Project(&upper{}, &question{})
 	runner = Pipeline(runner, Pick(1))
 	types := runner.Returns()

@@ -80,9 +80,9 @@ func (rs pipeline) returnsOne(j int) []Type {
 	// check for wildcards, and replace as needed. Walk backwards to allow
 	// adding types in-place without messing the iteration
 	for i := len(res) - 1; i >= 0; i-- {
-		w, _ := res[i].(*wildcardType)
+		w, isWildcard := res[i].(*wildcardType)
 
-		if w != nil {
+		if isWildcard {
 			// wildcard found - replace it with the types from the previous
 			// runner (which might also contain Wildcards)
 			prev := rs.returnsOne(j - 1)

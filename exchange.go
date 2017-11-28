@@ -90,7 +90,7 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 		select {
 		case data, ok := <-inp:
 			if !ok {
-				// the input is exhauted. Notify peers that we're done sending
+				// the input is exhausted. Notify peers that we're done sending
 				// data (they will use it to stop listening to data from us).
 				ex.EncodeAll(io.EOF)
 				sndDone = true
@@ -137,7 +137,7 @@ func (ex *exchange) Close(err error) error {
 		errOut = ex.EncodeAll(err)
 
 		// the error below is triggered very infrequently when we hang up too
-		// fast. 1ms timeout in case of error is a good tradeoff compared to
+		// fast. 1ms timeout in case of error is a good trade-off compared to
 		// the complexity of locks or a full hand-shake here.
 		time.Sleep(1 * time.Millisecond) // use of closed network connection
 	}
@@ -293,7 +293,7 @@ func (ex *exchange) Init(ctx context.Context) error {
 	return nil
 }
 
-// interfqace for gob.Encoder/Decoder. Used to also implement the short-circuit.
+// interfaces for gob.Encoder/Decoder. Used to also implement the short-circuit.
 type encoder interface {
 	Encode(interface{}) error
 }
@@ -325,7 +325,7 @@ func (dec dbgDecoder) Decode(e interface{}) error {
 	return err
 }
 
-// shortCircuit implements io.Closer, encoder and dedocder and provides the
+// shortCircuit implements io.Closer, encoder and decoder and provides the
 // means to short-circuit internal communications within the same node. This is
 // in order to not complicate the generic nature of the exchange code
 type shortCircuit struct {

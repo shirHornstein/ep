@@ -6,6 +6,7 @@ import (
 )
 
 var str = &strType{}
+var _ = Types.Register("string", str)
 
 type strType struct{}
 
@@ -21,7 +22,6 @@ func (vs strs) Len() int            { return len(vs) }
 func (vs strs) Less(i, j int) bool  { return vs[i] < vs[j] }
 func (vs strs) Swap(i, j int)       { vs[i], vs[j] = vs[j], vs[i] }
 func (vs strs) Slice(s, e int) Data { return vs[s:e] }
-func (vs strs) Strings() []string   { return vs }
 func (vs strs) Append(o Data) Data  { return append(vs, o.(strs)...) }
 func (vs strs) Duplicate(t int) Data {
 	ans := make(strs, 0, vs.Len()*t)
@@ -30,6 +30,7 @@ func (vs strs) Duplicate(t int) Data {
 	}
 	return ans
 }
+func (vs strs) Strings() []string { return vs }
 
 func ExampleData() {
 	var strs Data = strs([]string{"hello", "world", "foo", "bar"})
