@@ -20,7 +20,7 @@ type Dataset interface {
 
 	// Expand returns new dataset composed of this dataset's columns and other's
 	// columns. Number of rows of both datasets should be equal
-	Expand(data Dataset) Dataset
+	Expand(other Dataset) Dataset
 
 	// Split divides dataset to two parts, where the second part width determined by
 	// the given secondWidth argument
@@ -46,17 +46,17 @@ func (set dataset) At(i int) Data {
 }
 
 // Expand returns new dataset with set and other's columns
-func (set dataset) Expand(data Dataset) Dataset {
+func (set dataset) Expand(other Dataset) Dataset {
 	if set == nil {
-		return data
-	} else if data == nil {
+		return other
+	} else if other == nil {
 		return set
 	}
-	if set.Len() != data.Len() {
+	if set.Len() != other.Len() {
 		panic("Unable to expand mismatching number of rows")
 	}
 
-	otherCols := data.(dataset)
+	otherCols := other.(dataset)
 	return append(set, otherCols...)
 }
 
