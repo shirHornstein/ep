@@ -24,7 +24,7 @@ func TestDataset_Sort_byLastColAscending(t *testing.T) {
 	require.Equal(t, 7, dataset.Len())
 	require.Equal(t, 3, dataset.Width())
 
-	// sorting done by last column
+	// by default, sorting done by last column, ascending
 	require.Equal(t, "[0 1 1 1 2 3 4]", fmt.Sprintf("%+v", dataset.At(2)))
 	// verify other columns were updated as well
 	require.Equal(t, "[bar hello a z world bar foo]", fmt.Sprintf("%+v", dataset.At(0)))

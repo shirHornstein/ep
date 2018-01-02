@@ -18,7 +18,7 @@ func TestDatasetSort(t *testing.T) {
 	require.Equal(t, 7, dataset.Len())
 	require.Equal(t, 6, dataset.Width())
 
-	// sorting done according to added sorting columns
+	// sorting done according to sorting columns
 	require.Equal(t, "[0 1 1 1 2 3 4]", fmt.Sprintf("%+v", dataset.At(1)))
 	require.Equal(t, "[bar a hello z world bar foo]", fmt.Sprintf("%+v", dataset.At(3)))
 	// verify other columns were updated as well
@@ -39,7 +39,7 @@ func TestDadasetSort_firstDesc(t *testing.T) {
 	require.Equal(t, 7, dataset.Len())
 	require.Equal(t, 5, dataset.Width())
 
-	// sorting done according to added sorting columns
+	// sorting done according to sorting columns
 	require.Equal(t, "[4 3 2 1 1 1 0]", fmt.Sprintf("%+v", dataset.At(1)))
 	require.Equal(t, "[foo bar world a hello z bar]", fmt.Sprintf("%+v", dataset.At(4)))
 	// verify other columns were updated as well
@@ -60,7 +60,7 @@ func TestDadasetSort_secondDesc(t *testing.T) {
 	require.Equal(t, 7, dataset.Len())
 	require.Equal(t, 5, dataset.Width())
 
-	// sorting done according to added sorting columns
+	// sorting done according to sorting columns
 	require.Equal(t, "[0 1 1 1 2 3 4]", fmt.Sprintf("%+v", dataset.At(3)))
 	require.Equal(t, "[bar z hello a world bar foo]", fmt.Sprintf("%+v", dataset.At(0)))
 	// verify other columns were updated as well
@@ -81,7 +81,7 @@ func TestDadasetSort_severalDesc(t *testing.T) {
 	require.Equal(t, 7, dataset.Len())
 	require.Equal(t, 5, dataset.Width())
 
-	// sorting done according to added sorting columns
+	// sorting done according to sorting columns
 	require.Equal(t, "[4 3 2 1 1 1 0]", fmt.Sprintf("%+v", dataset.At(3)))
 	require.Equal(t, "[foo bar world z hello a bar]", fmt.Sprintf("%+v", dataset.At(0)))
 	// verify other columns were updated as well
