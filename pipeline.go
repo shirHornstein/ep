@@ -71,22 +71,22 @@ func (rs pipeline) Returns() []Type {
 }
 
 func (rs pipeline) returnsOne(j int) []Type {
-	if j == 0 {
-		return rs[j].Returns()
-	}
-
 	res := rs[j].Returns()
+	if j == 0 {
+		return res
+	}
 
 	// check for wildcards, and replace as needed. Walk backwards to allow
 	// adding types in-place without messing the iteration
 	for i := len(res) - 1; i >= 0; i-- {
-		w, isWildcard := res[i].(*wildcardType)
-
-		if isWildcard {
+		if w, isWildcard := res[i].(*wildcardType); isWildcard {
 			// wildcard found - replace it with the types from the previous
 			// runner (which might also contain Wildcards)
 			prev := rs.returnsOne(j - 1)
 
+			if w.CutFromTail > 0 {
+				prev = prev[:len(prev)-w.CutFromTail]
+			}
 			if w.Idx != nil {
 				// wildcard for a specific column in the input
 				prev = prev[*w.Idx : *w.Idx+1]
@@ -95,6 +95,5 @@ func (rs pipeline) returnsOne(j int) []Type {
 			res = append(res[:i], append(prev, res[i+1:]...)...)
 		}
 	}
-
 	return res
 }

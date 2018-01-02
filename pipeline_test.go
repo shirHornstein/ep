@@ -1,6 +1,7 @@
 package ep
 
 import (
+	"context"
 	"fmt"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -61,4 +62,26 @@ func TestPipeline_Returns_wildcardIdx(t *testing.T) {
 	require.Equal(t, 1, len(types))
 	require.Equal(t, str.Name(), types[0].Name())
 	require.Equal(t, "question", GetAlias(types[0]))
+}
+
+func TestPipeline_Returns_wildcardMinusTail(t *testing.T) {
+	runner := Project(&upper{}, &question{}, &upper{})
+	runner = Pipeline(runner, &tailCutter{2})
+
+	types := runner.Returns()
+	require.Equal(t, 1, len(types))
+	require.Equal(t, str.Name(), types[0].Name())
+	require.Equal(t, "upper", GetAlias(types[0]))
+}
+
+type tailCutter struct {
+	CutFromTail int
+}
+
+func (r *tailCutter) Returns() []Type { return []Type{WildcardMinusTail(r.CutFromTail)} }
+func (*tailCutter) Run(_ context.Context, inp, out chan Dataset) error {
+	for data := range inp {
+		out <- data
+	}
+	return nil
 }
