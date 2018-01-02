@@ -14,20 +14,16 @@ type SortingCol struct {
 
 // Sort sorts given dataset by given sorting conditions
 func Sort(data Dataset, sortingCols []SortingCol) {
-	// if no data or no pre-defined sorting columns - don't change dataset
-	if data == nil || Null.Is(data.Type()) {
+	// if no data or no pre-defined sorting columns - don't change anything
+	if data == nil || data.Width() == 0 {
 		return
 	}
 	if len(sortingCols) == 0 {
 		sort.Sort(data)
 		return
 	}
-	dataset := data.(dataset)
-	if len(dataset) == 0 {
-		return
-	}
 
-	conditionalSortDataset := newConditionalSortDataset(dataset, sortingCols)
+	conditionalSortDataset := newConditionalSortDataset(data.(dataset), sortingCols)
 	sort.Sort(conditionalSortDataset)
 }
 

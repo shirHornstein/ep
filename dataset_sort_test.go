@@ -89,3 +89,39 @@ func TestDadasetSort_severalDesc(t *testing.T) {
 	require.Equal(t, "[c e b g a f d]", fmt.Sprintf("%+v", dataset.At(2)))
 	require.Equal(t, "[foo bar world z hello a bar]", fmt.Sprintf("%+v", dataset.At(4)))
 }
+
+func TestDatasetSort_emptyDataset(t *testing.T) {
+	require.NotPanics(t, func() {
+		Sort(NewDataset(), []SortingCol{{1, false}, {3, false}})
+	})
+}
+
+func TestDatasetSort_nilDataset(t *testing.T) {
+	require.NotPanics(t, func() {
+		Sort(nil, []SortingCol{{1, false}, {3, false}})
+	})
+}
+
+func TestDatasetSort_nulls(t *testing.T) {
+	require.NotPanics(t, func() {
+		Sort(nulls(2), []SortingCol{{1, false}, {3, false}})
+	})
+}
+
+func TestDatasetSort_noSortingCols(t *testing.T) {
+	var d1 Data = strs([]string{"hello", "world", "foo", "bar", "bar", "a", "z"})
+	var d2 Data = strs([]string{"1", "2", "4", "0", "3", "1", "1"})
+	var d3 Data = strs([]string{"a", "b", "c", "d", "e", "f", "g"})
+
+	dataset := NewDataset(d1, d3, d2)
+
+	require.NotPanics(t, func() {
+		Sort(dataset, []SortingCol{})
+	})
+
+	// by default sorting done according to last column ascending
+	require.Equal(t, "[0 1 1 1 2 3 4]", fmt.Sprintf("%+v", dataset.At(2)))
+	// verify other columns were updated as well
+	require.Equal(t, "[d a f g b e c]", fmt.Sprintf("%+v", dataset.At(1)))
+	require.Equal(t, "[bar hello a z world bar foo]", fmt.Sprintf("%+v", dataset.At(0)))
+}

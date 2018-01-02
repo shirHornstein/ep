@@ -83,7 +83,7 @@ func (set dataset) Len() int {
 // see sort.Interface.
 // By default sorts by last column ascending. Consider use Sort(dataset,..) instead
 func (set dataset) Less(i, j int) bool {
-	// if no data or no pre-defined sorting columns - don't change dataset
+	// if no data - don't trigger any change
 	if set == nil || len(set) == 0 {
 		return false
 	}
@@ -98,7 +98,7 @@ func (set dataset) Swap(i, j int) {
 	}
 }
 
-// see Data.Data
+// see Data.Type
 func (set dataset) Type() Type {
 	return &datasetType{}
 }
