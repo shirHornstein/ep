@@ -1,10 +1,12 @@
 package ep
 
 import (
+	"fmt"
 	"strings"
 )
 
 var _ = registerGob(NewDataset(), &datasetType{})
+var errMismatch = fmt.Errorf("mismatched number of rows")
 
 // Dataset is a composite Data interface, containing several internal Data
 // objects. It's a Data in itself, but allows traversing and manipulating the
@@ -20,7 +22,7 @@ type Dataset interface {
 
 	// Expand returns new dataset composed of this dataset's columns and other's
 	// columns. Number of rows of both datasets should be equal
-	Expand(other Dataset) Dataset
+	Expand(other Dataset) (Dataset, error)
 
 	// Split divides dataset to two parts, where the second part width determined by
 	// the given secondWidth argument
@@ -46,18 +48,18 @@ func (set dataset) At(i int) Data {
 }
 
 // Expand returns new dataset with set and other's columns
-func (set dataset) Expand(other Dataset) Dataset {
+func (set dataset) Expand(other Dataset) (Dataset, error) {
 	if set == nil {
-		return other
+		return other, nil
 	} else if other == nil {
-		return set
+		return set, nil
 	}
 	if set.Len() != other.Len() {
-		panic("Unable to expand mismatching number of rows")
+		return nil, errMismatch
 	}
 
 	otherCols := other.(dataset)
-	return append(set, otherCols...)
+	return append(set, otherCols...), nil
 }
 
 // Split returns two datasets, with requested second width

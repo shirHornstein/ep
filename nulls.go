@@ -28,7 +28,7 @@ func (vs nulls) Duplicate(t int) Data  { return vs * nulls(t) }
 func (vs nulls) Strings() []string     { return make([]string, vs) }
 
 // implements Dataset as well
-func (vs nulls) Width() int                   { return 0 }
-func (vs nulls) At(int) Data                  { panic("runtime error: index out of range") }
-func (vs nulls) Expand(other Dataset) Dataset { return other }
-func (vs nulls) Split(int) (Dataset, Dataset) { panic("runtime error: not splitable") }
+func (vs nulls) Width() int                            { return 0 }
+func (vs nulls) At(int) Data                           { panic("runtime error: index out of range") }
+func (vs nulls) Expand(other Dataset) (Dataset, error) { return other, nil }
+func (vs nulls) Split(int) (Dataset, Dataset)          { panic("runtime error: not splitable") }

@@ -2,11 +2,9 @@ package ep
 
 import (
 	"context"
-	"fmt"
 )
 
 var _ = registerGob(project([]Runner{}))
-var errMismatch = fmt.Errorf("ep.Project: mismatched number of rows")
 
 // Project returns a horizontal composite projection runner that dispatches
 // its input to all of the internal runners, and joins the result into a single
@@ -33,96 +31,82 @@ func (rs project) Returns() []Type {
 	return types
 }
 
-// Run dispatches the same input to all inner runners, and then collects and
+// Run dispatches the same input to all inner runners, then collects and
 // joins their results into a single dataset output
 func (rs project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
-	return rs.runOne(ctx, len(rs)-1, inp, out)
-}
-
-func (rs project) runOne(ctx context.Context, i int, inp, out chan Dataset) (err error) {
-	if i == 0 {
-		return rs[i].Run(ctx, inp, out)
-	}
-
-	// choose the error out from the Left and Right errors.
-	var err1 error
-	var err2 error
-	defer func() {
-		if err1 != nil {
-			err = err1
-		} else if err2 != nil {
-			err = err2
-		}
-	}()
-
 	// set up the left and right channels
-	inpLeft := make(chan Dataset)
-	left := make(chan Dataset)
+	inps := make([]chan Dataset, len(rs))
+	outs := make([]chan Dataset, len(rs))
+	errs := make([]error, len(rs))
+
+	// choose first error out from all errors
 	defer func() {
-		for range left { // drain left until empty.
+		for _, errI := range errs {
+			if errI != nil {
+				err = errI
+				break
+			}
 		}
 	}()
 
-	inpRight := make(chan Dataset)
-	right := make(chan Dataset)
-	defer func() {
-		for range right { // drain right until empty.
-		}
-	}()
-
-	// cancel the both runners when we're done - just in case it's still running
+	// cancel all runners when we're done - just in case few still running
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	// run the left and right runners in go-routines
-	go func() {
-		defer close(left)
-		err1 = rs.runOne(ctx, i-1, inpLeft, left)
-	}()
+	// run all runners in go-routines
+	for i := range rs {
+		inps[i] = make(chan Dataset)
+		outs[i] = make(chan Dataset)
+		// in case project already done with error - drain until empty
+		defer func(idx int) {
+			for range outs[idx] {
+			}
+		}(i)
+		go func(idx int) {
+			defer close(outs[idx])
+			errs[idx] = rs[idx].Run(ctx, inps[idx], outs[idx])
+		}(i)
+	}
 
+	// dispatch (duplicate) input to all runners
 	go func() {
-		defer close(right)
-		err2 = rs[i].Run(ctx, inpRight, right)
-	}()
-
-	// dispatch (duplicate) input to both left and right runners
-	go func() {
-		defer close(inpLeft)
-		defer close(inpRight)
+		for i := range rs {
+			defer close(inps[i])
+		}
 		for data := range inp {
-			inpLeft <- data
-			inpRight <- data
+			for i := range rs {
+				inps[i] <- data
+			}
 		}
 	}()
 
-	// collect & join the output from the Left and Right runners, in order.
+	// collect & join the output from all runners, in order
 	for {
-		result := []Data{}
-		dataLeft, okLeft := <-left
-		dataRight, okRight := <-right
+		result := NewDataset()
+		var allOpen bool
+		for i := range rs {
+			curr, open := <-outs[i]
 
-		if okLeft != okRight {
-			return errMismatch // one's closed, the other is open
+			// verify all still open or all closed
+			if i == 0 {
+				allOpen = open // init allOpen according to first out channel
+			} else if allOpen != open {
+				cancel()
+				return errMismatch
+			}
+
+			if open {
+				result, err = result.Expand(curr)
+				if err != nil {
+					return err
+				}
+			}
 		}
 
-		if !okLeft {
-			return // all done.
+		if !allOpen {
+			return // all done
 		}
 
-		if dataLeft.Len() != dataRight.Len() {
-			return errMismatch
-		}
-
-		// TODO: what if there's a mismatch in Len()? Error may be best to
-		// identify runners that were incorrectly constructed?
-		for i := 0; okLeft && i < dataLeft.Width(); i++ {
-			result = append(result, dataLeft.At(i))
-		}
-
-		for i := 0; okRight && i < dataRight.Width(); i++ {
-			result = append(result, dataRight.At(i))
-		}
-
-		out <- NewDataset(result...)
+		out <- result
 	}
 }
