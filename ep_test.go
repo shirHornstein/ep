@@ -26,7 +26,7 @@ func (r *infinityRunner) Run(ctx context.Context, inp, out chan Dataset) error {
 	// infinitely produce data, until canceled
 	for {
 		select {
-		case _, _ = <-ctx.Done():
+		case <-ctx.Done():
 			return nil
 		default:
 			out <- NewDataset(strs{"data"})
