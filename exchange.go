@@ -23,21 +23,24 @@ const (
 // all other nodes such that the received datasets are dispatched in a round-
 // robin to the nodes.
 func Scatter() Runner {
-	return &exchange{UID: uuid.NewV4().String(), SendTo: sendScatter}
+	uid, _ := uuid.NewV4()
+	return &exchange{UID: uid.String(), SendTo: sendScatter}
 }
 
 // Gather returns an exchange Runner that gathers all of its input into a
 // single node. In all other nodes it will produce no output, but on the main
 // node it will be passthrough from all of the other nodes
 func Gather() Runner {
-	return &exchange{UID: uuid.NewV4().String(), SendTo: sendGather}
+	uid, _ := uuid.NewV4()
+	return &exchange{UID: uid.String(), SendTo: sendGather}
 }
 
 // Broadcast returns an exchange Runner that duplicates its input to all
 // other nodes. The output will be effectively a union of all of the inputs from
 // all nodes (order not guaranteed)
 func Broadcast() Runner {
-	return &exchange{UID: uuid.NewV4().String(), SendTo: sendBroadcast}
+	uid, _ := uuid.NewV4()
+	return &exchange{UID: uid.String(), SendTo: sendBroadcast}
 }
 
 // exchange is a Runner that exchanges data between peer nodes

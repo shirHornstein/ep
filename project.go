@@ -51,7 +51,6 @@ func (rs project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 
 	// cancel all runners when we're done - just in case few still running
 	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
 
 	// run all runners in go-routines
 	for i := range rs {
@@ -80,6 +79,9 @@ func (rs project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 		}
 	}()
 
+	// NOTE: cancel must be first defer to be called, to allow internal runners to finish
+	defer cancel()
+
 	// collect & join the output from all runners, in order
 	for {
 		result := NewDataset()
@@ -91,7 +93,6 @@ func (rs project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 			if i == 0 {
 				allOpen = open // init allOpen according to first out channel
 			} else if allOpen != open {
-				cancel()
 				return errMismatch
 			}
 
