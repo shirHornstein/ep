@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"net"
 	"testing"
-	"time"
 )
 
 type errDialer struct {
@@ -39,40 +38,6 @@ func ExampleScatter() {
 	fmt.Println(data, err) // no gather - only one batch should return
 
 	// Output: [[foo bar]] <nil>
-}
-
-// Test that errors are transmitted across the network (an error in one node
-// is reported to the calling node).
-func TestExchange_error(t *testing.T) {
-	defer time.Sleep(1 * time.Millisecond) // bind: address already in use
-
-	ln1, err := net.Listen("tcp", ":5551")
-	require.NoError(t, err)
-
-	dist1 := NewDistributer(":5551", ln1)
-	defer dist1.Close()
-
-	ln2, err := net.Listen("tcp", ":5552")
-	require.NoError(t, err)
-
-	dialer := &errDialer{ln2, fmt.Errorf("bad connection")}
-	dist2 := NewDistributer(":5552", dialer)
-	defer dist2.Close()
-
-	ln3, err := net.Listen("tcp", ":5553")
-	require.NoError(t, err)
-
-	dist3 := NewDistributer(":5553", ln3)
-	defer dist3.Close()
-
-	runner := dist1.Distribute(Scatter(), ":5551", ":5552", ":5553")
-
-	data1 := NewDataset(strs{"hello", "world"})
-	data2 := NewDataset(strs{"foo", "bar"})
-	data, err := TestRunner(runner, data1, data2)
-	require.Equal(t, 0, data.Width())
-	require.Error(t, err)
-	require.Equal(t, "bad connection", err.Error())
 }
 
 // Tests the scattering when there's just one node - the whole thing should

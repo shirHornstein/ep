@@ -75,10 +75,9 @@ func (d *distributer) Close() error {
 		return err
 	}
 
-	// wait for start() above to exit. otherwise, tests or code that attempts to
-	// re-bind to the same address will infrequently fail with "bind: address
-	// already in use" because while the listener is closed, there's still one
-	// pending Accept()
+	// wait for start() above to exit. otherwise, attempts to re-bind to the
+	// same address will infrequently fail with "bind: address already in use".
+	// because while the listener is closed, there's still one pending Accept()
 	// TODO: consider waiting for all served connections/runners?
 	<-d.closeCh
 	return nil
@@ -199,11 +198,13 @@ func (d *distributer) Serve(conn net.Conn) error {
 		close(inp)
 
 		err = r.Run(context.Background(), inp, out)
-		enc := gob.NewEncoder(conn)
+		// fmt.Printf("done running with err %+v\n", err)
 		if err != nil {
 			err = &errMsg{err.Error()}
 		}
 
+		// report back to master - either local error or nil payload
+		enc := gob.NewEncoder(conn)
 		err = enc.Encode(&req{err})
 		if err != nil {
 			fmt.Println("ep: runner error", err)
@@ -221,7 +222,6 @@ func (d *distributer) Serve(conn net.Conn) error {
 }
 
 func (d *distributer) connCh(k string) chan net.Conn {
-	// k := addr + ":" + uid
 	d.l.Lock()
 	defer d.l.Unlock()
 	if d.connsMap[k] == nil {
@@ -239,7 +239,7 @@ type distRunner struct {
 	d          *distributer
 }
 
-func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) (err error) {
+func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) error {
 	errs := []error{}
 
 	decs := []*gob.Decoder{}
@@ -251,7 +251,7 @@ func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) (err error)
 		}
 
 		var conn net.Conn
-		conn, err = r.d.Dial("tcp", addr)
+		conn, err := r.d.Dial("tcp", addr)
 		if err != nil {
 			errs = append(errs, err)
 			break
@@ -279,22 +279,22 @@ func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) (err error)
 	ctx = context.WithValue(ctx, thisNodeKey, r.d.addr)
 	ctx = context.WithValue(ctx, distributerKey, r.d)
 
-	if err == nil {
-		err = r.Runner.Run(ctx, inp, out)
-		errs = append(errs, err)
+	// start running query iff no errors were detected
+	if len(errs) == 0 {
+		err := r.Runner.Run(ctx, inp, out)
+		if err != nil {
+			errs = append(errs, err)
+		}
 	}
 
 	// collect error responses
-	// NB. currently the errors will arrive here in two ways: the exchange
-	// Runners communicate errors between nodes such that this master node will
-	// always receive the errors from the individual nodes. The final error is
-	// also transmitted by the Distributer at the end of the remote Run. This
-	// might be redundant - but in any case we need the top-level one here to
-	// make sure we wait for all runners to complete, thus not leaving any open
-	// resources/goroutines
+	// The final error is transmitted by the Distributer at the end of the remote
+	// Run. We need the top-level runner here to make sure we wait for all runners
+	// to complete, thus not leaving any open resources/goroutines
+	// note decs contains only peers that successfully got distRunner
 	for _, dec := range decs {
 		req := &req{}
-		err = dec.Decode(req)
+		err := dec.Decode(req)
 		data := req.Payload
 		if err == nil {
 			err, _ = data.(error)
@@ -306,12 +306,9 @@ func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) (err error)
 	}
 
 	// return the first error encountered
-	for _, err := range errs {
-		if err != nil {
-			return err
-		}
+	if len(errs) > 0 {
+		return errs[0]
 	}
-
 	return nil
 }
 
