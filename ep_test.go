@@ -2,6 +2,7 @@ package ep
 
 import (
 	"context"
+	"fmt"
 )
 
 var _ = registerGob(strs{})
@@ -36,6 +37,7 @@ func (r *infinityRunner) Run(ctx context.Context, inp, out chan Dataset) error {
 
 type dataRunner struct {
 	Dataset
+	ThrowOnData string
 }
 
 func (r *dataRunner) Returns() []Type {
@@ -46,7 +48,10 @@ func (r *dataRunner) Returns() []Type {
 	return types
 }
 func (r *dataRunner) Run(ctx context.Context, inp, out chan Dataset) error {
-	for range inp {
+	for data := range inp {
+		if r.ThrowOnData == data.At(data.Width() - 1).Strings()[0] {
+			return fmt.Errorf("error")
+		}
 	} // drains input
 	out <- r.Dataset
 	return nil

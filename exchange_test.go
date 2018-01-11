@@ -6,16 +6,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"net"
 	"testing"
+	"time"
 )
-
-type errDialer struct {
-	net.Listener
-	Err error
-}
-
-func (e *errDialer) Dial(net, addr string) (net.Conn, error) {
-	return nil, e.Err
-}
 
 // Example of Scatter with just 2 nodes. The datasets are scattered in
 // round-robin to the two nodes such that each node receives half of the
@@ -43,13 +35,11 @@ func ExampleScatter() {
 // Tests the scattering when there's just one node - the whole thing should
 // be short-circuited to act as a pass-through
 func TestScatter_singleNode(t *testing.T) {
-	ln, err := net.Listen("tcp", ":5551")
-	require.NoError(t, err)
-
-	dist := NewDistributer(":5551", ln)
+	port := ":5551"
+	dist := mockPeer(t, port)
 	defer dist.Close()
 
-	runner := dist.Distribute(Scatter(), ":5551")
+	runner := dist.Distribute(Scatter(), port)
 
 	data1 := NewDataset(strs{"hello", "world"})
 	data2 := NewDataset(strs{"foo", "bar"})
@@ -60,20 +50,18 @@ func TestScatter_singleNode(t *testing.T) {
 }
 
 func TestScatter_and_Gather(t *testing.T) {
-	ln1, err := net.Listen("tcp", ":5551")
-	require.NoError(t, err)
+	// avoid "bind: address already in use" error in future tests
+	defer time.Sleep(1 * time.Millisecond)
 
-	dist1 := NewDistributer(":5551", ln1)
+	port1 := ":5551"
+	dist1 := mockPeer(t, port1)
 	defer dist1.Close()
 
-	ln2, err := net.Listen("tcp", ":5552")
-	require.NoError(t, err)
-
-	dist2 := NewDistributer(":5552", ln2)
-	defer dist2.Close()
+	port2 := ":5552"
+	defer mockPeer(t, port2).Close()
 
 	runner := Pipeline(Scatter(), &nodeAddr{}, Gather())
-	runner = dist1.Distribute(runner, ":5551", ":5552")
+	runner = dist1.Distribute(runner, port1, port2)
 
 	data1 := NewDataset(strs{"hello", "world"})
 	data2 := NewDataset(strs{"foo", "bar"})
@@ -88,6 +76,31 @@ func TestScatter_unique(t *testing.T) {
 	s1 := Scatter().(*exchange)
 	s2 := Scatter().(*exchange)
 	require.NotEqual(t, s1.UID, s2.UID)
+}
+
+func TestExchange_dialingError(t *testing.T) {
+	// avoid "bind: address already in use" error in future tests
+	defer time.Sleep(1 * time.Millisecond)
+
+	port1 := ":5551"
+	dist1 := mockPeer(t, port1)
+	defer dist1.Close()
+
+	port2 := ":5552"
+	defer mockErrorPeer(t, port2).Close()
+
+	port3 := ":5553"
+	defer mockPeer(t, port3).Close()
+
+	runner := dist1.Distribute(Scatter(), port1, port2, port3)
+
+	data1 := NewDataset(strs{"hello", "world"})
+	data2 := NewDataset(strs{"foo", "bar"})
+	data, err := TestRunner(runner, data1, data2)
+
+	require.Error(t, err)
+	require.Equal(t, "bad connection", err.Error())
+	require.Nil(t, data)
 }
 
 var _ = registerGob(&nodeAddr{})
@@ -112,4 +125,26 @@ func (*nodeAddr) Run(ctx context.Context, inp, out chan Dataset) error {
 		out <- NewDataset(outset...)
 	}
 	return nil
+}
+
+func mockPeer(t *testing.T, port string) Distributer {
+	ln, err := net.Listen("tcp", port)
+	require.NoError(t, err)
+	return NewDistributer(port, ln)
+}
+
+func mockErrorPeer(t *testing.T, port string) Distributer {
+	ln, err := net.Listen("tcp", port)
+	require.NoError(t, err)
+	dialer := &errDialer{ln, fmt.Errorf("bad connection")}
+	return NewDistributer(port, dialer)
+}
+
+type errDialer struct {
+	net.Listener
+	Err error
+}
+
+func (e *errDialer) Dial(net, addr string) (net.Conn, error) {
+	return nil, e.Err
 }
