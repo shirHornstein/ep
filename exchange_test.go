@@ -32,6 +32,31 @@ func ExampleScatter() {
 	// Output: [[foo bar]] <nil>
 }
 
+func TestExchange_dialingError(t *testing.T) {
+	// avoid "bind: address already in use" error in future tests
+	defer time.Sleep(1 * time.Millisecond)
+
+	port1 := ":5551"
+	dist1 := mockPeer(t, port1)
+	defer dist1.Close()
+
+	port2 := ":5552"
+	defer mockErrorPeer(t, port2).Close()
+
+	port3 := ":5553"
+	defer mockPeer(t, port3).Close()
+
+	runner := dist1.Distribute(Scatter(), port1, port2, port3)
+
+	data1 := NewDataset(strs{"hello", "world"})
+	data2 := NewDataset(strs{"foo", "bar"})
+	data, err := TestRunner(runner, data1, data2)
+
+	require.Error(t, err)
+	require.Equal(t, "bad connection", err.Error())
+	require.Nil(t, data)
+}
+
 // Tests the scattering when there's just one node - the whole thing should
 // be short-circuited to act as a pass-through
 func TestScatter_singleNode(t *testing.T) {
@@ -72,35 +97,12 @@ func TestScatter_and_Gather(t *testing.T) {
 }
 
 // UID should be unique per generated exchange function
-func TestScatter_unique(t *testing.T) {
+func TestExchange_unique(t *testing.T) {
 	s1 := Scatter().(*exchange)
 	s2 := Scatter().(*exchange)
+	s3 := Gather().(*exchange)
 	require.NotEqual(t, s1.UID, s2.UID)
-}
-
-func TestExchange_dialingError(t *testing.T) {
-	// avoid "bind: address already in use" error in future tests
-	defer time.Sleep(1 * time.Millisecond)
-
-	port1 := ":5551"
-	dist1 := mockPeer(t, port1)
-	defer dist1.Close()
-
-	port2 := ":5552"
-	defer mockErrorPeer(t, port2).Close()
-
-	port3 := ":5553"
-	defer mockPeer(t, port3).Close()
-
-	runner := dist1.Distribute(Scatter(), port1, port2, port3)
-
-	data1 := NewDataset(strs{"hello", "world"})
-	data2 := NewDataset(strs{"foo", "bar"})
-	data, err := TestRunner(runner, data1, data2)
-
-	require.Error(t, err)
-	require.Equal(t, "bad connection", err.Error())
-	require.Nil(t, data)
+	require.NotEqual(t, s2.UID, s3.UID)
 }
 
 var _ = registerGob(&nodeAddr{})

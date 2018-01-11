@@ -75,3 +75,29 @@ func TestDistribute_errorFromPeer(t *testing.T) {
 	require.Equal(t, "error", err.Error())
 	require.Equal(t, 0, data.Width())
 }
+
+// Test that errors are transmitted across the network
+func _TestDistribute_errorFromPeerStopAllPeers(t *testing.T) {
+	port1 := ":5551"
+	dist1 := mockPeer(t, port1)
+	defer dist1.Close()
+
+	port2 := ":5552"
+	defer mockPeer(t, port2).Close()
+
+	port3 := ":5553"
+	defer mockPeer(t, port3).Close()
+
+	mightErrored := &dataRunner{NewDataset(), port2}
+	runner := dist1.Distribute(Pipeline(Scatter(), &nodeAddr{}, mightErrored, Gather()), port1, port2, port3)
+
+	data1 := NewDataset(strs{"hello", "world"})
+	data2 := NewDataset(strs{"foo", "bar"})
+	data, err := TestRunner(runner, data1, data2, data2, data2, data2, data2, data2, data2, data2, data2,
+		data2, data2, data2, data2, data2, data2, data2, data2, data2, data2, data2, data2, data2, data2,
+		data2, data2, data2, data2, data2, data2, data2, data2, data2, data2, data2)
+
+	require.Error(t, err)
+	require.Equal(t, "error", err.Error())
+	require.Equal(t, 0, data.Width())
+}
