@@ -132,7 +132,7 @@ func (d *distributer) Connect(addr string, uid string) (conn net.Conn, err error
 		}
 	} else {
 		// listen, timeout after 2 seconds
-		timer := time.NewTimer(2*time.Second)
+		timer := time.NewTimer(2 * time.Second)
 		defer timer.Stop()
 
 		select {
