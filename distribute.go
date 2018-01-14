@@ -71,16 +71,13 @@ func (d *distributer) start() error {
 
 func (d *distributer) Close() error {
 	err := d.listener.Close()
-	if err != nil {
-		return err
-	}
 
 	// wait for start() above to exit. otherwise, attempts to re-bind to the
 	// same address will infrequently fail with "bind: address already in use".
 	// because while the listener is closed, there's still one pending Accept()
 	// TODO: consider waiting for all served connections/runners?
 	<-d.closeCh
-	return nil
+	return err
 }
 
 func (d *distributer) Dial(network, addr string) (conn net.Conn, err error) {
@@ -134,8 +131,8 @@ func (d *distributer) Connect(addr string, uid string) (conn net.Conn, err error
 			return
 		}
 	} else {
-		// listen, timeout after 1 second
-		timer := time.NewTimer(time.Second)
+		// listen, timeout after 2 seconds
+		timer := time.NewTimer(2*time.Second)
 		defer timer.Stop()
 
 		select {
