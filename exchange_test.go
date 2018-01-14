@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/require"
 	"net"
+	"strings"
 	"testing"
 	"time"
 )
@@ -53,7 +54,17 @@ func TestExchange_dialingError(t *testing.T) {
 	data, err := TestRunner(runner, data1, data2)
 
 	require.Error(t, err)
-	require.Equal(t, "bad connection", err.Error())
+
+	possibleErrors := []string{
+		"->127.0.0.1:5552: write: broken pipe",  // reported by 5551, when dialing to :5552, starting with "write tcp 127.0.0.1:xxx"
+		"bad connection",                        // reported by 5552, when dialing to :5553
+		"ep: connect timeout; no incoming conn", // reported by 5553, when waiting to :5552
+	}
+	errMsg := err.Error()
+	isExpectedError := strings.Contains(errMsg, possibleErrors[0]) ||
+		errMsg == possibleErrors[1] ||
+		errMsg == possibleErrors[2]
+	require.True(t, isExpectedError, "expected \"%s\" to appear in %s", err.Error(), possibleErrors)
 	require.Nil(t, data)
 }
 
