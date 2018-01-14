@@ -50,7 +50,7 @@ func (r *dataRunner) Returns() []Type {
 func (r *dataRunner) Run(ctx context.Context, inp, out chan Dataset) error {
 	for data := range inp {
 		if r.ThrowOnData == data.At(data.Width() - 1).Strings()[0] {
-			return fmt.Errorf("error")
+			return fmt.Errorf("error %s", r.ThrowOnData)
 		}
 	} // drains input
 	out <- r.Dataset

@@ -14,14 +14,14 @@ func TestDistribute_success(t *testing.T) {
 	// avoid "bind: address already in use" error in future tests
 	defer time.Sleep(1 * time.Millisecond)
 
-	port1 := ":5561"
+	port1 := ":5551"
 	dist1 := mockPeer(t, port1)
 	defer dist1.Close()
 
-	port2 := ":5562"
+	port2 := ":5552"
 	defer mockPeer(t, port2).Close()
 
-	port3 := ":5563"
+	port3 := ":5553"
 	defer mockPeer(t, port3).Close()
 
 	runner := dist1.Distribute(Pipeline(Scatter(), Gather()), port1, port2, port3)
@@ -39,7 +39,7 @@ func TestDistribute_connectionError(t *testing.T) {
 	// avoid "bind: address already in use" error in future tests
 	defer time.Sleep(1 * time.Millisecond)
 
-	port1 := ":5561"
+	port1 := ":5551"
 	dist1 := mockPeer(t, port1)
 	defer dist1.Close()
 
@@ -57,11 +57,11 @@ func TestDistribute_errorFromPeer(t *testing.T) {
 	// avoid "bind: address already in use" error in future tests
 	defer time.Sleep(1 * time.Millisecond)
 
-	port1 := ":5561"
+	port1 := ":5551"
 	dist1 := mockPeer(t, port1)
 	defer dist1.Close()
 
-	port2 := ":5562"
+	port2 := ":5552"
 	defer mockPeer(t, port2).Close()
 
 	mightErrored := &dataRunner{NewDataset(), port2}
@@ -72,6 +72,6 @@ func TestDistribute_errorFromPeer(t *testing.T) {
 	data, err := TestRunner(runner, data1, data2)
 
 	require.Error(t, err)
-	require.Equal(t, "error", err.Error())
+	require.Equal(t, "error :5552", err.Error())
 	require.Equal(t, 0, data.Width())
 }
