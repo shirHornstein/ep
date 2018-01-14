@@ -209,9 +209,7 @@ func (ex *exchange) DecodeNext() (Dataset, error) {
 }
 
 // initialize the connections, encoders & decoders
-func (ex *exchange) Init(ctx context.Context) error {
-	var err error
-
+func (ex *exchange) Init(ctx context.Context) (err error) {
 	dist, _ := ctx.Value(distributerKey).(interface {
 		Connect(addr, uid string) (net.Conn, error)
 	})
@@ -230,9 +228,18 @@ func (ex *exchange) Init(ctx context.Context) error {
 	}
 
 	// open a connection to all target nodes
-	var conn net.Conn
 	connsMap := map[string]net.Conn{}
 	var shortCircuit *shortCircuit
+	defer func() {
+		if err != nil {
+			for _, conn := range connsMap {
+				conn.Close()
+			}
+			if shortCircuit != nil {
+				shortCircuit.Close()
+			}
+		}
+	}()
 	for _, n := range targetNodes {
 		if n == thisNode {
 			shortCircuit = newShortCircuit()
@@ -243,7 +250,7 @@ func (ex *exchange) Init(ctx context.Context) error {
 
 		msg := "THIS " + thisNode + " OTHER " + n
 
-		conn, err = dist.Connect(n, ex.UID)
+		conn, err := dist.Connect(n, ex.UID)
 		if err != nil {
 			return err
 		}
@@ -271,7 +278,7 @@ func (ex *exchange) Init(ctx context.Context) error {
 			continue
 		}
 
-		conn, err = dist.Connect(n, ex.UID)
+		conn, err := dist.Connect(n, ex.UID)
 		if err != nil {
 			return err
 		}
