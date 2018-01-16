@@ -27,11 +27,11 @@ func Sort(data Dataset, sortingCols []SortingCol) {
 	sort.Sort(conditionalSortDataset)
 }
 
-func newConditionalSortDataset(set dataset, sortingCols []SortingCol) conditionalSortDataset {
+func newConditionalSortDataset(set dataset, sortingCols []SortingCol) *conditionalSortDataset {
 	// in case dataset contains recurring columns - find unique columns indices to
 	// avoid double Swapping during sort
-	uniqueColumns := []int{}
-	for i := range set {
+	uniqueColumns := []Data{}
+	for i, col := range set {
 		unique := true
 		for j := 0; j < i; j++ {
 			// for efficiency - avoid reflection and check address of underlying array
@@ -40,7 +40,7 @@ func newConditionalSortDataset(set dataset, sortingCols []SortingCol) conditiona
 			}
 		}
 		if unique {
-			uniqueColumns = append(uniqueColumns, i)
+			uniqueColumns = append(uniqueColumns, col)
 		}
 	}
 	sortingInterfaces := make([]sort.Interface, len(sortingCols))
@@ -51,18 +51,16 @@ func newConditionalSortDataset(set dataset, sortingCols []SortingCol) conditiona
 			sortingInterfaces[i] = sort.Reverse(sortingInterfaces[i])
 		}
 	}
-	return conditionalSortDataset{set, uniqueColumns, sortingInterfaces}
+	return &conditionalSortDataset{uniqueColumns, sortingInterfaces}
 }
 
 type conditionalSortDataset struct {
-	dataset
-
-	uniqueColumns     []int
+	uniqueColumns     []Data
 	sortingInterfaces []sort.Interface
 }
 
 // see sort.Interface. Uses pre-defined sorting columns
-func (set conditionalSortDataset) Less(i, j int) bool {
+func (set *conditionalSortDataset) Less(i, j int) bool {
 	var iLessThanJ, stop bool
 	for idx := 0; idx < len(set.sortingInterfaces) && !stop; idx++ {
 		currCol := set.sortingInterfaces[idx]
@@ -79,8 +77,13 @@ func (set conditionalSortDataset) Less(i, j int) bool {
 }
 
 // see sort.Interface
-func (set conditionalSortDataset) Swap(i, j int) {
-	for _, idx := range set.uniqueColumns {
-		set.At(idx).Swap(i, j)
+func (set *conditionalSortDataset) Swap(i, j int) {
+	for _, col := range set.uniqueColumns {
+		col.Swap(i, j)
 	}
+}
+
+// see sort.Interface
+func (set *conditionalSortDataset) Len() int {
+	return set.uniqueColumns[0].Len()
 }
