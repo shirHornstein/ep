@@ -56,9 +56,9 @@ func TestExchange_dialingError(t *testing.T) {
 	require.Error(t, err)
 
 	possibleErrors := []string{
-		// reported by 5551, starting with "write/read tcp 127.0.0.1:xxx"
-		"->127.0.0.1:5552: write: broken pipe",             // when dialing to :5552
-		"->127.0.0.1:5553: read: connection reset by peer", // when reading from :5553 after 5553 failure
+		// reported by 5551, starting with "write/read tcp 127.0.0.1:xxx->127.0.0.1:555x"
+		": write: broken pipe",             // when dialing to peers
+		": read: connection reset by peer", // when reading from peers after peers failure
 
 		"bad connection",                        // reported by 5552, when dialing to :5553
 		"ep: connect timeout; no incoming conn", // reported by 5553, when waiting to :5552
