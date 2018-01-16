@@ -276,12 +276,22 @@ func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) error {
 	ctx = context.WithValue(ctx, thisNodeKey, r.d.addr)
 	ctx = context.WithValue(ctx, distributerKey, r.d)
 
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	respErrs := make(chan error)
+	wg := sync.WaitGroup{}
+
 	// start running query iff no errors were detected
 	if len(errs) == 0 {
-		err := r.Runner.Run(ctx, inp, out)
-		if err != nil {
-			errs = append(errs, err)
-		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			err := r.Runner.Run(ctx, inp, out)
+			if err != nil {
+				respErrs <- err
+			}
+		}()
 	}
 
 	// collect error responses
@@ -290,20 +300,35 @@ func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) error {
 	// to complete, thus not leaving any open resources/goroutines
 	// note decs contains only peers that successfully got distRunner
 	for _, dec := range decs {
-		req := &req{}
-		err := dec.Decode(req)
-		data := req.Payload
-		if err == nil {
-			err, _ = data.(error)
-		}
+		wg.Add(1)
+		go func(decoder *gob.Decoder) {
+			defer wg.Done()
 
-		if err != nil {
-			errs = append(errs, err)
-		}
+			req := &req{}
+			err := decoder.Decode(req)
+			data := req.Payload
+			if err == nil {
+				err, _ = data.(error)
+			}
+			if err != nil {
+				cancel()
+				respErrs <- err
+			}
+		}(dec)
+	}
+	go func() {
+		wg.Wait()
+		close(respErrs)
+	}()
+
+	// wait for errors
+	for err := range respErrs {
+		errs = append(errs, err)
 	}
 
 	// return the first error encountered
 	if len(errs) > 0 {
+		fmt.Printf("DISTRIBUTE: final errors gathered: %+v\n", errs)
 		return errs[0]
 	}
 	return nil

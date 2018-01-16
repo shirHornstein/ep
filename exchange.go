@@ -232,14 +232,11 @@ func (ex *exchange) Init(ctx context.Context) (err error) {
 	var shortCircuit *shortCircuit
 	defer func() {
 		if err != nil {
-			for _, conn := range connsMap {
-				conn.Close()
-			}
-			if shortCircuit != nil {
-				shortCircuit.Close()
-			}
+			// in case of error in one connection. close all other connections
+			ex.Close()
 		}
 	}()
+	var conn net.Conn
 	for _, n := range targetNodes {
 		if n == thisNode {
 			shortCircuit = newShortCircuit()
@@ -250,7 +247,7 @@ func (ex *exchange) Init(ctx context.Context) (err error) {
 
 		msg := "THIS " + thisNode + " OTHER " + n
 
-		conn, err := dist.Connect(n, ex.UID)
+		conn, err = dist.Connect(n, ex.UID)
 		if err != nil {
 			return err
 		}
@@ -278,7 +275,7 @@ func (ex *exchange) Init(ctx context.Context) (err error) {
 			continue
 		}
 
-		conn, err := dist.Connect(n, ex.UID)
+		conn, err = dist.Connect(n, ex.UID)
 		if err != nil {
 			return err
 		}
@@ -330,23 +327,23 @@ func (dec dbgDecoder) Decode(e interface{}) error {
 // in order to not complicate the generic nature of the exchange code
 type shortCircuit struct {
 	C      chan interface{}
-	Closed bool
+	closed bool
 	all    []interface{}
 }
 
 func (sc *shortCircuit) Close() error {
-	if sc.Closed {
+	if sc.closed {
 		return nil
 	}
 
-	sc.Closed = true
+	sc.closed = true
 	close(sc.C)
 	// fmt.Println("SC: Closed")
 	return nil
 }
 
 func (sc *shortCircuit) Encode(e interface{}) error {
-	if sc.Closed {
+	if sc.closed {
 		return io.ErrClosedPipe
 	}
 

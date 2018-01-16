@@ -56,14 +56,18 @@ func TestExchange_dialingError(t *testing.T) {
 	require.Error(t, err)
 
 	possibleErrors := []string{
-		"->127.0.0.1:5552: write: broken pipe",  // reported by 5551, when dialing to :5552, starting with "write tcp 127.0.0.1:xxx"
+		// reported by 5551, starting with "write/read tcp 127.0.0.1:xxx"
+		"->127.0.0.1:5552: write: broken pipe",             // when dialing to :5552
+		"->127.0.0.1:5553: read: connection reset by peer", // when reading from :5553 after 5553 failure
+
 		"bad connection",                        // reported by 5552, when dialing to :5553
 		"ep: connect timeout; no incoming conn", // reported by 5553, when waiting to :5552
 	}
 	errMsg := err.Error()
 	isExpectedError := strings.Contains(errMsg, possibleErrors[0]) ||
-		errMsg == possibleErrors[1] ||
-		errMsg == possibleErrors[2]
+		strings.Contains(errMsg, possibleErrors[1]) ||
+		errMsg == possibleErrors[2] ||
+		errMsg == possibleErrors[3]
 	require.True(t, isExpectedError, "expected \"%s\" to appear in %s", err.Error(), possibleErrors)
 	require.Nil(t, data)
 }
@@ -83,6 +87,30 @@ func TestScatter_singleNode(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 1, data.Width())
 	require.Equal(t, 4, data.Len())
+}
+
+// Tests the scattering when there's just one node - the whole thing should
+// be short-circuited to act as a pass-through
+func TestExchangeInit_closeConnectionUponError(t *testing.T) {
+	port := ":5551"
+	dist := mockPeer(t, port)
+	defer dist.Close()
+
+	port2 := ":5552"
+	defer mockErrorPeer(t, port2).Close()
+
+	ctx := context.WithValue(context.Background(), distributerKey, dist)
+	ctx = context.WithValue(ctx, allNodesKey, []string{port, port2, ":5553"})
+	ctx = context.WithValue(ctx, masterNodeKey, port)
+	ctx = context.WithValue(ctx, thisNodeKey, port)
+
+	exchange := Scatter().(*exchange)
+	err := exchange.Init(ctx)
+
+	require.Error(t, err)
+	require.Equal(t, 2, len(exchange.conns))
+	require.IsType(t, &shortCircuit{}, exchange.conns[0])
+	require.True(t, (exchange.conns[0]).(*shortCircuit).closed, "open connections leak")
 }
 
 func TestScatter_and_Gather(t *testing.T) {
