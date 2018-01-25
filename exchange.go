@@ -99,10 +99,7 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 				// the input is exhausted. Notify peers that we're done sending
 				// data (they will use it to stop listening to data from us).
 				eofMsg := &errMsg{io.EOF.Error()}
-				notifiedAllErr := ex.EncodeAll(eofMsg)
-				if notifiedAllErr != nil {
-					//TODO avia
-				}
+				ex.EncodeAll(eofMsg)
 				sndDone = true
 
 				// inp is closed. If we keep iterating, it will infinitely
@@ -166,9 +163,6 @@ func (ex *exchange) EncodeNext(e interface{}) error {
 	if len(ex.encs) == 0 {
 		return io.ErrClosedPipe
 	}
-	if e, isErr := e.(error); isErr {
-		panic("got an error to encode: " + e.Error())
-	}
 
 	req := &req{e}
 	ex.encsNext = (ex.encsNext + 1) % len(ex.encs)
@@ -200,12 +194,7 @@ func (ex *exchange) DecodeNext() (Dataset, error) {
 	}
 
 	ex.decsNext = i
-
-	data, ok := req.Payload.(Dataset)
-	if !ok {
-		panic("please exchange only datasets! :(")
-	}
-	return data, nil
+	return req.Payload.(Dataset), nil
 }
 
 // initialize the connections, encoders & decoders

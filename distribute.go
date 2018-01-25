@@ -195,7 +195,6 @@ func (d *distributer) Serve(conn net.Conn) error {
 		close(inp)
 
 		err = r.Run(context.Background(), inp, out)
-		// fmt.Printf("done running with err %+v\n", err)
 		if err != nil {
 			err = &errMsg{err.Error()}
 		}
