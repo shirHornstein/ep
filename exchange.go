@@ -74,15 +74,23 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 	errs := make(chan error)
 	go func() {
 		defer close(errs)
-		for {
-			data, err := ex.Receive()
-			if err == io.EOF {
-				break
-			} else if err != nil {
-				errs <- err
-				return
+		receiving := true
+		for receiving {
+			select {
+			case <-ctx.Done():
+				receiving = false
+				break // context timeout or cancel
+			default:
+				data, err := ex.Receive()
+				if err == io.EOF {
+					receiving = false
+					break
+				} else if err != nil {
+					errs <- err
+					return
+				}
+				out <- data
 			}
-			out <- data
 		}
 		errs <- nil
 	}()
