@@ -74,9 +74,10 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 	errs := make(chan error)
 	go func() {
 		defer close(errs)
-		for err == nil {
+		for {
 			data, recErr := ex.Receive()
 			if recErr == io.EOF {
+				errs <- nil
 				break
 			} else if recErr != nil {
 				errs <- recErr
@@ -84,7 +85,6 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 			}
 			out <- data
 		}
-		errs <- nil
 	}()
 
 	// send the local data to the peers, until completion or error. Also listen
@@ -97,9 +97,12 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 		case data, ok := <-inp:
 			if !ok {
 				// the input is exhausted. Notify peers that we're done sending
-				// data (they will use it to stop listening to data from us)
+				// data (they will use it to stop listening to data from us).
 				eofMsg := &errMsg{io.EOF.Error()}
-				ex.EncodeAll(eofMsg)
+				notifiedAllErr := ex.EncodeAll(eofMsg)
+				if notifiedAllErr != nil {
+					//TODO avia
+				}
 				sndDone = true
 
 				// inp is closed. If we keep iterating, it will infinitely
