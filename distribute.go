@@ -309,7 +309,7 @@ func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) error {
 			if err == nil {
 				err, _ = data.(error)
 			}
-			if err != nil {
+			if err != nil && err.Error() != io.EOF.Error() {
 				cancel()
 				respErrs <- err
 			}
