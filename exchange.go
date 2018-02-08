@@ -147,6 +147,7 @@ func (ex *exchange) Close() (err error) {
 }
 
 // Encode an object to all destination connections
+// expecting e to be either dataset or EOF error
 func (ex *exchange) EncodeAll(e interface{}) (err error) {
 	req := &req{e}
 	for _, enc := range ex.encs {

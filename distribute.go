@@ -246,7 +246,6 @@ func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) error {
 			continue
 		}
 
-		var conn net.Conn
 		conn, err := r.d.Dial("tcp", addr)
 		if err != nil {
 			errs = append(errs, err)
@@ -278,7 +277,7 @@ func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	respErrs := make(chan error)
+	respErrs := make(chan error, len(decs)+1)
 	wg := sync.WaitGroup{}
 
 	// start running query iff no errors were detected
@@ -311,26 +310,21 @@ func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) error {
 			}
 			if err != nil && err.Error() != io.EOF.Error() {
 				cancel()
+				// TODO cancelQuery()
 				respErrs <- err
 			}
 		}(dec)
 	}
+
 	go func() {
 		wg.Wait()
 		close(respErrs)
 	}()
 
-	// wait for errors
-	for err := range respErrs {
-		errs = append(errs, err)
-	}
-
-	// return the first error encountered
-	if len(errs) > 0 {
-		fmt.Printf("DISTRIBUTE: final errors gathered: %+v\n", errs)
-		return errs[0]
-	}
-	return nil
+	// wait for first error
+	e, _ := <-respErrs
+	errs = append(errs, e)
+	return errs[0]
 }
 
 // write a null-terminated string to a writer
