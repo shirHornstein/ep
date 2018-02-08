@@ -10,7 +10,7 @@ import (
 
 func TestRows(t *testing.T) {
 	data := NewDataset(strs([]string{"hello", "world"}))
-	runner := Pipeline(&dataRunner{data}, &upper{})
+	runner := Pipeline(&dataRunner{Dataset: data}, &upper{})
 	rows := Rows(context.Background(), runner).(driver.Rows)
 	cols := rows.Columns()
 	require.Equal(t, 1, len(cols))

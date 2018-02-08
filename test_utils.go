@@ -14,8 +14,7 @@ func TestRunner(r Runner, datasets ...Dataset) (Dataset, error) {
 
 // TestRunnerWithContext is helper function for tests, doing the same as TestRunner
 // with given context
-func TestRunnerWithContext(ctx context.Context, r Runner, datasets ...Dataset) (Dataset, error) {
-	var err error
+func TestRunnerWithContext(ctx context.Context, r Runner, datasets ...Dataset) (res Dataset, err error) {
 	inp := make(chan Dataset)
 	out := make(chan Dataset)
 	go func() {
@@ -34,10 +33,9 @@ func TestRunnerWithContext(ctx context.Context, r Runner, datasets ...Dataset) (
 		close(inp)
 	}()
 
-	var res = NewDataset()
+	res = NewDataset()
 	for data := range out {
 		res = res.Append(data).(Dataset)
 	}
-
 	return res, err
 }

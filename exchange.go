@@ -7,7 +7,6 @@ import (
 	"github.com/satori/go.uuid"
 	"io"
 	"net"
-	"time"
 )
 
 var _ = registerGob(&exchange{}, &req{}, &errMsg{})
@@ -57,11 +56,17 @@ type exchange struct {
 
 func (ex *exchange) Returns() []Type { return []Type{Wildcard} }
 func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) {
-	defer func() { ex.Close(err) }()
+	defer func() {
+		closeErr := ex.Close()
+		// prefer real existing error over close error
+		if err == nil {
+			err = closeErr
+		}
+	}()
 
 	err = ex.Init(ctx)
 	if err != nil {
-		return
+		return err
 	}
 
 	// receive remote data from peers in a go-routine. Write the final error (or
@@ -70,18 +75,16 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 	go func() {
 		defer close(errs)
 		for {
-			data, err := ex.Receive()
-			if err == io.EOF {
+			data, recErr := ex.Receive()
+			if recErr == io.EOF {
+				errs <- nil
 				break
-			} else if err != nil {
-				errs <- err
+			} else if recErr != nil {
+				errs <- recErr
 				return
 			}
-
 			out <- data
 		}
-
-		errs <- nil
 	}()
 
 	// send the local data to the peers, until completion or error. Also listen
@@ -95,7 +98,8 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 			if !ok {
 				// the input is exhausted. Notify peers that we're done sending
 				// data (they will use it to stop listening to data from us).
-				ex.EncodeAll(io.EOF)
+				eofMsg := &errMsg{io.EOF.Error()}
+				ex.EncodeAll(eofMsg)
 				sndDone = true
 
 				// inp is closed. If we keep iterating, it will infinitely
@@ -112,7 +116,6 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 			err = ctx.Err() // context timeout or cancel
 		}
 	}
-
 	return err
 }
 
@@ -132,37 +135,20 @@ func (ex *exchange) Receive() (Dataset, error) {
 	return ex.DecodeNext()
 }
 
-// Close all open connections. If an error object is supplied, it's first
-// encoded to all connections before closing.
-func (ex *exchange) Close(err error) error {
-	var errOut error
-	if err != nil {
-		errOut = ex.EncodeAll(err)
-
-		// the error below is triggered very infrequently when we hang up too
-		// fast. 1ms timeout in case of error is a good trade-off compared to
-		// the complexity of locks or a full hand-shake here.
-		time.Sleep(1 * time.Millisecond) // use of closed network connection
-	}
-
+// Close all open connections
+func (ex *exchange) Close() (err error) {
 	for _, conn := range ex.conns {
 		err1 := conn.Close()
 		if err1 != nil {
-			errOut = err1
+			err = err1
 		}
 	}
-
-	return errOut
+	return err
 }
 
 // Encode an object to all destination connections
+// expecting e to be either dataset or EOF error
 func (ex *exchange) EncodeAll(e interface{}) (err error) {
-	err, _ = e.(error)
-	if err != nil {
-		e = &errMsg{err.Error()}
-		err = nil
-	}
-
 	req := &req{e}
 	for _, enc := range ex.encs {
 		err1 := enc.Encode(req)
@@ -170,7 +156,6 @@ func (ex *exchange) EncodeAll(e interface{}) (err error) {
 			err = err1
 		}
 	}
-
 	return err
 }
 
@@ -200,31 +185,21 @@ func (ex *exchange) DecodeNext() (Dataset, error) {
 
 	req := &req{}
 	err := ex.decs[i].Decode(req)
-	data := req.Payload
-	if err == nil {
-		err, _ = data.(error)
-	}
-
-	if err != nil && err.Error() == io.EOF.Error() {
-		err = io.EOF
-	}
-
-	if err == io.EOF {
-		// remove the current decoder and try again
-		ex.decs = append(ex.decs[:i], ex.decs[i+1:]...)
-		return ex.DecodeNext()
-	} else if err != nil {
+	if err != nil {
+		if err == io.EOF {
+			// remove the current decoder and try again
+			ex.decs = append(ex.decs[:i], ex.decs[i+1:]...)
+			return ex.DecodeNext()
+		}
 		return nil, err
 	}
 
 	ex.decsNext = i
-	return data.(Dataset), nil
+	return req.Payload.(Dataset), nil
 }
 
 // initialize the connections, encoders & decoders
-func (ex *exchange) Init(ctx context.Context) error {
-	var err error
-
+func (ex *exchange) Init(ctx context.Context) (err error) {
 	dist, _ := ctx.Value(distributerKey).(interface {
 		Connect(addr, uid string) (net.Conn, error)
 	})
@@ -243,9 +218,15 @@ func (ex *exchange) Init(ctx context.Context) error {
 	}
 
 	// open a connection to all target nodes
-	var conn net.Conn
 	connsMap := map[string]net.Conn{}
 	var shortCircuit *shortCircuit
+	defer func() {
+		if err != nil {
+			// in case of error in one connection. close all other connections
+			ex.Close()
+		}
+	}()
+	var conn net.Conn
 	for _, n := range targetNodes {
 		if n == thisNode {
 			shortCircuit = newShortCircuit()
@@ -324,6 +305,9 @@ type dbgDecoder struct {
 func (dec dbgDecoder) Decode(e interface{}) error {
 	// fmt.Println("DECODE", dec.msg)
 	err := dec.decoder.Decode(e)
+	if err == nil && isEOFError(e) {
+		return io.EOF
+	}
 	// fmt.Println("DECODE DONE", dec.msg, e, err)
 	return err
 }
@@ -333,23 +317,23 @@ func (dec dbgDecoder) Decode(e interface{}) error {
 // in order to not complicate the generic nature of the exchange code
 type shortCircuit struct {
 	C      chan interface{}
-	Closed bool
+	closed bool
 	all    []interface{}
 }
 
 func (sc *shortCircuit) Close() error {
-	if sc.Closed {
+	if sc.closed {
 		return nil
 	}
 
-	sc.Closed = true
+	sc.closed = true
 	close(sc.C)
 	// fmt.Println("SC: Closed")
 	return nil
 }
 
 func (sc *shortCircuit) Encode(e interface{}) error {
-	if sc.Closed {
+	if sc.closed {
 		return io.ErrClosedPipe
 	}
 
@@ -359,13 +343,11 @@ func (sc *shortCircuit) Encode(e interface{}) error {
 }
 
 func (sc *shortCircuit) Decode(e interface{}) error {
-	r := e.(*req)
 	v, ok := <-sc.C
-	if !ok {
+	if !ok || isEOFError(v) {
 		return io.EOF
 	}
-
-	r.Payload = v.(*req).Payload
+	*e.(*req) = *v.(*req)
 	return nil
 }
 
@@ -377,3 +359,8 @@ type req struct{ Payload interface{} }
 type errMsg struct{ Msg string }
 
 func (err *errMsg) Error() string { return err.Msg }
+
+func isEOFError(data interface{}) bool {
+	err, isErr := data.(*req).Payload.(error)
+	return isErr && err.Error() == io.EOF.Error()
+}
