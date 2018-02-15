@@ -30,7 +30,7 @@ func Pipeline(runners ...Runner) Runner {
 		}
 	}
 
-	// if all runners were filtered - pipe should simple return its output as is
+	// if all runners were filtered - pipe should simply return its output as is
 	if len(ans) == 0 {
 		return PassThrough()
 	} else if len(ans) == 1 {
