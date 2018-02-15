@@ -19,7 +19,6 @@ var Types = make(typesReg)
 func Plan(ctx context.Context, arg interface{}) (Runner, error) {
 	var err error
 	for _, r := range Runners.Get(arg) {
-
 		// check if the runner is plannable
 		p, ok := r.(RunnerPlan)
 		if !ok {

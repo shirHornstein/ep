@@ -11,10 +11,32 @@ var _ = registerGob(pipeline([]Runner{}))
 func Pipeline(runners ...Runner) Runner {
 	if len(runners) == 0 {
 		panic("at least 1 runner is required for pipelining")
-	} else if len(runners) == 1 {
-		return runners[0]
 	}
-	return pipeline(runners)
+
+	var ans pipeline
+	for _, r := range runners {
+		// avoid nested pipelines by adding only real runners to returned ans.
+		// note we should examine only first level, as any pre-created pipeline
+		// was already flatten during its creation
+		if p, isPipe := r.(pipeline); isPipe {
+			for _, r2 := range p {
+				// skip passThrough runners, as they don't affect the pipe
+				if _, isPassThrough := r2.(*passthrough); !isPassThrough {
+					ans = append(ans, r2)
+				}
+			}
+		} else if _, isPassThrough := r.(*passthrough); !isPassThrough {
+			ans = append(ans, r)
+		}
+	}
+
+	// if all runners were filtered - pipe should simply return its output as is
+	if len(ans) == 0 {
+		return PassThrough()
+	} else if len(ans) == 1 {
+		return ans[0]
+	}
+	return ans
 }
 
 type pipeline []Runner

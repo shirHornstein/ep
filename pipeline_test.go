@@ -41,6 +41,86 @@ func TestPipeline_err(t *testing.T) {
 	require.Equal(t, false, infinity.Running, "Infinity go-routine leak")
 }
 
+func TestPipeline_creation_empty_panic(t *testing.T) {
+	require.Panics(t, func() { Pipeline() })
+}
+
+func TestPipeline_creation_single_runner(t *testing.T) {
+	runner := Pipeline(&upper{})
+	_, isPipe := runner.(pipeline)
+	require.False(t, isPipe)
+
+	passThrough := Pipeline(PassThrough())
+	_, isPipe = passThrough.(pipeline)
+	require.False(t, isPipe)
+
+	projectWithPipeline := Pipeline(Project(Pipeline(&question{}, &question{}), &upper{}))
+	_, isPipe = projectWithPipeline.(pipeline)
+	require.False(t, isPipe)
+
+	nestedPipeline := Pipeline(Pipeline(&question{}, &question{}))
+	p, isPipe := nestedPipeline.(pipeline)
+	require.True(t, isPipe)
+	require.Equal(t, 2, len(p))
+	_, isPipe = p[0].(pipeline)
+	require.False(t, isPipe)
+}
+
+func TestPipeline_creation_flat(t *testing.T) {
+	runner := Pipeline(&upper{}, &question{})
+	runner = Pipeline(runner, Pipeline(&question{}, Pipeline(&question{}, &question{})))
+
+	p, isPipe := runner.(pipeline)
+	require.True(t, isPipe)
+	require.Equal(t, 5, len(p))
+}
+
+func TestPipeline_creation_flat_skip_passthrogh(t *testing.T) {
+	runner := Pipeline(&upper{}, PassThrough())
+	runner = Pipeline(runner, Pipeline(&question{}, Pipeline(PassThrough(), &question{})))
+
+	p, isPipe := runner.(pipeline)
+	require.True(t, isPipe)
+	// 5 runners without 2 skipped passThrough
+	require.Equal(t, 3, len(p))
+}
+
+func TestPipeline_creation_dont_flat_project(t *testing.T) {
+	runner := Project(&upper{}, Pipeline(&question{}, &question{}), Pipeline(&question{}, &question{}))
+	runner = Pipeline(runner, &upper{})
+
+	p, isPipe := runner.(pipeline)
+	require.True(t, isPipe)
+	require.Equal(t, 2, len(p))
+}
+
+func TestPipeline_creation_single_runner_after_flat(t *testing.T) {
+	runner := Pipeline(PassThrough(), &upper{}, PassThrough())
+	_, isPipe := runner.(pipeline)
+	require.False(t, isPipe)
+
+	nestedPipeline := Pipeline(PassThrough(), Pipeline(&upper{}, PassThrough()), PassThrough())
+	_, isPipe = nestedPipeline.(pipeline)
+	require.False(t, isPipe)
+
+	onlyPassThrough := Pipeline(PassThrough(), PassThrough())
+	_, isPipe = onlyPassThrough.(pipeline)
+	require.False(t, isPipe)
+	_, isPassThrough := onlyPassThrough.(*passthrough)
+	require.True(t, isPassThrough)
+
+	nestedPipelineWithOnlyPassThrough := Pipeline(
+		PassThrough(),
+		Pipeline(PassThrough(), PassThrough()),
+		PassThrough(),
+		Pipeline(PassThrough(), Pipeline(PassThrough(), PassThrough())),
+	)
+	_, isPipe = nestedPipelineWithOnlyPassThrough.(pipeline)
+	require.False(t, isPipe)
+	_, isPassThrough = onlyPassThrough.(*passthrough)
+	require.True(t, isPassThrough)
+}
+
 func TestPipeline_Returns_wildcard(t *testing.T) {
 	runner := Project(&upper{}, &question{})
 	runner = Pipeline(runner, PassThrough())
