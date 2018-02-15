@@ -15,7 +15,9 @@ func Pipeline(runners ...Runner) Runner {
 
 	var ans pipeline
 	for _, r := range runners {
-		// avoid nested pipelines by add only real runners to returned ans
+		// avoid nested pipelines by adding only real runners to returned ans.
+		// note we should examine only first level, as any pre-created pipeline
+		// was already flatten during its creation
 		if p, isPipe := r.(pipeline); isPipe {
 			for _, r2 := range p {
 				// skip passThrough runners, as they don't affect the pipe
