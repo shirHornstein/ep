@@ -17,7 +17,7 @@ func (r *errRunner) Run(ctx context.Context, inp, out chan Dataset) error {
 }
 
 // infinityRunner infinitely emits data until it's canceled
-type infinityRunner struct{
+type infinityRunner struct {
 	IsRunning bool
 	sync.Mutex
 }
@@ -28,7 +28,7 @@ func (r *infinityRunner) getIsRunning() bool {
 	isRunning := r.IsRunning
 	r.Unlock()
 	return isRunning
-	}
+}
 func (r *infinityRunner) Run(ctx context.Context, inp, out chan Dataset) error {
 	// running flag helps tests ensure that the go-routine didn't leak
 	r.Lock()
