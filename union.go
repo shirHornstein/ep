@@ -67,20 +67,25 @@ func (rs union) ReturnsErr() ([]Type, error) {
 }
 
 func (rs union) Run(ctx context.Context, inp, out chan Dataset) (err error) {
-
 	// start all inner runners
 	inputs := make([]chan Dataset, len(rs))
 	outputs := make([]chan Dataset, len(rs))
+	errors := make([]error, len(rs))
+	defer func() {
+		for _, errI := range errors {
+			if errI != nil && err == nil {
+				err = errI
+				break
+			}
+		}
+	}()
 	for i := range rs {
 		inputs[i] = make(chan Dataset)
 		outputs[i] = make(chan Dataset)
 
 		go func(i int) {
 			defer close(outputs[i])
-			err1 := rs[i].Run(ctx, inputs[i], outputs[i])
-			if err1 != nil && err == nil {
-				err = err1
-			}
+			errors[i] = rs[i].Run(ctx, inputs[i], outputs[i])
 		}(i)
 	}
 
@@ -104,6 +109,5 @@ func (rs union) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 			out <- data
 		}
 	}
-
 	return err
 }

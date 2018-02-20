@@ -87,6 +87,11 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 		}
 	}()
 
+	defer func() {
+		// wait for all receivers to finish
+		for range errs {
+		}
+	}()
 	// send the local data to the peers, until completion or error. Also listen
 	// for the completion of the received go-routine above. When both sending
 	// and receiving is complete, exit. Upon error, exit early.
