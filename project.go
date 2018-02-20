@@ -2,6 +2,7 @@ package ep
 
 import (
 	"context"
+	"sync"
 )
 
 var _ = registerGob(project([]Runner{}))
@@ -38,9 +39,12 @@ func (rs project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 	inps := make([]chan Dataset, len(rs))
 	outs := make([]chan Dataset, len(rs))
 	errs := make([]error, len(rs))
+	var wg sync.WaitGroup
+	wg.Add(len(rs))
 
 	// choose first error out from all errors
 	defer func() {
+		wg.Wait()
 		for _, errI := range errs {
 			if errI != nil {
 				err = errI
@@ -84,6 +88,7 @@ func (rs project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 				}
 			}(idx)
 			errs[idx] = rs[idx].Run(ctx, inps[idx], outs[idx])
+			wg.Done()
 		}(i)
 	}
 

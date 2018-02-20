@@ -38,7 +38,7 @@ func TestPipeline_err(t *testing.T) {
 	require.Equal(t, 0, data.Width())
 	require.Error(t, err)
 	require.Equal(t, "something bad happened", err.Error())
-	require.Equal(t, false, infinity.Running, "Infinity go-routine leak")
+	require.Equal(t, false, infinity.getIsRunning(), "Infinity go-routine leak")
 }
 
 func TestPipeline_creation_empty_panic(t *testing.T) {
