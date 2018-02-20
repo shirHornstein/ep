@@ -57,6 +57,7 @@ func (rs project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 	ctx, cancel := context.WithCancel(ctx)
 
 	defer func() {
+		// in case of error - drain inp without duplicate data to all runners, to allow previous runner to write
 		for {
 			select {
 			case <-ctx.Done():

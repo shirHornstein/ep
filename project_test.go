@@ -38,7 +38,7 @@ func TestProject_error(t *testing.T) {
 	require.Equal(t, 0, data.Width())
 	require.Error(t, err)
 	require.Equal(t, "something bad happened", err.Error())
-	require.Equal(t, false, infinity.getIsRunning(), "Infinity go-routine leak")
+	require.Equal(t, false, infinity.IsRunning(), "Infinity go-routine leak")
 }
 
 // project error should cancel all inner runners
@@ -55,7 +55,7 @@ func TestProjectWithPipelines_error(t *testing.T) {
 	require.Equal(t, 0, data.Width())
 	require.Error(t, err)
 	require.Equal(t, "something bad happened", err.Error())
-	require.Equal(t, false, infinityRunner.getIsRunning(), "Infinity go-routine leak")
+	require.Equal(t, false, infinityRunner.IsRunning(), "Infinity go-routine leak")
 }
 
 // project error should cancel all inner runners
@@ -72,7 +72,7 @@ func TestProjectWithOnePipelineDataFirst_error(t *testing.T) {
 	require.Equal(t, 0, data.Width())
 	require.Error(t, err)
 	require.Equal(t, "something bad happened", err.Error())
-	require.Equal(t, false, infinityRunner.getIsRunning(), "Infinity go-routine leak")
+	require.Equal(t, false, infinityRunner.IsRunning(), "Infinity go-routine leak")
 }
 
 // project error should cancel all inner runners
@@ -97,9 +97,9 @@ func TestNestedProjectWithTwoPipelinesDataLast_error(t *testing.T) {
 	require.Equal(t, 0, data.Width())
 	require.Error(t, err)
 	require.Equal(t, "something bad happened", err.Error())
-	require.Equal(t, false, infinityRunner1.getIsRunning(), "Infinity go-routine leak")
-	require.Equal(t, false, infinityRunner2.getIsRunning(), "Infinity go-routine leak")
-	require.Equal(t, false, infinityRunner3.getIsRunning(), "Infinity go-routine leak")
+	require.Equal(t, false, infinityRunner1.IsRunning(), "Infinity go-routine leak")
+	require.Equal(t, false, infinityRunner2.IsRunning(), "Infinity go-routine leak")
+	require.Equal(t, false, infinityRunner3.IsRunning(), "Infinity go-routine leak")
 }
 
 // project error should cancel all inner runners
@@ -124,9 +124,9 @@ func TestNestedProjectWithTwoPipelinesDataFirst_error(t *testing.T) {
 	require.Equal(t, 0, data.Width())
 	require.Error(t, err)
 	require.Equal(t, "something bad happened", err.Error())
-	require.Equal(t, false, infinityRunner1.getIsRunning(), "Infinity go-routine leak")
-	require.Equal(t, false, infinityRunner2.getIsRunning(), "Infinity go-routine leak")
-	require.Equal(t, false, infinityRunner3.getIsRunning(), "Infinity go-routine leak")
+	require.Equal(t, false, infinityRunner1.IsRunning(), "Infinity go-routine leak")
+	require.Equal(t, false, infinityRunner2.IsRunning(), "Infinity go-routine leak")
+	require.Equal(t, false, infinityRunner3.IsRunning(), "Infinity go-routine leak")
 }
 
 // project error should cancel all inner runners
@@ -160,7 +160,7 @@ func TestProjectWithExchange_error(t *testing.T) {
 	require.Equal(t, 0, data.Width())
 	require.Error(t, err)
 	require.Equal(t, "something bad happened", err.Error())
-	require.Equal(t, false, infinityRunner.getIsRunning(), "Infinity go-routine leak")
+	require.Equal(t, false, infinityRunner.IsRunning(), "Infinity go-routine leak")
 }
 
 // Test that Projected runners always returns the same number of rows

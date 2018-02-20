@@ -18,26 +18,26 @@ func (r *errRunner) Run(ctx context.Context, inp, out chan Dataset) error {
 
 // infinityRunner infinitely emits data until it's canceled
 type infinityRunner struct {
-	IsRunning bool
+	isRunning bool
 	sync.Mutex
 }
 
 func (*infinityRunner) Returns() []Type { return []Type{str} }
-func (r *infinityRunner) getIsRunning() bool {
+func (r *infinityRunner) IsRunning() bool {
 	r.Lock()
-	isRunning := r.IsRunning
+	isRunning := r.isRunning
 	r.Unlock()
 	return isRunning
 }
 func (r *infinityRunner) Run(ctx context.Context, inp, out chan Dataset) error {
 	// running flag helps tests ensure that the go-routine didn't leak
 	r.Lock()
-	r.IsRunning = true
+	r.isRunning = true
 	r.Unlock()
 
 	defer func() {
 		r.Lock()
-		r.IsRunning = false
+		r.isRunning = false
 		r.Unlock()
 	}()
 

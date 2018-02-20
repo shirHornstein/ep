@@ -66,6 +66,7 @@ func (rs pipeline) runOne(ctx context.Context, i int, inp, out chan Dataset) (er
 	middle := make(chan Dataset)
 	defer func() {
 		if err != nil {
+			// in case of error - drain middle to allow i-1 previous runners to write
 			for range middle {
 			}
 		}
