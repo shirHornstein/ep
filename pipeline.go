@@ -65,7 +65,9 @@ func (rs pipeline) runOne(ctx context.Context, i int, inp, out chan Dataset) (er
 	// or some other logic (LIMIT?). This prevents leaking go-routines
 	middle := make(chan Dataset)
 	defer func() {
-		for range middle {
+		if err != nil {
+			for range middle {
+			}
 		}
 	}()
 
