@@ -8,6 +8,7 @@ import (
 	"net"
 	"sync"
 	"time"
+	"log"
 )
 
 // MagicNumber used by the built-in Distributer to prefix all of its connections
@@ -177,7 +178,7 @@ func (d *distributer) Serve(conn net.Conn) error {
 		dec := gob.NewDecoder(conn)
 		err := dec.Decode(r)
 		if err != nil {
-			fmt.Println("ep: distributer error", err)
+			log.Println("ep: distributer error", err)
 			return err
 		}
 
@@ -203,14 +204,14 @@ func (d *distributer) Serve(conn net.Conn) error {
 		enc := gob.NewEncoder(conn)
 		err = enc.Encode(&req{err})
 		if err != nil {
-			fmt.Println("ep: runner error", err)
+			log.Println("ep: runner error", err)
 			return err
 		}
 	} else {
 		defer conn.Close()
 
 		err := fmt.Errorf("unrecognized connection type: %s", typee)
-		fmt.Println("ep: " + err.Error())
+		log.Println("ep: " + err.Error())
 		return err
 	}
 

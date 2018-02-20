@@ -5,7 +5,7 @@ branches:
     - master
 
 go:
-  - 1.9.x
+  - 1.10.x
 
 install:
   - go get -t -v ./... # all deps
@@ -16,7 +16,7 @@ script:
   - go tool vet .
   - golint -set_exit_status ./...
   - gofmt -l . | exit $(wc -l)
-  - go test -v ./... -cover -race
+  - go test -v -cover -race
 
 notifications:
   slack:
