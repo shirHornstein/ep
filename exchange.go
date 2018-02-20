@@ -86,7 +86,9 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 			out <- data
 		}
 	}()
+
 	defer func() {
+		// wait for all receivers to finish
 		for range errs {
 		}
 	}()
