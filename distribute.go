@@ -5,10 +5,10 @@ import (
 	"encoding/gob"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"sync"
 	"time"
-	"log"
 )
 
 // MagicNumber used by the built-in Distributer to prefix all of its connections
