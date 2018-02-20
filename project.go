@@ -52,17 +52,37 @@ func (rs project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 	// cancel all runners when we're done - just in case few still running
 	ctx, cancel := context.WithCancel(ctx)
 
+	defer func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case _, ok := <-inp:
+				if !ok { // inp was closed - no more input
+					return
+				}
+			}
+		}
+	}()
+
 	// run all runners in go-routines
 	for i := range rs {
 		inps[i] = make(chan Dataset)
 		outs[i] = make(chan Dataset)
-		// in case project already done with error - drain until empty
-		defer func(idx int) {
-			for range outs[idx] {
-			}
-		}(i)
 		go func(idx int) {
-			defer close(outs[idx])
+			defer func(idx int) {
+				// in case project already done with error - drain others outs channel until empty
+				close(outs[idx])
+				if errs[idx] != nil {
+					for i := range rs {
+						defer func(i int) {
+							for range outs[i] {
+							}
+						}(i)
+					}
+					cancel()
+				}
+			}(idx)
 			errs[idx] = rs[idx].Run(ctx, inps[idx], outs[idx])
 		}(i)
 	}
@@ -70,7 +90,9 @@ func (rs project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 	// dispatch (duplicate) input to all runners
 	go func() {
 		for i := range rs {
-			defer close(inps[i])
+			defer func(i int) {
+				close(inps[i])
+			}(i)
 		}
 		for data := range inp {
 			for i := range rs {
@@ -108,6 +130,8 @@ func (rs project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 			return // all done
 		}
 
-		out <- result
+		if err == nil {
+			out <- result
+		}
 	}
 }
