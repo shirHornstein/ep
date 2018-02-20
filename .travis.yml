@@ -4,6 +4,9 @@ branches:
   only:
     - master
 
+env:
+  - GIMME_OS=linux GIMME_ARCH=amd64
+
 go:
   - 1.10
 
