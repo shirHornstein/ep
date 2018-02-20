@@ -102,6 +102,11 @@ func (rs union) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 			close(s)
 		}
 	}()
+	defer func() {
+		// in case of error - drain input
+		for range inp {
+		}
+	}()
 
 	// collect and union all of the stream into a single output
 	for _, s := range outputs {
