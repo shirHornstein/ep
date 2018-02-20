@@ -4,11 +4,8 @@ branches:
   only:
     - master
 
-env:
-  - GIMME_OS=linux GIMME_ARCH=amd64
-
 go:
-  - 1.10
+  - "1.10"
 
 install:
   - go get -t -v ./... # all deps
