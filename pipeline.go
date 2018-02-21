@@ -42,44 +42,50 @@ func Pipeline(runners ...Runner) Runner {
 type pipeline []Runner
 
 func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
-	return rs.runOne(ctx, len(rs)-1, inp, out)
-}
+	// choose first error out from all errors
+	errs := make([]error, len(rs))
+	defer func() {
+		for _, errI := range errs {
+			if errI != nil {
+				err = errI
+				break
+			}
+		}
+	}()
 
-func (rs pipeline) runOne(ctx context.Context, i int, inp, out chan Dataset) (err error) {
-	if i == 0 {
-		return rs[i].Run(ctx, inp, out)
+	ctx, cancel := context.WithCancel(ctx)
+
+	// run all of the internal runners (all except the very last one), piping
+	// the output from each runner to the next.
+	for i := 0; i < len(rs) - 1; i++ {
+
+		// middle chan is the output from the current runner and the input to
+		// the next. Drain it until the go-routine has exited. Usually this will
+		// be a no-op, but other times there might still be left overs in the
+		// channel. This can happen if the top runner has exited early due to an
+		// error or some other logic (LIMIT). This prevents leaking go-routines.
+		middle := make(chan Dataset)
+		defer func() {
+			for range middle {
+			}
+		}()
+
+		go func(i int, inp, middle chan Dataset) {
+			defer close(middle)
+			errs[i] = rs[i].Run(ctx, inp, middle)
+		}(i, inp, middle)
+
+		// input to the next channel is the output from the current one.
+		inp = middle
 	}
 
-	// choose the error out from the From and To errors.
-	var err1 error
-	defer func() {
-		if err == nil && err1 != nil {
-			err = err1
-		}
-	}()
-
-	// middle chan is the output from the From runner and the input to the To
-	// Runner. Drain it until the go-routine has exited. Usually this will be a
-	// no-op, but other times there might still be left overs in the channel.
-	// This can happen if the top (To) runner has exited early due to an error
-	// or some other logic (LIMIT?). This prevents leaking go-routines
-	middle := make(chan Dataset)
-	defer func() {
-		for range middle {
-		}
-	}()
-
-	// cancel the From runner when we're done - just in case it's still running.
-	ctx, cancel := context.WithCancel(ctx)
+	// cancel the all of the runners when we're done - just in case some are
+	// still running. This might happen if the top of the pipeline ends before
+	// the bottom of the pipeline.
 	defer cancel()
 
-	// start the From runner, writing data into the middle chan
-	go func() {
-		defer close(middle)
-		err1 = rs.runOne(ctx, i-1, inp, middle)
-	}()
-
-	return rs[i].Run(ctx, middle, out)
+	// run the last runner to completion.
+	return rs[len(rs) - 1].Run(ctx, inp, out)
 }
 
 // The implementation isn't trivial because it has to account for Wildcard types
