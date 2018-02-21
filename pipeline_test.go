@@ -155,7 +155,9 @@ func TestPipeline_Returns_wildcardMinusTail(t *testing.T) {
 }
 
 // Measures the number of datasets (ops) per second going through a pipeline
-// composed of 3 pass-throughs.
+// composed of 3 pass-throughs. At the time of writing, it was evident that
+// performance is not impacted by the size of the datasets (sensible, given
+// the implementation details).
 func BenchmarkPipeline(b *testing.B) {
 	data := NewDataset(strs([]string{"hello", "world", "foo", "bar"}))
 	inp := make(chan Dataset)
