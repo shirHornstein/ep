@@ -65,10 +65,13 @@ func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 	for i := 0; i < len(rs)-1; i++ {
 
 		// middle chan is the output from the current runner and the input to
-		// the next. Drain it until the go-routine has exited. Usually this will
-		// be a no-op, but other times there might still be left overs in the
-		// channel. This can happen if the top runner has exited early due to an
-		// error or some other logic (LIMIT). This prevents leaking go-routines.
+		// the next. We need to wait until this channel is closed before this
+		// Run() function returns to avoid leaking go routines. This is achieved
+		// by draining it. Only when the middle channel is closed we can know for
+		// certain that the go routine has exited. Usually this will be a no-op,
+		// but other times there might still be left overs in the channel. This
+		// can happen if the top runner has exited early due to an error or some
+		// other logic (LIMIT).
 		middle := make(chan Dataset)
 		defer func(middle chan Dataset) {
 			for range middle {
