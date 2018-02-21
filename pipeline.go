@@ -65,8 +65,8 @@ func (rs pipeline) runOne(ctx context.Context, i int, inp, out chan Dataset) (er
 	// or some other logic (LIMIT?). This prevents leaking go-routines
 	middle := make(chan Dataset)
 	defer func() {
+		// in case of error - drain middle to allow i-1 previous runners to write
 		if err != nil {
-			// in case of error - drain middle to allow i-1 previous runners to write
 			for range middle {
 			}
 		}

@@ -28,17 +28,104 @@ func ExamplePipeline_reverse() {
 
 // test that upon an error, the producing (infinity) runners are canceled.
 // Otherwise - this test will block indefinitely
-func TestPipeline_err(t *testing.T) {
+func TestPipeline_errInFirstRunner(t *testing.T) {
 	err := fmt.Errorf("something bad happened")
-	infinity := &infinityRunner{}
-	runner := Pipeline(infinity, &errRunner{err})
+	infinityRunner1 := &infinityRunner{}
+	infinityRunner2 := &infinityRunner{}
+	runner := Pipeline(&errRunner{err}, infinityRunner1, infinityRunner2)
 	data := NewDataset(Null.Data(1))
 	data, err = TestRunner(runner, data)
 
 	require.Equal(t, 0, data.Width())
 	require.Error(t, err)
 	require.Equal(t, "something bad happened", err.Error())
-	require.Equal(t, false, infinity.IsRunning(), "Infinity go-routine leak")
+	require.Equal(t, false, infinityRunner1.IsRunning(), "Infinity go-routine leak")
+	require.Equal(t, false, infinityRunner2.IsRunning(), "Infinity go-routine leak")
+}
+
+// test that upon an error, the producing (infinity) runners are canceled.
+// Otherwise - this test will block indefinitely
+func TestPipeline_errInSecondRunner(t *testing.T) {
+	err := fmt.Errorf("something bad happened")
+	infinityRunner1 := &infinityRunner{}
+	infinityRunner2 := &infinityRunner{}
+	runner := Pipeline(infinityRunner1, &errRunner{err}, infinityRunner2)
+	data := NewDataset(Null.Data(1))
+	data, err = TestRunner(runner, data)
+
+	require.Equal(t, 0, data.Width())
+	require.Error(t, err)
+	require.Equal(t, "something bad happened", err.Error())
+	require.Equal(t, false, infinityRunner1.IsRunning(), "Infinity go-routine leak")
+	require.Equal(t, false, infinityRunner2.IsRunning(), "Infinity go-routine leak")
+}
+
+// test that upon an error, the producing (infinity) runners are canceled.
+// Otherwise - this test will block indefinitely
+func TestPipeline_errInThirdRunner(t *testing.T) {
+	err := fmt.Errorf("something bad happened")
+	infinityRunner1 := &infinityRunner{}
+	infinityRunner2 := &infinityRunner{}
+	runner := Pipeline(infinityRunner1, infinityRunner2, &errRunner{err})
+	data := NewDataset(Null.Data(1))
+	data, err = TestRunner(runner, data)
+
+	require.Equal(t, 0, data.Width())
+	require.Error(t, err)
+	require.Equal(t, "something bad happened", err.Error())
+	require.Equal(t, false, infinityRunner1.IsRunning(), "Infinity go-routine leak")
+	require.Equal(t, false, infinityRunner2.IsRunning(), "Infinity go-routine leak")
+}
+
+// test that upon an error, the producing (infinity) runners are canceled.
+// Otherwise - this test will block indefinitely
+func TestPipeline_errInNestedPipeline(t *testing.T) {
+	err := fmt.Errorf("something bad happened")
+	infinityRunner1 := &infinityRunner{}
+	infinityRunner2 := &infinityRunner{}
+	infinityRunner3 := &infinityRunner{}
+	runner := Pipeline(
+		Pipeline(infinityRunner1, &errRunner{err}),
+		Pipeline(infinityRunner2, infinityRunner3),
+	)
+	data := NewDataset(Null.Data(1))
+	data, err = TestRunner(runner, data)
+
+	require.Equal(t, 0, data.Width())
+	require.Error(t, err)
+	require.Equal(t, "something bad happened", err.Error())
+	require.Equal(t, false, infinityRunner1.IsRunning(), "Infinity go-routine leak")
+	require.Equal(t, false, infinityRunner2.IsRunning(), "Infinity go-routine leak")
+	require.Equal(t, false, infinityRunner3.IsRunning(), "Infinity go-routine leak")
+}
+
+// test that upon an error, the producing (infinity) runners are canceled.
+// Otherwise - this test will block indefinitely
+// project error should cancel all inner runners
+func TestPipeline_errNestedPipelineWithProject(t *testing.T) {
+	err := fmt.Errorf("something bad happened")
+	infinityRunner1 := &infinityRunner{}
+	infinityRunner2 := &infinityRunner{}
+	infinityRunner3 := &infinityRunner{}
+	runner :=
+		Pipeline(
+			Project(
+				Pipeline(infinityRunner1, PassThrough()),
+				Pipeline(infinityRunner2, PassThrough()),
+			),
+			Project(
+				Pipeline(infinityRunner3, PassThrough()),
+				Pipeline(&errRunner{err}, PassThrough()),
+			))
+	data := NewDataset(Null.Data(1))
+	data, err = TestRunner(runner, data)
+
+	require.Equal(t, 0, data.Width())
+	require.Error(t, err)
+	require.Equal(t, "something bad happened", err.Error())
+	require.Equal(t, false, infinityRunner1.IsRunning(), "Infinity go-routine leak")
+	require.Equal(t, false, infinityRunner2.IsRunning(), "Infinity go-routine leak")
+	require.Equal(t, false, infinityRunner3.IsRunning(), "Infinity go-routine leak")
 }
 
 func TestPipeline_creation_empty_panic(t *testing.T) {

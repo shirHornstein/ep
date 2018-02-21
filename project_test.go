@@ -27,11 +27,10 @@ func ExampleProject_reversed() {
 	// [[is hello? is world?] [HELLO WORLD]] <nil>
 }
 
-// project error should cancel all inner runners
-func TestProject_error(t *testing.T) {
+func TestProject_cancelUponErrorInFirstRunner(t *testing.T) {
 	err := fmt.Errorf("something bad happened")
 	infinity := &infinityRunner{}
-	runner := Project(infinity, &errRunner{err})
+	runner := Project(&errRunner{err}, infinity)
 	data := NewDataset(Null.Data(1))
 	data, err = TestRunner(runner, data)
 
@@ -41,13 +40,45 @@ func TestProject_error(t *testing.T) {
 	require.Equal(t, false, infinity.IsRunning(), "Infinity go-routine leak")
 }
 
-// project error should cancel all inner runners
-func TestProjectWithPipelines_error(t *testing.T) {
+func TestProject_cancelUponErrorInSecondRunner(t *testing.T) {
 	err := fmt.Errorf("something bad happened")
-	infinityRunner := &infinityRunner{}
+	infinityRunner1 := &infinityRunner{}
+	infinityRunner2 := &infinityRunner{}
+	runner := Project(infinityRunner1, &errRunner{err}, infinityRunner2)
+	data := NewDataset(Null.Data(1))
+	data, err = TestRunner(runner, data)
+
+	require.Equal(t, 0, data.Width())
+	require.Error(t, err)
+	require.Equal(t, "something bad happened", err.Error())
+	require.Equal(t, false, infinityRunner1.IsRunning(), "Infinity go-routine leak")
+	require.Equal(t, false, infinityRunner2.IsRunning(), "Infinity go-routine leak")
+}
+
+func TestProject_cancelUponErrorInThirdRunner(t *testing.T) {
+	err := fmt.Errorf("something bad happened")
+	infinityRunner1 := &infinityRunner{}
+	infinityRunner2 := &infinityRunner{}
+	runner := Project(infinityRunner1, infinityRunner2, &errRunner{err})
+	data := NewDataset(Null.Data(1))
+	data, err = TestRunner(runner, data)
+
+	require.Equal(t, 0, data.Width())
+	require.Error(t, err)
+	require.Equal(t, "something bad happened", err.Error())
+	require.Equal(t, false, infinityRunner1.IsRunning(), "Infinity go-routine leak")
+	require.Equal(t, false, infinityRunner2.IsRunning(), "Infinity go-routine leak")
+}
+
+// project error should cancel all inner runners
+func TestProject_withPipelines_error(t *testing.T) {
+	err := fmt.Errorf("something bad happened")
+	infinityRunner1 := &infinityRunner{}
+	infinityRunner2 := &infinityRunner{}
+	infinityRunner3 := &infinityRunner{}
 	runner := Project(
-		Pipeline(PassThrough(), infinityRunner),
-		Pipeline(PassThrough(), &errRunner{err}),
+		Pipeline(infinityRunner1, infinityRunner2),
+		Pipeline(infinityRunner3, &errRunner{err}),
 	)
 	data := NewDataset(Null.Data(1))
 	data, err = TestRunner(runner, data)
@@ -55,41 +86,26 @@ func TestProjectWithPipelines_error(t *testing.T) {
 	require.Equal(t, 0, data.Width())
 	require.Error(t, err)
 	require.Equal(t, "something bad happened", err.Error())
-	require.Equal(t, false, infinityRunner.IsRunning(), "Infinity go-routine leak")
+	require.Equal(t, false, infinityRunner3.IsRunning(), "Infinity go-routine leak 3")
+	require.Equal(t, false, infinityRunner2.IsRunning(), "Infinity go-routine leak 2")
+	require.Equal(t, false, infinityRunner1.IsRunning(), "Infinity go-routine leak 1")
 }
 
 // project error should cancel all inner runners
-func TestProjectWithOnePipelineDataFirst_error(t *testing.T) {
-	err := fmt.Errorf("something bad happened")
-	infinityRunner := &infinityRunner{}
-	runner := Project(
-		Pipeline(infinityRunner, PassThrough()),
-		&errRunner{err},
-	)
-	data := NewDataset(Null.Data(1))
-	data, err = TestRunner(runner, data)
-
-	require.Equal(t, 0, data.Width())
-	require.Error(t, err)
-	require.Equal(t, "something bad happened", err.Error())
-	require.Equal(t, false, infinityRunner.IsRunning(), "Infinity go-routine leak")
-}
-
-// project error should cancel all inner runners
-func TestNestedProjectWithTwoPipelinesDataLast_error(t *testing.T) {
+func TestProject_NestedWithErrorInTheFirstRunner(t *testing.T) {
 	err := fmt.Errorf("something bad happened")
 	infinityRunner1 := &infinityRunner{}
 	infinityRunner2 := &infinityRunner{}
 	infinityRunner3 := &infinityRunner{}
 	runner :=
-		Pipeline(
+		Project(
 			Project(
-				Pipeline(PassThrough(), infinityRunner1),
-				Pipeline(PassThrough(), infinityRunner2),
+				infinityRunner3,
+				&errRunner{err},
 			),
 			Project(
-				Pipeline(PassThrough(), infinityRunner3),
-				Pipeline(PassThrough(), &errRunner{err}),
+				infinityRunner1,
+				infinityRunner2,
 			))
 	data := NewDataset(Null.Data(1))
 	data, err = TestRunner(runner, data)
@@ -103,20 +119,20 @@ func TestNestedProjectWithTwoPipelinesDataLast_error(t *testing.T) {
 }
 
 // project error should cancel all inner runners
-func TestNestedProjectWithTwoPipelinesDataFirst_error(t *testing.T) {
+func TestProject_NestedWithErrorInTheSecondRunner(t *testing.T) {
 	err := fmt.Errorf("something bad happened")
 	infinityRunner1 := &infinityRunner{}
 	infinityRunner2 := &infinityRunner{}
 	infinityRunner3 := &infinityRunner{}
 	runner :=
-		Pipeline(
+		Project(
 			Project(
-				Pipeline(infinityRunner1, PassThrough()),
-				Pipeline(infinityRunner2, PassThrough()),
+				infinityRunner1,
+				infinityRunner2,
 			),
 			Project(
-				Pipeline(infinityRunner3, PassThrough()),
-				Pipeline(&errRunner{err}, PassThrough()),
+				infinityRunner3,
+				&errRunner{err},
 			))
 	data := NewDataset(Null.Data(1))
 	data, err = TestRunner(runner, data)
@@ -130,7 +146,7 @@ func TestNestedProjectWithTwoPipelinesDataFirst_error(t *testing.T) {
 }
 
 // project error should cancel all inner runners
-func TestProjectWithExchange_error(t *testing.T) {
+func TestProject_withExchange_error(t *testing.T) {
 	err := fmt.Errorf("something bad happened")
 	infinityRunner := &infinityRunner{}
 
@@ -163,7 +179,7 @@ func TestProjectWithExchange_error(t *testing.T) {
 	require.Equal(t, false, infinityRunner.IsRunning(), "Infinity go-routine leak")
 }
 
-// Test that Projected runners always returns the same number of rows
+// Test that projected runners always returns the same number of rows
 func TestProject_mismatchErr(t *testing.T) {
 	runner := Project(&upper{}, &count{})
 	data := NewDataset(strs([]string{"hello", "world"}))

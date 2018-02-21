@@ -13,6 +13,9 @@ type errRunner struct{ error }
 
 func (*errRunner) Returns() []Type { return []Type{} }
 func (r *errRunner) Run(ctx context.Context, inp, out chan Dataset) error {
+	for range inp {
+		return r.error
+	}
 	return r.error
 }
 
@@ -25,9 +28,8 @@ type infinityRunner struct {
 func (*infinityRunner) Returns() []Type { return []Type{str} }
 func (r *infinityRunner) IsRunning() bool {
 	r.Lock()
-	isRunning := r.isRunning
-	r.Unlock()
-	return isRunning
+	defer r.Unlock()
+	return r.isRunning
 }
 func (r *infinityRunner) Run(ctx context.Context, inp, out chan Dataset) error {
 	// running flag helps tests ensure that the go-routine didn't leak
@@ -46,8 +48,12 @@ func (r *infinityRunner) Run(ctx context.Context, inp, out chan Dataset) error {
 		select {
 		case <-ctx.Done():
 			return nil
-		default:
-			out <- NewDataset(strs{"data"})
+		case _, ok := <-inp:
+			if ok {
+				out <- NewDataset(strs{"data"})
+			} else {
+				return nil
+			}
 		}
 	}
 }

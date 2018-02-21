@@ -40,7 +40,6 @@ func (rs project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 	outs := make([]chan Dataset, len(rs))
 	errs := make([]error, len(rs))
 	var wg sync.WaitGroup
-	wg.Add(len(rs))
 
 	// choose first error out from all errors
 	defer func() {
@@ -53,14 +52,12 @@ func (rs project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 		}
 	}()
 
-	// cancel all runners when we're done - just in case few still running
-	ctx, cancel := context.WithCancel(ctx)
-
-	defer func() {
-		// in case of error - drain inp without duplicate data to all runners, to allow previous runner to write
+	defer func(origCtx context.Context) {
+		// in case of error - drain inp without duplicate data to all runners,
+		// to allow previous runner to write
 		for {
 			select {
-			case <-ctx.Done():
+			case <-origCtx.Done():
 				return
 			case _, ok := <-inp:
 				if !ok { // inp was closed - no more input
@@ -68,47 +65,56 @@ func (rs project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 				}
 			}
 		}
-	}()
+	}(ctx)
+
+	ctx, cancel := context.WithCancel(ctx)
 
 	// run all runners in go-routines
 	for i := range rs {
 		inps[i] = make(chan Dataset)
 		outs[i] = make(chan Dataset)
+		wg.Add(1)
 		go func(idx int) {
-			defer func(idx int) {
-				// in case project already done with error - drain others outs channel until empty
-				close(outs[idx])
-				if errs[idx] != nil {
-					for i := range rs {
-						defer func(i int) {
-							for range outs[i] {
-							}
-						}(i)
-					}
-					cancel()
-				}
-			}(idx)
+			defer wg.Done()
 			errs[idx] = rs[idx].Run(ctx, inps[idx], outs[idx])
-			wg.Done()
+			close(outs[idx])
+			// in case of error - drain inps[idx] to allow project keep
+			// duplicating data
+			if errs[idx] != nil {
+				cancel()
+				go func() {
+					for range inps[idx] {
+					}
+				}()
+			}
 		}(i)
 	}
 
 	// dispatch (duplicate) input to all runners
 	go func() {
-		for i := range rs {
-			defer func(i int) {
-				close(inps[i])
-			}(i)
-		}
 		for data := range inp {
 			for i := range rs {
 				inps[i] <- data
 			}
 		}
+		for i := range rs {
+			close(inps[i])
+		}
 	}()
 
+	// cancel all runners when we're done - just in case few still running
 	// NOTE: cancel must be first defer to be called, to allow internal runners to finish
-	defer cancel()
+	defer func() {
+		if err != nil {
+			cancel()
+			for i := range rs {
+				go func(i int) {
+					for range outs[i] {
+					}
+				}(i)
+			}
+		}
+	}()
 
 	// collect & join the output from all runners, in order
 	for {
