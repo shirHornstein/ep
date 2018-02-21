@@ -13,30 +13,34 @@ func Pipeline(runners ...Runner) Runner {
 		panic("at least 1 runner is required for pipelining")
 	}
 
-	var ans pipeline
+	// flatten nested pipelines. note we should examine only first level, as any
+	// pre-created pipeline was already flatten during its creation
+	flat := []Runner{}
 	for _, r := range runners {
-		// avoid nested pipelines by adding only real runners to returned ans.
-		// note we should examine only first level, as any pre-created pipeline
-		// was already flatten during its creation
-		if p, isPipe := r.(pipeline); isPipe {
-			for _, r2 := range p {
-				// skip passThrough runners, as they don't affect the pipe
-				if _, isPassThrough := r2.(*passthrough); !isPassThrough {
-					ans = append(ans, r2)
-				}
-			}
-		} else if _, isPassThrough := r.(*passthrough); !isPassThrough {
-			ans = append(ans, r)
+		p, isPipe := r.(pipeline)
+		if isPipe {
+			flat = append(flat, p...)
+		} else {
+			flat = append(flat, r)
 		}
 	}
 
-	// if all runners were filtered - pipe should simply return its output as is
-	if len(ans) == 0 {
-		return PassThrough()
-	} else if len(ans) == 1 {
-		return ans[0]
+	// filter out passthrough runners as they don't affect the pipe
+	filtered := []Runner{}
+	for _, r := range flat {
+		_, isPassthrough := r.(*passthrough)
+		if !isPassthrough {
+			filtered = append(filtered, r)
+		}
 	}
-	return ans
+
+	if len(filtered) == 0 {
+		return PassThrough() // all non-passthrough runners were filtered
+	} else if len(filtered) == 1 {
+		return filtered[0] // only one runner left, no need for a pipeline
+	}
+
+	return pipeline(filtered)
 }
 
 type pipeline []Runner
@@ -57,7 +61,7 @@ func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 
 	// run all of the internal runners (all except the very last one), piping
 	// the output from each runner to the next.
-	for i := 0; i < len(rs) - 1; i++ {
+	for i := 0; i < len(rs)-1; i++ {
 
 		// middle chan is the output from the current runner and the input to
 		// the next. Drain it until the go-routine has exited. Usually this will
@@ -65,10 +69,10 @@ func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 		// channel. This can happen if the top runner has exited early due to an
 		// error or some other logic (LIMIT). This prevents leaking go-routines.
 		middle := make(chan Dataset)
-		defer func() {
+		defer func(middle chan Dataset) {
 			for range middle {
 			}
-		}()
+		}(middle)
 
 		go func(i int, inp, middle chan Dataset) {
 			defer close(middle)
@@ -84,8 +88,8 @@ func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 	// the bottom of the pipeline.
 	defer cancel()
 
-	// run the last runner to completion.
-	return rs[len(rs) - 1].Run(ctx, inp, out)
+	// block run the last runner until completed
+	return rs[len(rs)-1].Run(ctx, inp, out)
 }
 
 // The implementation isn't trivial because it has to account for Wildcard types
@@ -111,10 +115,7 @@ func (rs pipeline) returnsOne(j int) []Type {
 			// wildcard found - replace it with the types from the previous
 			// runner (which might also contain Wildcards)
 			prev := rs.returnsOne(j - 1)
-
-			if w.CutFromTail > 0 {
-				prev = prev[:len(prev)-w.CutFromTail]
-			}
+			prev = prev[:len(prev)-w.CutFromTail]
 			if w.Idx != nil {
 				// wildcard for a specific column in the input
 				prev = prev[*w.Idx : *w.Idx+1]
