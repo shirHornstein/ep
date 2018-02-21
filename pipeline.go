@@ -15,7 +15,7 @@ func Pipeline(runners ...Runner) Runner {
 
 	// flatten nested pipelines. note we should examine only first level, as any
 	// pre-created pipeline was already flatten during its creation
-	flat := []Runner{}
+	var flat pipeline
 	for _, r := range runners {
 		p, isPipe := r.(pipeline)
 		if isPipe {
@@ -26,7 +26,7 @@ func Pipeline(runners ...Runner) Runner {
 	}
 
 	// filter out passthrough runners as they don't affect the pipe
-	filtered := []Runner{}
+	filtered := flat[:0]
 	for _, r := range flat {
 		_, isPassthrough := r.(*passthrough)
 		if !isPassthrough {
@@ -35,12 +35,13 @@ func Pipeline(runners ...Runner) Runner {
 	}
 
 	if len(filtered) == 0 {
-		return PassThrough() // all non-passthrough runners were filtered
+		// all runners were filtered, pipe should simply return its output as is
+		return PassThrough()
 	} else if len(filtered) == 1 {
 		return filtered[0] // only one runner left, no need for a pipeline
 	}
 
-	return pipeline(filtered)
+	return filtered
 }
 
 type pipeline []Runner
