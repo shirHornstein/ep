@@ -154,6 +154,26 @@ func TestPipeline_Returns_wildcardMinusTail(t *testing.T) {
 	require.Equal(t, "upper", GetAlias(types[0]))
 }
 
+// Measures the number of datasets (ops) per second going through a pipeline
+// composed of 3 pass-throughs.
+func BenchmarkPipeline(b *testing.B) {
+	data := NewDataset(strs([]string{"hello", "world", "foo", "bar"}))
+	inp := make(chan Dataset)
+	out := make(chan Dataset)
+	defer close(inp)
+	defer close(out)
+
+	r := pipeline{PassThrough(), PassThrough(), PassThrough()}
+	go r.Run(context.Background(), inp, out)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		// run a single dataset through the pipeline
+		inp <- data
+		<-out
+	}
+}
+
 type tailCutter struct {
 	CutFromTail int
 }
