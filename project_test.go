@@ -71,7 +71,7 @@ func TestProject_cancelUponErrorInThirdRunner(t *testing.T) {
 }
 
 // project error should cancel all inner runners
-func _TestProject_withPipelines_error(t *testing.T) { //todo: fix- not stable
+func _TestProjectWithPipelinesError(t *testing.T) { //todo: fix- not stable
 	err := fmt.Errorf("something bad happened")
 	infinityRunner1 := &infinityRunner{}
 	infinityRunner2 := &infinityRunner{}
