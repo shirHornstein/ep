@@ -53,7 +53,7 @@ func TestDistribute_connectionError(t *testing.T) {
 }
 
 // Test that errors are transmitted across the network
-func _SkipTestDistributeErrorFromPeer(t *testing.T) { //todo: not stable
+func SkipTestDistributeErrorFromPeer(t *testing.T) { //todo: not stable
 	// avoid "bind: address already in use" error in future tests
 	defer time.Sleep(1 * time.Millisecond)
 
