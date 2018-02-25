@@ -167,8 +167,8 @@ func TestProject_withExchange_error(t *testing.T) {
 		Pipeline(
 			exchange,
 			Project(
-				Pipeline(PassThrough(), infinityRunner),
-				Pipeline(PassThrough(), &errRunner{err}),
+				infinityRunner,
+				&errRunner{err},
 			))
 	data := NewDataset(Null.Data(1))
 	data, err = TestRunner(runner, data)
