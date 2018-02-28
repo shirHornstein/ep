@@ -34,7 +34,7 @@ func (rs project) Returns() []Type {
 
 // Run dispatches the same input to all inner runners, then collects and
 // joins their results into a single dataset output
-func (rs project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
+func (rs project) Run(origCtx context.Context, inp, out chan Dataset) (err error) {
 	// set up the left and right channels
 	inps := make([]chan Dataset, len(rs))
 	outs := make([]chan Dataset, len(rs))
@@ -52,22 +52,14 @@ func (rs project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 		}
 	}()
 
-	defer func(origCtx context.Context) {
-		// in case of error - drain inp without duplicate data to all runners,
-		// to allow previous runner to write
-		for {
-			select {
-			case <-origCtx.Done():
-				return
-			case _, ok := <-inp:
-				if !ok { // inp was closed - no more input
-					return
-				}
-			}
+	defer func() {
+		//todo: this input drying prevents the error from being permeate up and stopping the process,
+		// instead we are waiting for other runners to be finish
+		for range inp {
 		}
-	}(ctx)
+	}()
 
-	ctx, cancel := context.WithCancel(ctx)
+	ctx, cancel := context.WithCancel(origCtx)
 
 	// run all runners in go-routines
 	for i := range rs {
@@ -90,15 +82,30 @@ func (rs project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 		}(i)
 	}
 
-	// dispatch (duplicate) input to all runners
+	// dispatch (duplicate) input to all runners & cancellation listeners
+	wg.Add(1)
 	go func() {
-		for data := range inp {
-			for i := range rs {
-				inps[i] <- data
-			}
-		}
+		defer wg.Done()
+
 		for i := range rs {
-			close(inps[i])
+			defer close(inps[i])
+		}
+
+		for {
+			select {
+			case <-origCtx.Done():
+				cancel()
+				return
+			case <-ctx.Done():
+				return
+			case data, ok := <-inp:
+				if !ok {
+					return
+				}
+				for i := range rs {
+					inps[i] <- data
+				}
+			}
 		}
 	}()
 
