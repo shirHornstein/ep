@@ -50,11 +50,8 @@ func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 	// choose first error out from all errors
 	errs := make([]error, len(rs))
 	defer func() {
-		for _, errI := range errs {
-			if errI != nil {
-				err = errI
-				break
-			}
+		for i := 0; err == nil && i < len(rs); i++ {
+			err = errs[i]
 		}
 	}()
 
@@ -63,7 +60,6 @@ func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 	// run all of the internal runners (all except the very last one), piping
 	// the output from each runner to the next.
 	for i := 0; i < len(rs)-1; i++ {
-
 		// middle chan is the output from the current runner and the input to
 		// the next. We need to wait until this channel is closed before this
 		// Run() function returns to avoid leaking go routines. This is achieved
@@ -124,7 +120,6 @@ func (rs pipeline) returnsOne(j int) []Type {
 				// wildcard for a specific column in the input
 				prev = prev[*w.Idx : *w.Idx+1]
 			}
-
 			res = append(res[:i], append(prev, res[i+1:]...)...)
 		}
 	}

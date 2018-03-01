@@ -117,8 +117,13 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 			err = ex.Send(data)
 		case err = <-errs:
 			rcvDone = true // errors (or nil) from the receive go-routine
-		case <-ctx.Done():
-			err = ctx.Err() // context timeout or cancel
+		case <-ctx.Done(): // context timeout or cancel
+			err = ctx.Err()
+			// as all other runners - in case of cancellation, runner should stop
+			// without effecting final error
+			if err == context.Canceled {
+				return nil
+			}
 		}
 	}
 	return err
