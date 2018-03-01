@@ -16,7 +16,8 @@ script:
   - go tool vet .
   - golint -set_exit_status ./...
   - gofmt -l . | exit $(wc -l)
-  - go test -v -cover -race -benchmem -bench .
+  - go test -cover -race ./...
+  - go test -v -run nothing -bench=. ./... # benchmark
 
 notifications:
   slack:
