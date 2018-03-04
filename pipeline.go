@@ -17,7 +17,7 @@ func Pipeline(runners ...Runner) Runner {
 
 	// flatten nested pipelines. note we should examine only first level, as any
 	// pre-created pipeline was already flatten during its creation
-	flat := []Runner{}
+	var flat pipeline
 	for _, r := range runners {
 		p, isPipe := r.(pipeline)
 		if isPipe {
@@ -28,7 +28,7 @@ func Pipeline(runners ...Runner) Runner {
 	}
 
 	// filter out passthrough runners as they don't affect the pipe
-	filtered := []Runner{}
+	filtered := flat[:0]
 	for _, r := range flat {
 		_, isPassthrough := r.(*passthrough)
 		if !isPassthrough {
@@ -37,12 +37,13 @@ func Pipeline(runners ...Runner) Runner {
 	}
 
 	if len(filtered) == 0 {
-		return PassThrough() // all non-passthrough runners were filtered
+		// all runners were filtered, pipe should simply return its output as is
+		return PassThrough()
 	} else if len(filtered) == 1 {
 		return filtered[0] // only one runner left, no need for a pipeline
 	}
 
-	return pipeline(filtered)
+	return filtered
 }
 
 type pipeline []Runner
@@ -54,11 +55,8 @@ func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 
 	defer func() {
 		wg.Wait()
-		for _, errI := range errs {
-			if errI != nil && errI.Error() != contextCanceledErrorMessage {
-				err = errI
-				break
-			}
+		for i := 0; (err == nil || err.Error() == contextCanceledErrorMessage) && i < len(rs); i++ {
+			err = errs[i]
 		}
 	}()
 
@@ -67,15 +65,20 @@ func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 	// run all of the internal runners (all except the very last one), piping
 	// the output from each runner to the next.
 	for i := 0; i < len(rs)-1; i++ {
-
 		// middle chan is the output from the current runner and the input to
-		// the next. Drain it until the go-routine has exited. Usually this will
-		// be a no-op, but other times there might still be left overs in the
-		// channel. This can happen if the top runner has exited early due to an
-		// error or some other logic (LIMIT). This prevents leaking go-routines.
+		// the next. We need to wait until this channel is closed before this
+		// Run() function returns to avoid leaking go routines. This is achieved
+		// by draining it. Only when the middle channel is closed we can know for
+		// certain that the go routine has exited. Usually this will be a no-op,
+		// but other times there might still be left overs in the channel. This
+		// can happen if the top runner has exited early due to an error or some
+		// other logic (LIMIT).
 		middle := make(chan Dataset)
 		defer func(middle chan Dataset) {
-			for range middle {
+			// in case of error - drain middle to allow i-1 previous runners to write
+			if err != nil {
+				for range middle {
+				}
 			}
 		}(middle)
 
@@ -93,10 +96,8 @@ func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 	// cancel the all of the runners when we're done - just in case some are
 	// still running. This might happen if the top of the pipeline ends before
 	// the bottom of the pipeline.
-	defer func() {
-		defer wg.Done()
-		cancel()
-	}()
+	defer wg.Done()
+	defer cancel()
 
 	wg.Add(1)
 	// block run the last runner until completed
@@ -131,7 +132,6 @@ func (rs pipeline) returnsOne(j int) []Type {
 				// wildcard for a specific column in the input
 				prev = prev[*w.Idx : *w.Idx+1]
 			}
-
 			res = append(res[:i], append(prev, res[i+1:]...)...)
 		}
 	}
