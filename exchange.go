@@ -83,7 +83,7 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 				errs <- recErr
 				return
 			}
-			out <- data //todo panic: send on closed channel
+			out <- data
 		}
 	}()
 

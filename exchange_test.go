@@ -33,7 +33,7 @@ func ExampleScatter() {
 	// Output: [[foo bar]] <nil>
 }
 
-func TestExchangeDialingError(t *testing.T) {
+func TestExchange_dialingError(t *testing.T) {
 	// avoid "bind: address already in use" error in future tests
 	defer time.Sleep(1 * time.Millisecond)
 
