@@ -45,7 +45,7 @@ func TestPipeline_errInFirstRunner(t *testing.T) {
 
 // test that upon an error, the producing (infinity) runners are canceled.
 // Otherwise - this test will block indefinitely
-func SkipTestPipeline_errInSecondRunner(t *testing.T) {
+func SkipTestPipelineErrInSecondRunner(t *testing.T) {
 	err := fmt.Errorf("something bad happened")
 	infinityRunner1 := &infinityRunner{}
 	infinityRunner2 := &infinityRunner{}
@@ -79,7 +79,7 @@ func SkipTestPipelineErrInThirdRunner(t *testing.T) { //todo: test not stable, h
 
 // test that upon an error, the producing (infinity) runners are canceled.
 // Otherwise - this test will block indefinitely
-func SkipTestPipeline_errInNestedPipeline(t *testing.T) {
+func SkipTestPipelineErrInNestedPipeline(t *testing.T) {
 	err := fmt.Errorf("something bad happened")
 	infinityRunner1 := &infinityRunner{}
 	infinityRunner2 := &infinityRunner{}
@@ -107,15 +107,19 @@ func TestPipeline_errNestedPipelineWithProject(t *testing.T) {
 	infinityRunner1 := &infinityRunner{}
 	infinityRunner2 := &infinityRunner{}
 	infinityRunner3 := &infinityRunner{}
+	infinityRunner4 := &infinityRunner{}
+	infinityRunner5 := &infinityRunner{}
+	infinityRunner6 := &infinityRunner{}
+	infinityRunner7 := &infinityRunner{}
 	runner :=
 		Pipeline(
 			Project(
-				Pipeline(infinityRunner1, PassThrough()),
-				Pipeline(infinityRunner2, PassThrough()),
+				Pipeline(infinityRunner1, infinityRunner4),
+				Pipeline(infinityRunner2, infinityRunner5),
 			),
 			Project(
-				Pipeline(infinityRunner3, PassThrough()),
-				Pipeline(&errRunner{err}, PassThrough()),
+				Pipeline(infinityRunner3, infinityRunner6),
+				Pipeline(infinityRunner7, &errRunner{err}),
 			))
 	data := NewDataset(Null.Data(1))
 	data, err = TestRunner(runner, data)
