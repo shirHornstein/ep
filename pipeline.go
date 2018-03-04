@@ -75,10 +75,7 @@ func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 		// other logic (LIMIT).
 		middle := make(chan Dataset)
 		defer func(middle chan Dataset) {
-			// in case of error - drain middle to allow i-1 previous runners to write
-			if err != nil {
-				for range middle {
-				}
+			for range middle {
 			}
 		}(middle)
 
@@ -130,7 +127,7 @@ func (rs pipeline) returnsOne(j int) []Type {
 			prev = prev[:len(prev)-w.CutFromTail]
 			if w.Idx != nil {
 				// wildcard for a specific column in the input
-				prev = prev[*w.Idx : *w.Idx+1]
+				prev = prev[*w.Idx: *w.Idx+1]
 			}
 			res = append(res[:i], append(prev, res[i+1:]...)...)
 		}
