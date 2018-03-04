@@ -127,7 +127,7 @@ func (rs pipeline) returnsOne(j int) []Type {
 			prev = prev[:len(prev)-w.CutFromTail]
 			if w.Idx != nil {
 				// wildcard for a specific column in the input
-				prev = prev[*w.Idx: *w.Idx+1]
+				prev = prev[*w.Idx : *w.Idx+1]
 			}
 			res = append(res[:i], append(prev, res[i+1:]...)...)
 		}
