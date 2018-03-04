@@ -45,7 +45,7 @@ func TestPipeline_errInFirstRunner(t *testing.T) {
 
 // test that upon an error, the producing (infinity) runners are canceled.
 // Otherwise - this test will block indefinitely
-func SkipTestPipelineErrInSecondRunner(t *testing.T) {
+func TestPipeline_errInSecondRunner(t *testing.T) {
 	err := fmt.Errorf("something bad happened")
 	infinityRunner1 := &infinityRunner{}
 	infinityRunner2 := &infinityRunner{}
@@ -62,7 +62,7 @@ func SkipTestPipelineErrInSecondRunner(t *testing.T) {
 
 // test that upon an error, the producing (infinity) runners are canceled.
 // Otherwise - this test will block indefinitely
-func SkipTestPipelineErrInThirdRunner(t *testing.T) { //todo: test not stable, has race and leek
+func TestPipeline_errInThirdRunner(t *testing.T) { //todo: test not stable, has race and leek
 	err := fmt.Errorf("something bad happened")
 	infinityRunner1 := &infinityRunner{}
 	infinityRunner2 := &infinityRunner{}
@@ -79,7 +79,7 @@ func SkipTestPipelineErrInThirdRunner(t *testing.T) { //todo: test not stable, h
 
 // test that upon an error, the producing (infinity) runners are canceled.
 // Otherwise - this test will block indefinitely
-func SkipTestPipelineErrInNestedPipeline(t *testing.T) {
+func TestPipeline_errInNestedPipeline(t *testing.T) {
 	err := fmt.Errorf("something bad happened")
 	infinityRunner1 := &infinityRunner{}
 	infinityRunner2 := &infinityRunner{}

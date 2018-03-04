@@ -6,7 +6,6 @@ import (
 )
 
 var _ = registerGob(pipeline([]Runner{}))
-var contextCanceledErrorMessage = "context canceled"
 
 // Pipeline returns a vertical composite pipeline runner where the output of
 // any one stream is passed as input to the next
@@ -55,7 +54,7 @@ func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 
 	defer func() {
 		wg.Wait()
-		for i := 0; (err == nil || err.Error() == contextCanceledErrorMessage) && i < len(rs); i++ {
+		for i := 0; err == nil && i < len(rs); i++ {
 			err = errs[i]
 		}
 	}()
@@ -84,6 +83,10 @@ func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 			defer wg.Done()
 			defer close(middle)
 			errs[i] = rs[i].Run(ctx, inp, middle)
+			// in case of error - notify and cancel other runners in pipe
+			if errs[i] != nil {
+				cancel()
+			}
 		}(i, inp, middle)
 
 		// input to the next channel is the output from the current one.
@@ -93,10 +96,8 @@ func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 	// cancel the all of the runners when we're done - just in case some are
 	// still running. This might happen if the top of the pipeline ends before
 	// the bottom of the pipeline.
-	defer wg.Done()
 	defer cancel()
 
-	wg.Add(1)
 	// block run the last runner until completed
 	return rs[len(rs)-1].Run(ctx, inp, out)
 }
