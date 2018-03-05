@@ -49,11 +49,10 @@ func (r *infinityRunner) Run(ctx context.Context, inp, out chan Dataset) error {
 		case <-ctx.Done():
 			return nil
 		case _, ok := <-inp:
-			if ok {
-				out <- NewDataset(strs{"data"})
-			} else {
+			if !ok {
 				return nil
 			}
+			out <- NewDataset(strs{"data"})
 		}
 	}
 }
@@ -75,7 +74,7 @@ func (r *dataRunner) Run(ctx context.Context, inp, out chan Dataset) error {
 		if r.ThrowOnData == data.At(data.Width() - 1).Strings()[0] {
 			return fmt.Errorf("error %s", r.ThrowOnData)
 		}
-	} // drains input
+	}
 	out <- r.Dataset
 	return nil
 }

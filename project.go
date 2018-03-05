@@ -52,13 +52,6 @@ func (rs project) Run(origCtx context.Context, inp, out chan Dataset) (err error
 		}
 	}()
 
-	defer func() {
-		//todo: this input drying prevents the error from being permeate up and stopping the process,
-		// instead we are waiting for other runners to be finish
-		for range inp {
-		}
-	}()
-
 	ctx, cancel := context.WithCancel(origCtx)
 
 	// run all runners in go-routines
@@ -82,7 +75,6 @@ func (rs project) Run(origCtx context.Context, inp, out chan Dataset) (err error
 		}(i)
 	}
 
-	// dispatch (duplicate) input to all runners & cancellation listeners
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -102,6 +94,7 @@ func (rs project) Run(origCtx context.Context, inp, out chan Dataset) (err error
 				if !ok {
 					return
 				}
+				// dispatch (duplicate) input to all runners
 				for i := range rs {
 					inps[i] <- data
 				}
@@ -115,6 +108,7 @@ func (rs project) Run(origCtx context.Context, inp, out chan Dataset) (err error
 		if err != nil {
 			cancel()
 			for i := range rs {
+				// drain all runners' output to allow them catch cancellation
 				go func(i int) {
 					for range outs[i] {
 					}

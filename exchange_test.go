@@ -77,7 +77,9 @@ func TestExchange_dialingError(t *testing.T) {
 func TestScatter_singleNode(t *testing.T) {
 	port := ":5551"
 	dist := mockPeer(t, port)
-	defer require.NoError(t, dist.Close())
+	defer func() {
+		require.NoError(t, dist.Close())
+	}()
 
 	runner := dist.Distribute(Scatter(), port)
 

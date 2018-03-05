@@ -41,7 +41,6 @@ func Pipeline(runners ...Runner) Runner {
 	} else if len(filtered) == 1 {
 		return filtered[0] // only one runner left, no need for a pipeline
 	}
-
 	return filtered
 }
 
@@ -83,10 +82,6 @@ func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 			defer wg.Done()
 			defer close(middle)
 			errs[i] = rs[i].Run(ctx, inp, middle)
-			// in case of error - notify and cancel other runners in pipe
-			if errs[i] != nil {
-				cancel()
-			}
 		}(i, inp, middle)
 
 		// input to the next channel is the output from the current one.
