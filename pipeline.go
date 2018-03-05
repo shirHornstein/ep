@@ -2,6 +2,7 @@ package ep
 
 import (
 	"context"
+	"sync"
 )
 
 var _ = registerGob(pipeline([]Runner{}))
@@ -40,7 +41,6 @@ func Pipeline(runners ...Runner) Runner {
 	} else if len(filtered) == 1 {
 		return filtered[0] // only one runner left, no need for a pipeline
 	}
-
 	return filtered
 }
 
@@ -49,7 +49,10 @@ type pipeline []Runner
 func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 	// choose first error out from all errors
 	errs := make([]error, len(rs))
+	var wg sync.WaitGroup
+
 	defer func() {
+		wg.Wait()
 		for i := 0; err == nil && i < len(rs); i++ {
 			err = errs[i]
 		}
@@ -74,7 +77,9 @@ func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 			}
 		}(middle)
 
+		wg.Add(1)
 		go func(i int, inp, middle chan Dataset) {
+			defer wg.Done()
 			defer close(middle)
 			errs[i] = rs[i].Run(ctx, inp, middle)
 		}(i, inp, middle)

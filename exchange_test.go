@@ -7,7 +7,6 @@ import (
 	"net"
 	"strings"
 	"testing"
-	"time"
 )
 
 // Example of Scatter with just 2 nodes. The datasets are scattered in
@@ -34,18 +33,19 @@ func ExampleScatter() {
 }
 
 func TestExchange_dialingError(t *testing.T) {
-	// avoid "bind: address already in use" error in future tests
-	defer time.Sleep(1 * time.Millisecond)
-
 	port1 := ":5551"
 	dist1 := mockPeer(t, port1)
-	defer dist1.Close()
 
 	port2 := ":5552"
-	defer mockErrorPeer(t, port2).Close()
+	peer2 := mockErrorPeer(t, port2)
 
 	port3 := ":5553"
-	defer mockPeer(t, port3).Close()
+	peer3 := mockPeer(t, port3)
+	defer func() {
+		require.NoError(t, dist1.Close())
+		require.NoError(t, peer2.Close())
+		require.NoError(t, peer3.Close())
+	}()
 
 	runner := dist1.Distribute(Scatter(), port1, port2, port3)
 
@@ -56,9 +56,9 @@ func TestExchange_dialingError(t *testing.T) {
 	require.Error(t, err)
 
 	possibleErrors := []string{
-		// reported by 5551, starting with "write/read tcp 127.0.0.1:xxx->127.0.0.1:555x"
-		": write: broken pipe",       // when dialing to peers
-		": connection reset by peer", // when interacting with peers after peers failure
+		// when interacting with peers after peers failure
+		"write tcp",
+		"read tcp",
 
 		"bad connection",                        // reported by 5552, when dialing to :5553
 		"ep: connect timeout; no incoming conn", // reported by 5553, when waiting to :5552
@@ -77,7 +77,9 @@ func TestExchange_dialingError(t *testing.T) {
 func TestScatter_singleNode(t *testing.T) {
 	port := ":5551"
 	dist := mockPeer(t, port)
-	defer dist.Close()
+	defer func() {
+		require.NoError(t, dist.Close())
+	}()
 
 	runner := dist.Distribute(Scatter(), port)
 
@@ -94,10 +96,13 @@ func TestScatter_singleNode(t *testing.T) {
 func TestExchangeInit_closeConnectionUponError(t *testing.T) {
 	port := ":5551"
 	dist := mockPeer(t, port)
-	defer dist.Close()
 
 	port2 := ":5552"
-	defer mockErrorPeer(t, port2).Close()
+	peer := mockErrorPeer(t, port2)
+	defer func() {
+		require.NoError(t, dist.Close())
+		require.NoError(t, peer.Close())
+	}()
 
 	ctx := context.WithValue(context.Background(), distributerKey, dist)
 	ctx = context.WithValue(ctx, allNodesKey, []string{port, port2, ":5553"})
@@ -114,18 +119,18 @@ func TestExchangeInit_closeConnectionUponError(t *testing.T) {
 }
 
 func TestScatter_and_Gather(t *testing.T) {
-	// avoid "bind: address already in use" error in future tests
-	defer time.Sleep(1 * time.Millisecond)
-
 	port1 := ":5551"
-	dist1 := mockPeer(t, port1)
-	defer dist1.Close()
+	dist := mockPeer(t, port1)
 
 	port2 := ":5552"
-	defer mockPeer(t, port2).Close()
+	peer := mockPeer(t, port2)
+	defer func() {
+		require.NoError(t, dist.Close())
+		require.NoError(t, peer.Close())
+	}()
 
 	runner := Pipeline(Scatter(), &nodeAddr{}, Gather())
-	runner = dist1.Distribute(runner, port1, port2)
+	runner = dist.Distribute(runner, port1, port2)
 
 	data1 := NewDataset(strs{"hello", "world"})
 	data2 := NewDataset(strs{"foo", "bar"})
