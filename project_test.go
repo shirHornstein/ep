@@ -27,7 +27,7 @@ func ExampleProject_reversed() {
 	// [[is hello? is world?] [HELLO WORLD]] <nil>
 }
 
-func _TestProject_cancelUponErrorInFirstRunner(t *testing.T) {
+func TestProject_cancelUponErrorInFirstRunner(t *testing.T) {
 	err := fmt.Errorf("something bad happened")
 	infinity := &infinityRunner{}
 	runner := Project(&errRunner{err}, infinity)
@@ -40,7 +40,7 @@ func _TestProject_cancelUponErrorInFirstRunner(t *testing.T) {
 	require.Equal(t, false, infinity.IsRunning(), "Infinity go-routine leak")
 }
 
-func _TestProject_cancelUponErrorInSecondRunner(t *testing.T) {
+func TestProject_cancelUponErrorInSecondRunner(t *testing.T) {
 	err := fmt.Errorf("something bad happened")
 	infinityRunner1 := &infinityRunner{}
 	infinityRunner2 := &infinityRunner{}
@@ -71,7 +71,7 @@ func TestProject_cancelUponErrorInThirdRunner(t *testing.T) {
 }
 
 // project error should cancel all inner runners
-func _TestProject_withPipelinesError(t *testing.T) { //todo: fix- not stable
+func TestProject_withPipelinesError(t *testing.T) { //todo: fix- not stable
 	err := fmt.Errorf("something bad happened")
 	infinityRunner1 := &infinityRunner{}
 	infinityRunner2 := &infinityRunner{}
@@ -92,7 +92,7 @@ func _TestProject_withPipelinesError(t *testing.T) { //todo: fix- not stable
 }
 
 // project error should cancel all inner runners
-func _TestProject_nestedWithErrorInTheFirstRunner(t *testing.T) {
+func TestProject_nestedWithErrorInTheFirstRunner(t *testing.T) {
 	err := fmt.Errorf("something bad happened")
 	infinityRunner1 := &infinityRunner{}
 	infinityRunner2 := &infinityRunner{}
@@ -119,7 +119,7 @@ func _TestProject_nestedWithErrorInTheFirstRunner(t *testing.T) {
 }
 
 // project error should cancel all inner runners
-func _TestProject_nestedWithErrorInTheSecondRunner(t *testing.T) {
+func TestProject_nestedWithErrorInTheSecondRunner(t *testing.T) {
 	err := fmt.Errorf("something bad happened")
 	infinityRunner1 := &infinityRunner{}
 	infinityRunner2 := &infinityRunner{}

@@ -74,11 +74,11 @@ func (rs project) Run(origCtx context.Context, inp, out chan Dataset) (err error
 			// duplicating data
 			if errs[idx] != nil {
 				cancel()
-				go func() {
-					for range inps[idx] {
-					}
-				}()
 			}
+			go func() {
+				for range inps[idx] {
+				}
+			}()
 		}(i)
 	}
 
