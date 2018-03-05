@@ -2,10 +2,12 @@ package ep
 
 import (
 	"context"
+	"fmt"
 	"sync"
 )
 
 var _ = registerGob(project([]Runner{}))
+var errProjectState = fmt.Errorf("mismatched runners state")
 
 // Project returns a horizontal composite projection runner that dispatches
 // its input to all of the internal runners, and joins the result into a single
@@ -43,9 +45,9 @@ func (rs project) Run(origCtx context.Context, inp, out chan Dataset) (err error
 
 	defer func() {
 		wg.Wait()
-		// choose first error out from all errors
+		// choose first error out from all errors, that isn't project internal error
 		for _, errI := range errs {
-			if errI != nil {
+			if errI != nil && errI != errProjectState {
 				err = errI
 				break
 			}
@@ -128,7 +130,7 @@ func (rs project) Run(origCtx context.Context, inp, out chan Dataset) (err error
 			if i == 0 {
 				allOpen = open // init allOpen according to first out channel
 			} else if allOpen != open {
-				return errMismatch
+				return errProjectState
 			}
 
 			if open {
