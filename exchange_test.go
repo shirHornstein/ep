@@ -56,9 +56,9 @@ func TestExchange_dialingError(t *testing.T) {
 	require.Error(t, err)
 
 	possibleErrors := []string{
-		// reported by 5551, starting with "write/read tcp 127.0.0.1:xxx->127.0.0.1:555x"
-		"write tcp", // when dialing to peers
-		"read tcp",  // when interacting with peers after peers failure
+		// when interacting with peers after peers failure
+		"write tcp",
+		"read tcp",
 
 		"bad connection",                        // reported by 5552, when dialing to :5553
 		"ep: connect timeout; no incoming conn", // reported by 5553, when waiting to :5552

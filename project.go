@@ -41,9 +41,9 @@ func (rs project) Run(origCtx context.Context, inp, out chan Dataset) (err error
 	errs := make([]error, len(rs))
 	var wg sync.WaitGroup
 
-	// choose first error out from all errors
 	defer func() {
 		wg.Wait()
+		// choose first error out from all errors
 		for _, errI := range errs {
 			if errI != nil {
 				err = errI

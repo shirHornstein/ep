@@ -53,16 +53,16 @@ func TestDistribute_connectionError(t *testing.T) {
 }
 
 // Test that errors are transmitted across the network
-func SkipTestDistributeErrorFromPeer(t *testing.T) { //todo: not stable
-	// avoid "bind: address already in use" error in future tests
-	defer time.Sleep(1 * time.Millisecond)
-
+func _TestDistributeErrorFromPeer(t *testing.T) {
 	port1 := ":5551"
 	dist1 := mockPeer(t, port1)
-	defer dist1.Close()
 
 	port2 := ":5552"
-	defer mockPeer(t, port2).Close()
+	peer := mockPeer(t, port2)
+	defer func() {
+		require.NoError(t, dist1.Close())
+		require.NoError(t, peer.Close())
+	}()
 
 	mightErrored := &dataRunner{NewDataset(), port2}
 	runner := dist1.Distribute(Pipeline(Scatter(), &nodeAddr{}, mightErrored, Gather()), port1, port2)
