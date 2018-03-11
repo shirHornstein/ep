@@ -48,7 +48,7 @@ func TestDistribute_connectionError(t *testing.T) {
 	data, err := TestRunner(runner, NewDataset())
 
 	require.Error(t, err)
-	require.Equal(t, "dial tcp :5000: connect: connection refused", err.Error())
+	require.Equal(t, "dial tcp :5000: getsockopt: connection refused", err.Error())
 	require.Nil(t, data)
 }
 

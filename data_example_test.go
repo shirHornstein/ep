@@ -30,6 +30,8 @@ func (vs strs) Duplicate(t int) Data {
 	}
 	return ans
 }
+func (vs strs) IsNull(i int) bool { return false }
+func (vs strs) MarkNull(i int)    {}
 func (vs strs) Strings() []string { return vs }
 
 func ExampleData() {
