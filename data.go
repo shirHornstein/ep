@@ -27,6 +27,12 @@ type Data interface {
 
 	// Strings returns the string representation of all of the Data values
 	Strings() []string
+
+	// IsNull check if null exists in a given index
+	IsNull(i int) bool
+
+	// MarkNull set NullsIndicators to true for a given index
+	MarkNull(i int)
 }
 
 // Clone the contents of the provided Data. Dataset also implements the Data
