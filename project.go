@@ -25,7 +25,7 @@ func Project(runners ...Runner) Runner {
 
 type project []Runner
 
-// Returns a concatenation of the left and right return types
+// Returns a concatenation of all runners' return types
 func (rs project) Returns() []Type {
 	types := []Type{}
 	for _, r := range rs {

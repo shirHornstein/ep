@@ -227,12 +227,14 @@ func TestPipeline_Returns_wildcard(t *testing.T) {
 }
 
 func TestPipeline_Returns_wildcardIdx(t *testing.T) {
-	runner := Project(&upper{}, &question{})
-	runner = Pipeline(runner, Pick(1))
+	runner := Project(&upper{}, &question{}, &question{})
+	runner = Pipeline(runner, Pick(1, 2))
 	types := runner.Returns()
-	require.Equal(t, 1, len(types))
+	require.Equal(t, 2, len(types))
 	require.Equal(t, str.Name(), types[0].Name())
+	require.Equal(t, str.Name(), types[1].Name())
 	require.Equal(t, "question", GetAlias(types[0]))
+	require.Equal(t, "question", GetAlias(types[1]))
 }
 
 func TestPipeline_Returns_wildcardMinusTail(t *testing.T) {

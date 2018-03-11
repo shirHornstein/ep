@@ -102,12 +102,6 @@ func TestDatasetSort_nilDataset(t *testing.T) {
 	})
 }
 
-func TestDatasetSort_nulls(t *testing.T) {
-	require.NotPanics(t, func() {
-		Sort(nulls(2), []SortingCol{{1, false}, {3, false}})
-	})
-}
-
 func TestDatasetSort_noSortingCols(t *testing.T) {
 	var d1 Data = strs([]string{"hello", "world", "foo", "bar", "bar", "a", "z"})
 	var d2 Data = strs([]string{"1", "2", "4", "0", "3", "1", "1"})
