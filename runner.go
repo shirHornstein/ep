@@ -12,7 +12,6 @@ var _ = registerGob(&passthrough{}, &pick{})
 // NOTE: Some Runners will run concurrently, this it's important to not modify
 // the input in-place. Instead, copy/create a new dataset and use that
 type Runner interface {
-
 	// Run the manipulation code. Receive datasets from the `inp` stream, cast
 	// and modify them as needed (no in-place), and send the results to the
 	// `out` stream. Return when the `inp` is closed.
@@ -52,7 +51,7 @@ type Runner interface {
 // RunnerArgs is a Runner that also exposes a list of argument types that it
 // must accept as input.
 type RunnerArgs interface {
-	Runner // it's a Runner.
+	Runner // it's a Runner
 
 	// Args returns the list of types that the runner must accept as input
 	Args() []Type
@@ -62,7 +61,7 @@ type RunnerArgs interface {
 // for cases when the Runner needs to be somehow configured, or even replaced
 // altogher based on input arguments
 type RunnerPlan interface {
-	Runner // it's a Runner.
+	Runner // it's a Runner
 
 	// Plan allows the Runner to plan itself given an arbitrary argument. The
 	// argument is context-dependent: it can be an AST node, or a composite
@@ -77,7 +76,7 @@ type passthrough struct{}
 
 func (*passthrough) Args() []Type    { return []Type{Wildcard} }
 func (*passthrough) Returns() []Type { return []Type{Wildcard} }
-func (*passthrough) Run(_ context.Context, inp, out chan Dataset) (err error) {
+func (*passthrough) Run(_ context.Context, inp, out chan Dataset) error {
 	for data := range inp {
 		out <- data
 	}
@@ -101,16 +100,17 @@ func (r *pick) Returns() []Type {
 
 func (r *pick) Run(_ context.Context, inp, out chan Dataset) error {
 	for data := range inp {
-		res := make([]Data, len(r.Indices))
-		for i, idx := range r.Indices {
-			res[i] = data.At(idx)
-		}
-
-		if len(res) == 0 {
-			out <- Null.Data(data.Len()).(Dataset)
+		var result Dataset
+		if len(r.Indices) == 0 {
+			result = NewDataset(Null.Data(data.Len()))
 		} else {
-			out <- NewDataset(res...)
+			res := make([]Data, len(r.Indices))
+			for i, idx := range r.Indices {
+				res[i] = data.At(idx)
+			}
+			result = NewDataset(res...)
 		}
+		out <- result
 	}
 	return nil
 }
