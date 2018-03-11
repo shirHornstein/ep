@@ -25,14 +25,14 @@ type Data interface {
 	// Len() * t rows
 	Duplicate(t int) Data
 
-	// Strings returns the string representation of all of the Data values
-	Strings() []string
-
-	// IsNull check if null exists in a given index
+	// IsNull checks if the given index contain null
 	IsNull(i int) bool
 
-	// MarkNull set NullsIndicators to true for a given index
+	// MarkNull set the value in the given index to null
 	MarkNull(i int)
+
+	// Strings returns the string representation of all of the Data values
+	Strings() []string
 }
 
 // Clone the contents of the provided Data. Dataset also implements the Data
