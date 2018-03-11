@@ -147,6 +147,16 @@ func (set dataset) Duplicate(t int) Data {
 	return res
 }
 
+// see Data.IsNull. Returns a bool
+func (set dataset) IsNull(i int) bool {
+	panic("runtime error: not nullable")
+}
+
+// see Data.MarkNull.
+func (set dataset) MarkNull(i int) {
+	panic("runtime error: not nullable")
+}
+
 // see Data.Strings
 func (set dataset) Strings() []string {
 	var res []string
