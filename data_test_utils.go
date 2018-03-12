@@ -36,6 +36,21 @@ func VerifyDataInvariant(t *testing.T, data Data) {
 	require.Equal(t, oldLen, data.Len())
 	require.Equal(t, dataString, fmt.Sprintf("%+v", data))
 
+	if _, ok := data.(dataset); !ok {
+		data.IsNull(0)
+		require.Equal(t, oldLen, data.Len())
+		require.Equal(t, dataString, fmt.Sprintf("%+v", data))
+
+		data.MarkNull(0)
+		require.Equal(t, oldLen, data.Len())
+		require.Equal(t, dataString, fmt.Sprintf("%+v", data))
+
+		data.Equal(data)
+		require.Equal(t, true, data.Equal(data))
+		require.Equal(t, oldLen, data.Len())
+		require.Equal(t, dataString, fmt.Sprintf("%+v", data))
+	}
+
 	// allow types to not implement Strings() with a proper error message
 	defer func() {
 		if r := recover(); r != nil {
