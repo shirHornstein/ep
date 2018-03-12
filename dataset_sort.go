@@ -36,7 +36,6 @@ func newConditionalSortDataset(set dataset, sortingCols []SortingCol) *condition
 		for j := 0; j < i; j++ {
 			// for efficiency - avoid reflection and check address of underlying array
 			if set[i].Equal(set[j]) {
-				fmt.Printf("not unique %d %d\n", i, j)
 				unique = false
 			}
 		}

@@ -31,7 +31,7 @@ type Data interface {
 	// MarkNull sets the value in the given index to null
 	MarkNull(i int)
 
-	// Equal checks that two data objects are equal
+	// Equal checks if another data object refer to same underlying data as this one (shallow comparison)
 	Equal(Data) bool
 
 	// Strings returns the string representation of all of the Data values

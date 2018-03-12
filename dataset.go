@@ -157,13 +157,9 @@ func (set dataset) MarkNull(i int) {
 	panic("runtime error: not nullable")
 }
 
-// see Data.MarkNull
+// see Data.Equal
 func (set dataset) Equal(data Data) bool {
-	d, ok := data.(dataset)
-	if !ok {
-		return false
-	}
-	return fmt.Sprintf("%p", set) == fmt.Sprintf("%p", d)
+	panic("runtime error: not comparable")
 }
 
 // see Data.Strings
