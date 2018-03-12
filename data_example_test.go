@@ -33,6 +33,13 @@ func (vs strs) Duplicate(t int) Data {
 func (vs strs) IsNull(i int) bool { return false }
 func (vs strs) MarkNull(i int)    {}
 func (vs strs) Strings() []string { return vs }
+func (vs strs) Equal(d Data) bool {
+	st, ok := d.(strs)
+	if !ok {
+		return false
+	}
+	return fmt.Sprintf("%p", vs) == fmt.Sprintf("%p", st)
+}
 
 func ExampleData() {
 	var strs Data = strs([]string{"hello", "world", "foo", "bar"})

@@ -147,14 +147,23 @@ func (set dataset) Duplicate(t int) Data {
 	return res
 }
 
-// see Data.IsNull. Returns a bool
+// see Data.IsNull
 func (set dataset) IsNull(i int) bool {
 	panic("runtime error: not nullable")
 }
 
-// see Data.MarkNull.
+// see Data.MarkNull
 func (set dataset) MarkNull(i int) {
 	panic("runtime error: not nullable")
+}
+
+// see Data.MarkNull
+func (set dataset) Equal(data Data) bool {
+	d, ok := data.(dataset)
+	if !ok {
+		return false
+	}
+	return fmt.Sprintf("%p", set) == fmt.Sprintf("%p", d)
 }
 
 // see Data.Strings
