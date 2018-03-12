@@ -57,7 +57,6 @@ func (set dataset) Expand(other Dataset) (Dataset, error) {
 	if set.Len() != other.Len() {
 		return nil, errMismatch
 	}
-
 	otherCols := other.(dataset)
 	return append(set, otherCols...), nil
 }
