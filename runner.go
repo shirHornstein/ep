@@ -69,6 +69,18 @@ type RunnerPlan interface {
 	Plan(ctx context.Context, arg interface{}) (Runner, error)
 }
 
+// RunnerFilterable is a Runner that also exposes the ability to choose which
+// results to return, and which are irrelevant and can be replaced with dummy
+// placeholder
+type RunnerFilterable interface {
+	Runner // it's a Runner
+
+	// Filter modifies internal Runner to return only the columns that their
+	// corresponding 'keep' values are true.
+	// length of 'keep' should be same as internal Runner's return types
+	Filter(keep []bool) error
+}
+
 // PassThrough returns a runner that lets all of its input through as-is
 func PassThrough() Runner { return passThroughSingleton }
 
@@ -113,6 +125,23 @@ func (r *pick) Run(_ context.Context, inp, out chan Dataset) error {
 			result = NewDataset(res...)
 		}
 		out <- result
+	}
+	return nil
+}
+
+// DummyRunner returns a runner that does nothing and just returns batch
+// for each input batch
+func DummyRunner() Runner { return dummyRunnerSingleton }
+
+var dummyRunnerSingleton = &dummyRunner{}
+
+type dummyRunner struct{}
+
+func (*dummyRunner) Args() []Type    { return []Type{Wildcard} }
+func (*dummyRunner) Returns() []Type { return []Type{Null} }
+func (*dummyRunner) Run(_ context.Context, inp, out chan Dataset) error {
+	for range inp {
+		out <- NewDataset(Null.Data(-1))
 	}
 	return nil
 }

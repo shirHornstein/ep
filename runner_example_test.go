@@ -25,10 +25,14 @@ func (*upper) Run(_ context.Context, inp, out chan Dataset) error {
 	return nil
 }
 
-type question struct{}
+type question struct {
+	// called flag helps tests ensure runner was/wasn't called
+	called bool
+}
 
 func (*question) Returns() []Type { return []Type{SetAlias(str, "question")} }
-func (*question) Run(_ context.Context, inp, out chan Dataset) error {
+func (q *question) Run(_ context.Context, inp, out chan Dataset) error {
+	q.called = true
 	for data := range inp {
 		if data.At(0).Type() == Null {
 			out <- data
@@ -52,4 +56,18 @@ func ExampleRunner() {
 
 	// Output:
 	// [[HELLO WORLD]] <nil>
+}
+
+func ExampleRunnerFilterable_Filter() {
+	runner := Project(&question{}, &upper{}, &question{}).(RunnerFilterable)
+	err := runner.Filter([]bool{false, true, false})
+	fmt.Println(err)
+
+	data := NewDataset(strs([]string{"hello", "world"}))
+	data, err = TestRunner(runner, data)
+	fmt.Println(data.Strings(), err)
+
+	// Output:
+	// <nil>
+	// [[] [HELLO WORLD] []] <nil>
 }

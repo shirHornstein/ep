@@ -8,10 +8,15 @@ var _ = Types.Register("NULL", Null)
 
 type nullType struct{}
 
-func (t *nullType) String() string     { return t.Name() }
-func (*nullType) Name() string         { return "NULL" }
-func (*nullType) Data(n int) Data      { return nulls(n) }
-func (*nullType) DataEmpty(n int) Data { return nulls(n) }
+func (t *nullType) String() string { return t.Name() }
+func (*nullType) Name() string     { return "NULL" }
+func (*nullType) Data(n int) Data {
+	if n < 0 {
+		return variadicNulls{-1}
+	}
+	return nulls(n)
+}
+func (t *nullType) DataEmpty(n int) Data { return t.Data(n) }
 func (*nullType) Is(t Type) bool {
 	return t.Name() == "NULL"
 }
@@ -25,3 +30,9 @@ func (nulls) Slice(i, j int) Data      { return nulls(j - i) }
 func (vs nulls) Append(data Data) Data { return vs + data.(nulls) }
 func (vs nulls) Duplicate(t int) Data  { return vs * nulls(t) }
 func (vs nulls) Strings() []string     { return make([]string, vs) }
+
+// variadicNulls inherits nulls to allow flexible nulls number
+type variadicNulls struct{ nulls }
+
+func (variadicNulls) Len() int          { return -1 }
+func (variadicNulls) Strings() []string { return []string{} }
