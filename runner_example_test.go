@@ -48,7 +48,8 @@ func ExampleRunner() {
 	upper := &upper{}
 	data := NewDataset(strs([]string{"hello", "world"}))
 	data, err := TestRunner(upper, data)
-	fmt.Println(data, err)
+	fmt.Println(data.Strings(), err)
 
-	// Output: [[HELLO WORLD]] <nil>
+	// Output:
+	// [[HELLO WORLD]] <nil>
 }

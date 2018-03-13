@@ -27,9 +27,10 @@ func ExampleScatter() {
 	data1 := NewDataset(strs{"hello", "world"})
 	data2 := NewDataset(strs{"foo", "bar"})
 	data, err := TestRunner(runner, data1, data2)
-	fmt.Println(data, err) // no gather - only one batch should return
+	fmt.Println(data.Strings(), err) // no gather - only one batch should return
 
-	// Output: [[foo bar]] <nil>
+	// Output:
+	// [[foo bar]] <nil>
 }
 
 func TestExchange_dialingError(t *testing.T) {
