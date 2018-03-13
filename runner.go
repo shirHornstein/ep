@@ -129,8 +129,8 @@ func (r *pick) Run(_ context.Context, inp, out chan Dataset) error {
 	return nil
 }
 
-// DummyRunner returns a runner that does nothing and just returns batch
-// for each input batch
+// DummyRunner returns a runner that does nothing and just returns a variadic
+// length batch for each input batch
 func DummyRunner() Runner { return dummyRunnerSingleton }
 
 var dummyRunnerSingleton = &dummyRunner{}
