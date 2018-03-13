@@ -21,7 +21,8 @@ func ExampleClone() {
 func ExampleCut() {
 	var d Data = strs([]string{"hello", "world", "foo", "bar"})
 	data := Cut(d, 1, 3)
-	fmt.Println(data)
+	fmt.Println(data.Strings())
+
 	// Output:
 	// [[hello] [world foo] [bar]]
 }
@@ -29,7 +30,8 @@ func ExampleCut() {
 func ExamplePartition() {
 	var d Data = strs([]string{"hello", "world", "hello", "bar"})
 	data := Partition(d)
-	fmt.Println(data)
+	fmt.Println(data.Strings())
+
 	// Output:
 	// [[bar] [hello hello] [world]]
 }
