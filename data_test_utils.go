@@ -6,8 +6,8 @@ import (
 	"testing"
 )
 
-// VerifyDataInvariant makes sure all functions (except Swap() & MarkNull()) does not
-// modify input data, but creating a modified copy when needed
+// VerifyDataInvariant makes sure all functions (except Swap & MarkNull)
+// does not modify input data, but creating a modified copy when needed
 func VerifyDataInvariant(t *testing.T, data Data) {
 	oldLen := data.Len()
 	dataString := fmt.Sprintf("%+v", data)
@@ -36,31 +36,32 @@ func VerifyDataInvariant(t *testing.T, data Data) {
 	require.Equal(t, oldLen, data.Len())
 	require.Equal(t, dataString, fmt.Sprintf("%+v", data))
 
-	if _, ok := data.(dataset); !ok {
+	if _, isDataset := data.(dataset); !isDataset {
 		data.IsNull(0)
 		require.Equal(t, oldLen, data.Len())
 		require.Equal(t, dataString, fmt.Sprintf("%+v", data))
 
-		data.Equal(data)
-		require.True(t, data.Equal(data))
+		isEqual := data.Equal(data)
+		require.True(t, isEqual)
+		require.Equal(t, oldLen, data.Len())
+		require.Equal(t, dataString, fmt.Sprintf("%+v", data))
+		isEqual = data.Equal(nil)
+		require.False(t, isEqual)
 		require.Equal(t, oldLen, data.Len())
 		require.Equal(t, dataString, fmt.Sprintf("%+v", data))
 	}
 
-	// allow types to not implement Strings() with a proper error message
-	defer func() {
-		if r := recover(); r != nil {
-			require.Contains(t, r.(string), "cannot be cast to strings")
-		}
-	}()
 	data.Strings()
 	require.Equal(t, oldLen, data.Len())
 	require.Equal(t, dataString, fmt.Sprintf("%+v", data))
 }
 
-// MarkNullsInFirstIndexAndVerify sets the value in the given index to null and verify it
-func MarkNullsInFirstIndexAndVerify(t *testing.T, data Data) {
-	idx := 1
-	data.MarkNull(idx)
-	require.True(t, data.IsNull(idx))
+// VerifyDataMarkNull makes sure null marking updates the input data
+func VerifyDataMarkNull(t *testing.T, data Data) {
+	if _, isDataset := data.(dataset); !isDataset {
+		idx := 1
+		require.False(t, data.IsNull(idx))
+		data.MarkNull(idx)
+		require.True(t, data.IsNull(idx))
+	}
 }
