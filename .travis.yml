@@ -8,21 +8,21 @@ go:
   - 1.10.x
 
 install:
-  - go get -t -v ./...
+  - go get -t -v ./... # all deps
   - go get -u github.com/golang/lint/golint
   - export PATH=$PATH:$HOME/.local/bin
 
 script:
-  - go vet ./...
+  - go vet .
   - golint -set_exit_status ./...
   - gofmt -l . | exit $(wc -l)
   - go test -cover -race -count 100 ./...
-  - go test -v -run nothing -bench=. ./...
+  - go test -v -run nothing -bench=. ./... # benchmark
 
 notifications:
   slack:
     rooms:
-      secure: nYc9/CiVtpgaa/clTq1+htiKBuHqQzTMIQEWZp5hulamyPxn6nD+Ngz5lEZEBSHCwAoh0jXjFoEyiQ2eHLYdLDr6z/ukoWEgj5ApfIwelNNddbxWJI7pkB0UtQy9K1FaDBf2XhuO04/GpwL1EG8gUbE0+zTOJI58uFAakJdgi8mYiPJjZRqi6x2s9SKZ0jDq8xv0f+Ov/TcCYPGqQ7IggehwsWdrJ5sGJa17jJTs9JJym7ltFNLmBwZB7ACCX+2OYmbsFQPEkcFI/rfqlKZD7QqH1kun1qwhhiu4kvuye+Vnj3itPMi2EZhgJZHS+bdrPtoGrVvbC4bZZnxgSJoLFNTBFwY4ACiJhjwyv6xkrpTlSXsL/2phf/QL8M7YmkIMuka/GaXfNZiHJq79WLV4tYxGG8aWykjl6X6qYf3IkZVVoFSOZbv36n3M+nRub8aquHl0wdxW+PMxnM0KQtwy1nhaAXxCYJ77/CcRnQmZNyCMgfI2kLsH5w/ew6WG3Jf9kLFmOzoNrzB2mqp+RwMni8J1WrV6RKJBRiIlBXlShxoWmbVlH/5aemBBCtPFQA9oSHFoX/ZPY2ejwEgDIgslkJ0yCQgbGOkZdfeXQGAv2uKq0JMTjXtJXHyEWrF+Nd9WuJUuOPaJweQz9pjWjgeLMSmYanlT0clkS1zf+AELdEc=
+        - panoplyio:LeK4hoOIDsRiBBAhgXKnSAD0#builds
     on_pull_requests: false
     on_success: change
     on_failure: always
