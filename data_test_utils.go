@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-// VerifyDataInvariant makes sure all functions (except Swap()) does not
+// VerifyDataInvariant makes sure all functions (except Swap() & MarkNull()) does not
 // modify input data, but creating a modified copy when needed
 func VerifyDataInvariant(t *testing.T, data Data) {
 	oldLen := data.Len()
@@ -41,12 +41,8 @@ func VerifyDataInvariant(t *testing.T, data Data) {
 		require.Equal(t, oldLen, data.Len())
 		require.Equal(t, dataString, fmt.Sprintf("%+v", data))
 
-		data.MarkNull(0)
-		require.Equal(t, oldLen, data.Len())
-		require.Equal(t, dataString, fmt.Sprintf("%+v", data))
-
 		data.Equal(data)
-		require.Equal(t, true, data.Equal(data))
+		require.True(t, data.Equal(data))
 		require.Equal(t, oldLen, data.Len())
 		require.Equal(t, dataString, fmt.Sprintf("%+v", data))
 	}
