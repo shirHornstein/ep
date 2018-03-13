@@ -57,3 +57,10 @@ func VerifyDataInvariant(t *testing.T, data Data) {
 	require.Equal(t, oldLen, data.Len())
 	require.Equal(t, dataString, fmt.Sprintf("%+v", data))
 }
+
+// MarkNullsInFirstIndexAndVerify sets the value in the given index to null and verify it
+func MarkNullsInFirstIndexAndVerify(t *testing.T, data Data) {
+	idx := 1
+	data.MarkNull(idx)
+	require.True(t, data.IsNull(idx))
+}
