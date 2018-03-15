@@ -1,19 +1,20 @@
-package ep
+package ep_test
 
 import (
 	"fmt"
+	"github.com/panoplyio/ep"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
 
 func TestDatasetSort(t *testing.T) {
-	var d1 Data = strs([]string{"hello", "world", "foo", "bar", "bar", "a", "z"})
-	var d2 Data = strs([]string{"1", "2", "4", "0", "3", "1", "1"})
-	var d3 Data = strs([]string{"a", "b", "c", "d", "e", "f", "g"})
+	var d1 ep.Data = strs([]string{"hello", "world", "foo", "bar", "bar", "a", "z"})
+	var d2 ep.Data = strs([]string{"1", "2", "4", "0", "3", "1", "1"})
+	var d3 ep.Data = strs([]string{"a", "b", "c", "d", "e", "f", "g"})
 
-	dataset := NewDataset(d1, d2, d3, d1, d2, d1)
+	dataset := ep.NewDataset(d1, d2, d3, d1, d2, d1)
 
-	Sort(dataset, []SortingCol{{1, false}, {3, false}})
+	ep.Sort(dataset, []ep.SortingCol{{Index: 1, Desc: false}, {Index: 3, Desc: false}})
 
 	require.Equal(t, 7, dataset.Len())
 	require.Equal(t, 6, dataset.Width())
@@ -28,13 +29,13 @@ func TestDatasetSort(t *testing.T) {
 }
 
 func TestDadasetSort_firstDesc(t *testing.T) {
-	var d1 Data = strs([]string{"hello", "world", "foo", "bar", "bar", "a", "z"})
-	var d2 Data = strs([]string{"1", "2", "4", "0", "3", "1", "1"})
-	var d3 Data = strs([]string{"a", "b", "c", "d", "e", "f", "g"})
+	var d1 ep.Data = strs([]string{"hello", "world", "foo", "bar", "bar", "a", "z"})
+	var d2 ep.Data = strs([]string{"1", "2", "4", "0", "3", "1", "1"})
+	var d3 ep.Data = strs([]string{"a", "b", "c", "d", "e", "f", "g"})
 
-	dataset := NewDataset(d1, d2, d3, d2, d1)
+	dataset := ep.NewDataset(d1, d2, d3, d2, d1)
 
-	Sort(dataset, []SortingCol{{1, true}, {4, false}})
+	ep.Sort(dataset, []ep.SortingCol{{Index: 1, Desc: true}, {Index: 4, Desc: false}})
 
 	require.Equal(t, 7, dataset.Len())
 	require.Equal(t, 5, dataset.Width())
@@ -49,13 +50,13 @@ func TestDadasetSort_firstDesc(t *testing.T) {
 }
 
 func TestDadasetSort_secondDesc(t *testing.T) {
-	var d1 Data = strs([]string{"hello", "world", "foo", "bar", "bar", "a", "z"})
-	var d2 Data = strs([]string{"1", "2", "4", "0", "3", "1", "1"})
-	var d3 Data = strs([]string{"a", "b", "c", "d", "e", "f", "g"})
+	var d1 ep.Data = strs([]string{"hello", "world", "foo", "bar", "bar", "a", "z"})
+	var d2 ep.Data = strs([]string{"1", "2", "4", "0", "3", "1", "1"})
+	var d3 ep.Data = strs([]string{"a", "b", "c", "d", "e", "f", "g"})
 
-	dataset := NewDataset(d1, d2, d3, d2, d1)
+	dataset := ep.NewDataset(d1, d2, d3, d2, d1)
 
-	Sort(dataset, []SortingCol{{3, false}, {0, true}})
+	ep.Sort(dataset, []ep.SortingCol{{Index: 3, Desc: false}, {Index: 0, Desc: true}})
 
 	require.Equal(t, 7, dataset.Len())
 	require.Equal(t, 5, dataset.Width())
@@ -70,13 +71,13 @@ func TestDadasetSort_secondDesc(t *testing.T) {
 }
 
 func TestDadasetSort_severalDesc(t *testing.T) {
-	var d1 Data = strs([]string{"hello", "world", "foo", "bar", "bar", "a", "z"})
-	var d2 Data = strs([]string{"1", "2", "4", "0", "3", "1", "1"})
-	var d3 Data = strs([]string{"a", "b", "c", "d", "e", "f", "g"})
+	var d1 ep.Data = strs([]string{"hello", "world", "foo", "bar", "bar", "a", "z"})
+	var d2 ep.Data = strs([]string{"1", "2", "4", "0", "3", "1", "1"})
+	var d3 ep.Data = strs([]string{"a", "b", "c", "d", "e", "f", "g"})
 
-	dataset := NewDataset(d1, d2, d3, d2, d1)
+	dataset := ep.NewDataset(d1, d2, d3, d2, d1)
 
-	Sort(dataset, []SortingCol{{3, true}, {0, true}})
+	ep.Sort(dataset, []ep.SortingCol{{Index: 3, Desc: true}, {Index: 0, Desc: true}})
 
 	require.Equal(t, 7, dataset.Len())
 	require.Equal(t, 5, dataset.Width())
@@ -92,25 +93,25 @@ func TestDadasetSort_severalDesc(t *testing.T) {
 
 func TestDatasetSort_emptyDataset(t *testing.T) {
 	require.NotPanics(t, func() {
-		Sort(NewDataset(), []SortingCol{{1, false}, {3, false}})
+		ep.Sort(ep.NewDataset(), []ep.SortingCol{{Index: 1, Desc: false}, {Index: 3, Desc: false}})
 	})
 }
 
 func TestDatasetSort_nilDataset(t *testing.T) {
 	require.NotPanics(t, func() {
-		Sort(nil, []SortingCol{{1, false}, {3, false}})
+		ep.Sort(nil, []ep.SortingCol{{Index: 1, Desc: false}, {Index: 3, Desc: false}})
 	})
 }
 
 func TestDatasetSort_noSortingCols(t *testing.T) {
-	var d1 Data = strs([]string{"hello", "world", "foo", "bar", "bar", "a", "z"})
-	var d2 Data = strs([]string{"1", "2", "4", "0", "3", "1", "1"})
-	var d3 Data = strs([]string{"a", "b", "c", "d", "e", "f", "g"})
+	var d1 ep.Data = strs([]string{"hello", "world", "foo", "bar", "bar", "a", "z"})
+	var d2 ep.Data = strs([]string{"1", "2", "4", "0", "3", "1", "1"})
+	var d3 ep.Data = strs([]string{"a", "b", "c", "d", "e", "f", "g"})
 
-	dataset := NewDataset(d1, d3, d2)
+	dataset := ep.NewDataset(d1, d3, d2)
 
 	require.NotPanics(t, func() {
-		Sort(dataset, []SortingCol{})
+		ep.Sort(dataset, []ep.SortingCol{})
 	})
 
 	// by default sorting done according to last column ascending

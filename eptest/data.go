@@ -1,14 +1,17 @@
-package ep
+package eptest
+
+// Data utils for writing data interface tests
 
 import (
 	"fmt"
+	"github.com/panoplyio/ep"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
 
 // VerifyDataInvariant makes sure all functions (except Swap()) does not
 // modify input data, but creating a modified copy when needed
-func VerifyDataInvariant(t *testing.T, data Data) {
+func VerifyDataInvariant(t *testing.T, data ep.Data) {
 	oldLen := data.Len()
 	dataString := fmt.Sprintf("%+v", data)
 

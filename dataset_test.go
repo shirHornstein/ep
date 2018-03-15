@@ -1,23 +1,25 @@
-package ep
+package ep_test
 
 import (
 	"fmt"
+	"github.com/panoplyio/ep"
+	"github.com/panoplyio/ep/eptest"
 	"github.com/stretchr/testify/require"
 	"sort"
 	"testing"
 )
 
 func TestDataInterface(t *testing.T) {
-	dataset := NewDataset(Null.Data(10), str.Data(10))
-	VerifyDataInvariant(t, dataset)
+	dataset := ep.NewDataset(ep.Null.Data(10), str.Data(10))
+	eptest.VerifyDataInvariant(t, dataset)
 }
 
 func TestDataset_Sort_byLastColAscending(t *testing.T) {
-	var d1 Data = strs([]string{"hello", "world", "foo", "bar", "bar", "a", "z"})
-	var d2 Data = strs([]string{"1", "2", "4", "0", "3", "1", "1"})
-	var d3 Data = strs([]string{"a", "b", "c", "d", "e", "f", "g"})
+	var d1 ep.Data = strs([]string{"hello", "world", "foo", "bar", "bar", "a", "z"})
+	var d2 ep.Data = strs([]string{"1", "2", "4", "0", "3", "1", "1"})
+	var d3 ep.Data = strs([]string{"a", "b", "c", "d", "e", "f", "g"})
 
-	dataset := NewDataset(d1, d3, d2)
+	dataset := ep.NewDataset(d1, d3, d2)
 
 	sort.Sort(dataset)
 

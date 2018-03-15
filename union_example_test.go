@@ -1,13 +1,15 @@
-package ep
+package ep_test
 
 import (
 	"fmt"
+	"github.com/panoplyio/ep"
+	"github.com/panoplyio/ep/eptest"
 )
 
 func ExampleUnion() {
-	runner, _ := Union(&upper{}, &question{})
-	data := NewDataset(strs([]string{"hello", "world"}))
-	data, err := TestRunner(runner, data)
+	runner, _ := ep.Union(&upper{}, &question{})
+	data := ep.NewDataset(strs([]string{"hello", "world"}))
+	data, err := eptest.TestRunner(runner, data)
 	fmt.Println(data.Strings(), err)
 
 	// Output:

@@ -97,6 +97,7 @@
 package ep
 
 import (
+	"context"
 	"encoding/gob"
 	"github.com/davecgh/go-spew/spew"
 )
@@ -122,3 +123,9 @@ const (
 	thisNodeKey    ctxKey = "ep.ThisNode"
 	distributerKey ctxKey = "ep.Distributer"
 )
+
+// NodeAddress returns the current node address as saved in given context
+func NodeAddress(ctx context.Context) string {
+	thisAddress, _ := ctx.Value(thisNodeKey).(string)
+	return thisAddress
+}
