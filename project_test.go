@@ -32,7 +32,7 @@ func ExampleProject_reversed() {
 func TestProject_errorInFirstRunner(t *testing.T) {
 	err := fmt.Errorf("something bad happened")
 	infinity := &infinityRunner{}
-	runner := ep.Project(&errRunner{err}, infinity)
+	runner := ep.Project(NewErrRunner(err), infinity)
 	data := ep.NewDataset(ep.Null.Data(1))
 	data, err = eptest.TestRunner(runner, data)
 
@@ -46,7 +46,7 @@ func TestProject_errorInSecondRunner(t *testing.T) {
 	err := fmt.Errorf("something bad happened")
 	infinityRunner1 := &infinityRunner{}
 	infinityRunner2 := &infinityRunner{}
-	runner := ep.Project(infinityRunner1, &errRunner{err}, infinityRunner2)
+	runner := ep.Project(infinityRunner1, NewErrRunner(err), infinityRunner2)
 	data := ep.NewDataset(ep.Null.Data(1))
 	data, err = eptest.TestRunner(runner, data)
 
@@ -61,7 +61,7 @@ func TestProject_errorInThirdRunner(t *testing.T) {
 	err := fmt.Errorf("something bad happened")
 	infinityRunner1 := &infinityRunner{}
 	infinityRunner2 := &infinityRunner{}
-	runner := ep.Project(infinityRunner1, infinityRunner2, &errRunner{err})
+	runner := ep.Project(infinityRunner1, infinityRunner2, NewErrRunner(err))
 	data := ep.NewDataset(ep.Null.Data(1))
 	data, err = eptest.TestRunner(runner, data)
 
@@ -79,7 +79,7 @@ func TestProject_errorInPipeline(t *testing.T) {
 	infinityRunner3 := &infinityRunner{}
 	runner := ep.Project(
 		ep.Pipeline(infinityRunner1, infinityRunner2),
-		ep.Pipeline(infinityRunner3, &errRunner{err}),
+		ep.Pipeline(infinityRunner3, NewErrRunner(err)),
 	)
 	data := ep.NewDataset(ep.Null.Data(1))
 	data, err = eptest.TestRunner(runner, data)
@@ -92,7 +92,7 @@ func TestProject_errorInPipeline(t *testing.T) {
 	require.Equal(t, false, infinityRunner3.IsRunning(), "Infinity 3 go-routine leak")
 }
 
-func _TestProject_errorWithExchange(t *testing.T) { // TODO avia
+func TestProject_errorWithExchange(t *testing.T) {
 	err := fmt.Errorf("something bad happened")
 	infinityRunner := &infinityRunner{}
 
@@ -106,7 +106,7 @@ func _TestProject_errorWithExchange(t *testing.T) { // TODO avia
 
 	runner := ep.Pipeline(
 		infinityRunner,
-		ep.Project(ep.Scatter(), &errRunner{err}),
+		ep.Project(ep.Scatter(), NewErrRunner(err)),
 	)
 	runner = dist.Distribute(runner, port, port2)
 
@@ -125,7 +125,7 @@ func TestProject_nested_errorInFirstRunner(t *testing.T) {
 	infinityRunner2 := &infinityRunner{}
 	infinityRunner3 := &infinityRunner{}
 	runner := ep.Project(
-		ep.Project(infinityRunner3, &errRunner{err}),
+		ep.Project(infinityRunner3, NewErrRunner(err)),
 		ep.Project(infinityRunner1, infinityRunner2),
 	)
 	data := ep.NewDataset(ep.Null.Data(1))
@@ -146,7 +146,7 @@ func TestProject_nested_errorInSecondRunner(t *testing.T) {
 	infinityRunner3 := &infinityRunner{}
 	runner := ep.Project(
 		ep.Project(infinityRunner1, infinityRunner2),
-		ep.Project(infinityRunner3, &errRunner{err}),
+		ep.Project(infinityRunner3, NewErrRunner(err)),
 	)
 	data := ep.NewDataset(ep.Null.Data(1))
 	data, err = eptest.TestRunner(runner, data)

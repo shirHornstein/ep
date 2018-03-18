@@ -16,8 +16,16 @@ var _ = ep.Runners.
 	Register("upper", &upper{}).
 	Register("question", &question{})
 
-// errRunner is a Runner that immediately returns an error
-type errRunner struct{ error }
+// errRunner is a Runner that returns an error upon first input or inp closing
+type errRunner struct {
+	error
+	// Name is unused field, defined to allow gob-ing errRunner between peers
+	Name string
+}
+
+func NewErrRunner(e error) ep.Runner {
+	return &errRunner{e, "err"}
+}
 
 func (*errRunner) Returns() []ep.Type { return []ep.Type{} }
 func (r *errRunner) Run(ctx context.Context, inp, out chan ep.Dataset) error {
@@ -29,26 +37,29 @@ func (r *errRunner) Run(ctx context.Context, inp, out chan ep.Dataset) error {
 
 // infinityRunner infinitely emits data until it's canceled
 type infinityRunner struct {
-	sync.Mutex
+	isRunningLock sync.Mutex
 	// isRunning flag helps tests ensure that the go-routine didn't leak
 	isRunning bool
+
+	// Name is unused field, defined to allow gob-ing infinityRunner between peers
+	Name string
 }
 
 func (*infinityRunner) Returns() []ep.Type { return []ep.Type{str} }
 func (r *infinityRunner) IsRunning() bool {
-	r.Lock()
-	defer r.Unlock()
+	r.isRunningLock.Lock()
+	defer r.isRunningLock.Unlock()
 	return r.isRunning
 }
 func (r *infinityRunner) Run(ctx context.Context, inp, out chan ep.Dataset) error {
-	r.Lock()
+	r.isRunningLock.Lock()
 	r.isRunning = true
-	r.Unlock()
+	r.isRunningLock.Unlock()
 
 	defer func() {
-		r.Lock()
+		r.isRunningLock.Lock()
 		r.isRunning = false
-		r.Unlock()
+		r.isRunningLock.Unlock()
 	}()
 
 	// infinitely produce data, until canceled
@@ -71,7 +82,7 @@ type dataRunner struct {
 }
 
 func (r *dataRunner) Returns() []ep.Type {
-	types := []ep.Type{}
+	var types []ep.Type
 	for i := 0; i < r.Dataset.Len(); i++ {
 		types = append(types, r.Dataset.At(i).Type())
 	}
@@ -98,7 +109,7 @@ func (*nodeAddr) Run(ctx context.Context, inp, out chan ep.Dataset) error {
 			res[i] = addr
 		}
 
-		outset := []ep.Data{}
+		var outset []ep.Data
 		for i := 0; i < data.Width(); i++ {
 			outset = append(outset, data.At(i))
 		}

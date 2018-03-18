@@ -36,7 +36,7 @@ func TestPipeline_errInFirstRunner(t *testing.T) {
 	err := fmt.Errorf("something bad happened")
 	infinityRunner1 := &infinityRunner{}
 	infinityRunner2 := &infinityRunner{}
-	runner := ep.Pipeline(&errRunner{err}, infinityRunner1, infinityRunner2)
+	runner := ep.Pipeline(NewErrRunner(err), infinityRunner1, infinityRunner2)
 	data := ep.NewDataset(ep.Null.Data(1))
 	data, err = eptest.TestRunner(runner, data)
 
@@ -53,7 +53,7 @@ func TestPipeline_errInSecondRunner(t *testing.T) {
 	err := fmt.Errorf("something bad happened")
 	infinityRunner1 := &infinityRunner{}
 	infinityRunner2 := &infinityRunner{}
-	runner := ep.Pipeline(infinityRunner1, &errRunner{err}, infinityRunner2)
+	runner := ep.Pipeline(infinityRunner1, NewErrRunner(err), infinityRunner2)
 	data := ep.NewDataset(ep.Null.Data(1))
 	data, err = eptest.TestRunner(runner, data)
 
@@ -70,7 +70,7 @@ func TestPipeline_errInThirdRunner(t *testing.T) {
 	err := fmt.Errorf("something bad happened")
 	infinityRunner1 := &infinityRunner{}
 	infinityRunner2 := &infinityRunner{}
-	runner := ep.Pipeline(infinityRunner1, infinityRunner2, &errRunner{err})
+	runner := ep.Pipeline(infinityRunner1, infinityRunner2, NewErrRunner(err))
 	data := ep.NewDataset(ep.Null.Data(1))
 	data, err = eptest.TestRunner(runner, data)
 
@@ -89,7 +89,7 @@ func TestPipeline_errInNestedPipeline(t *testing.T) {
 	infinityRunner2 := &infinityRunner{}
 	infinityRunner3 := &infinityRunner{}
 	runner := ep.Pipeline(
-		ep.Pipeline(infinityRunner1, &errRunner{err}),
+		ep.Pipeline(infinityRunner1, NewErrRunner(err)),
 		ep.Pipeline(infinityRunner2, infinityRunner3),
 	)
 	data := ep.NewDataset(ep.Null.Data(1))
@@ -123,7 +123,7 @@ func TestPipeline_errNestedPipelineWithProject(t *testing.T) {
 			),
 			ep.Project(
 				ep.Pipeline(infinityRunner3, infinityRunner6),
-				ep.Pipeline(infinityRunner7, &errRunner{err}),
+				ep.Pipeline(infinityRunner7, NewErrRunner(err)),
 			))
 	data := ep.NewDataset(ep.Null.Data(1))
 	data, err = eptest.TestRunner(runner, data)
