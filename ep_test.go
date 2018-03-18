@@ -78,6 +78,8 @@ func (r *infinityRunner) Run(ctx context.Context, inp, out chan ep.Dataset) erro
 
 type dataRunner struct {
 	ep.Dataset
+	// ThrowOnData is a condition for throwing error. in case the last column
+	// contains exactly this string in first row - fail with error
 	ThrowOnData string
 }
 

@@ -322,7 +322,7 @@ func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) error {
 		close(respErrs)
 	}()
 
-	// wait for first error
+	// wait for either first error or closing of respErrs channel
 	e, _ := <-respErrs
 	errs = append(errs, e)
 	return errs[0]
