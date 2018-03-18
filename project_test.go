@@ -111,7 +111,7 @@ func TestProject_errorWithExchange(t *testing.T) {
 	runner = dist.Distribute(runner, port, port2)
 
 	data := ep.NewDataset(ep.Null.Data(1))
-	data, err = eptest.Run(runner, data)
+	data, err = eptest.Run(runner, data, data, data, data)
 
 	require.Equal(t, 0, data.Width())
 	require.Error(t, err)
