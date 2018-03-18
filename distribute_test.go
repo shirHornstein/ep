@@ -31,7 +31,7 @@ func TestDistribute_success(t *testing.T) {
 
 	data1 := ep.NewDataset(strs{"hello", "world"})
 	data2 := ep.NewDataset(strs{"foo", "bar"})
-	data, err := eptest.TestRunner(runner, data1, data2)
+	data, err := eptest.Run(runner, data1, data2)
 
 	require.NoError(t, err)
 	require.Equal(t, 1, data.Width())
@@ -48,7 +48,7 @@ func TestDistribute_connectionError(t *testing.T) {
 
 	runner := dist1.Distribute(&upper{}, port1, ":5000")
 
-	data, err := eptest.TestRunner(runner, ep.NewDataset())
+	data, err := eptest.Run(runner, ep.NewDataset())
 
 	require.Error(t, err)
 	require.Equal(t, "dial tcp :5000: connect: connection refused", err.Error())
@@ -72,7 +72,7 @@ func _TestDistributeErrorFromPeer(t *testing.T) {
 
 	data1 := ep.NewDataset(strs{"hello", "world"})
 	data2 := ep.NewDataset(strs{"foo", "bar"})
-	data, err := eptest.TestRunner(runner, data1, data2)
+	data, err := eptest.Run(runner, data1, data2)
 
 	require.Error(t, err)
 	require.Equal(t, "error :5552", err.Error())

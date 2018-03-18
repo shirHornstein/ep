@@ -9,7 +9,7 @@ import (
 func ExampleRunner() {
 	upper := &upper{}
 	data := ep.NewDataset(strs([]string{"hello", "world"}))
-	data, err := eptest.TestRunner(upper, data)
+	data, err := eptest.Run(upper, data)
 	fmt.Println(data.Strings(), err)
 
 	// Output:

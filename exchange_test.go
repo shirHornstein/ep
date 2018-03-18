@@ -27,7 +27,7 @@ func ExampleScatter() {
 
 	data1 := ep.NewDataset(strs{"hello", "world"})
 	data2 := ep.NewDataset(strs{"foo", "bar"})
-	data, err := eptest.TestRunner(runner, data1, data2)
+	data, err := eptest.Run(runner, data1, data2)
 	fmt.Println(data.Strings(), err) // no gather - only one batch should return
 
 	// Output:
@@ -53,7 +53,7 @@ func TestExchange_dialingError(t *testing.T) {
 
 	data1 := ep.NewDataset(strs{"hello", "world"})
 	data2 := ep.NewDataset(strs{"foo", "bar"})
-	data, err := eptest.TestRunner(runner, data1, data2)
+	data, err := eptest.Run(runner, data1, data2)
 
 	require.Error(t, err)
 
@@ -87,7 +87,7 @@ func TestScatter_singleNode(t *testing.T) {
 
 	data1 := ep.NewDataset(strs{"hello", "world"})
 	data2 := ep.NewDataset(strs{"foo", "bar"})
-	data, err := eptest.TestRunner(runner, data1, data2)
+	data, err := eptest.Run(runner, data1, data2)
 	require.NoError(t, err)
 	require.Equal(t, 1, data.Width())
 	require.Equal(t, 4, data.Len())
@@ -109,7 +109,7 @@ func TestScatter_and_Gather(t *testing.T) {
 
 	data1 := ep.NewDataset(strs{"hello", "world"})
 	data2 := ep.NewDataset(strs{"foo", "bar"})
-	data, err := eptest.TestRunner(runner, data1, data2)
+	data, err := eptest.Run(runner, data1, data2)
 
 	require.NoError(t, err)
 	require.NotNil(t, data)

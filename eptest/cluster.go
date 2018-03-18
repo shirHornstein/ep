@@ -1,6 +1,6 @@
 package eptest
 
-// Cluster utils for writing tests with clusters
+// cluster.go contains utilities for writing tests with clusters
 
 import (
 	"fmt"

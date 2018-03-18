@@ -1,21 +1,20 @@
+// Package eptest contains only tests utilities (without actual tests).
 package eptest
-
-// General utility for running a given runner with given input batches
 
 import (
 	"context"
 	"github.com/panoplyio/ep"
 )
 
-// TestRunner is helper function for tests, that runs given runner with given
+// Run is helper function for tests, that runs given runner with given
 // list of input datasets. Output is consumed up to completion, then returned
-func TestRunner(r ep.Runner, datasets ...ep.Dataset) (ep.Dataset, error) {
-	return TestRunnerWithContext(context.Background(), r, datasets...)
+func Run(r ep.Runner, datasets ...ep.Dataset) (ep.Dataset, error) {
+	return RunWithContext(context.Background(), r, datasets...)
 }
 
-// TestRunnerWithContext is helper function for tests, doing the same as TestRunner
+// RunWithContext is helper function for tests, doing the same as Run
 // with given context
-func TestRunnerWithContext(ctx context.Context, r ep.Runner, datasets ...ep.Dataset) (res ep.Dataset, err error) {
+func RunWithContext(ctx context.Context, r ep.Runner, datasets ...ep.Dataset) (res ep.Dataset, err error) {
 	inp := make(chan ep.Dataset)
 	out := make(chan ep.Dataset)
 	go func() {

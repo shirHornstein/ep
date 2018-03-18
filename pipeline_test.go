@@ -12,7 +12,7 @@ import (
 func ExamplePipeline() {
 	runner := ep.Pipeline(&upper{}, &question{})
 	data := ep.NewDataset(strs([]string{"hello", "world"}))
-	data, err := eptest.TestRunner(runner, data)
+	data, err := eptest.Run(runner, data)
 	fmt.Println(data.Strings(), err)
 
 	// Output:
@@ -23,7 +23,7 @@ func ExamplePipeline() {
 func ExamplePipeline_reverse() {
 	runner := ep.Pipeline(&question{}, &upper{})
 	data := ep.NewDataset(strs([]string{"hello", "world"}))
-	data, err := eptest.TestRunner(runner, data)
+	data, err := eptest.Run(runner, data)
 	fmt.Println(data.Strings(), err)
 
 	// Output:
@@ -38,7 +38,7 @@ func TestPipeline_errInFirstRunner(t *testing.T) {
 	infinityRunner2 := &infinityRunner{}
 	runner := ep.Pipeline(NewErrRunner(err), infinityRunner1, infinityRunner2)
 	data := ep.NewDataset(ep.Null.Data(1))
-	data, err = eptest.TestRunner(runner, data)
+	data, err = eptest.Run(runner, data)
 
 	require.Equal(t, 0, data.Width())
 	require.Error(t, err)
@@ -55,7 +55,7 @@ func TestPipeline_errInSecondRunner(t *testing.T) {
 	infinityRunner2 := &infinityRunner{}
 	runner := ep.Pipeline(infinityRunner1, NewErrRunner(err), infinityRunner2)
 	data := ep.NewDataset(ep.Null.Data(1))
-	data, err = eptest.TestRunner(runner, data)
+	data, err = eptest.Run(runner, data)
 
 	require.Equal(t, 0, data.Width())
 	require.Error(t, err)
@@ -72,7 +72,7 @@ func TestPipeline_errInThirdRunner(t *testing.T) {
 	infinityRunner2 := &infinityRunner{}
 	runner := ep.Pipeline(infinityRunner1, infinityRunner2, NewErrRunner(err))
 	data := ep.NewDataset(ep.Null.Data(1))
-	data, err = eptest.TestRunner(runner, data)
+	data, err = eptest.Run(runner, data)
 
 	require.Equal(t, 0, data.Width())
 	require.Error(t, err)
@@ -93,7 +93,7 @@ func TestPipeline_errInNestedPipeline(t *testing.T) {
 		ep.Pipeline(infinityRunner2, infinityRunner3),
 	)
 	data := ep.NewDataset(ep.Null.Data(1))
-	data, err = eptest.TestRunner(runner, data)
+	data, err = eptest.Run(runner, data)
 
 	require.Equal(t, 0, data.Width())
 	require.Error(t, err)
@@ -126,7 +126,7 @@ func TestPipeline_errNestedPipelineWithProject(t *testing.T) {
 				ep.Pipeline(infinityRunner7, NewErrRunner(err)),
 			))
 	data := ep.NewDataset(ep.Null.Data(1))
-	data, err = eptest.TestRunner(runner, data)
+	data, err = eptest.Run(runner, data)
 
 	require.Equal(t, 0, data.Width())
 	require.Error(t, err)

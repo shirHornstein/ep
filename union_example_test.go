@@ -9,7 +9,7 @@ import (
 func ExampleUnion() {
 	runner, _ := ep.Union(&upper{}, &question{})
 	data := ep.NewDataset(strs([]string{"hello", "world"}))
-	data, err := eptest.TestRunner(runner, data)
+	data, err := eptest.Run(runner, data)
 	fmt.Println(data.Strings(), err)
 
 	// Output:

@@ -12,7 +12,7 @@ import (
 func ExampleProject() {
 	runner := ep.Project(&upper{}, &question{})
 	data := ep.NewDataset(strs([]string{"hello", "world"}))
-	data, err := eptest.TestRunner(runner, data)
+	data, err := eptest.Run(runner, data)
 	fmt.Println(data.Strings(), err)
 
 	// Output:
@@ -22,7 +22,7 @@ func ExampleProject() {
 func ExampleProject_reversed() {
 	runner := ep.Project(&question{}, &upper{})
 	data := ep.NewDataset(strs([]string{"hello", "world"}))
-	data, err := eptest.TestRunner(runner, data)
+	data, err := eptest.Run(runner, data)
 	fmt.Println(data.Strings(), err)
 
 	// Output:
@@ -34,7 +34,7 @@ func TestProject_errorInFirstRunner(t *testing.T) {
 	infinity := &infinityRunner{}
 	runner := ep.Project(NewErrRunner(err), infinity)
 	data := ep.NewDataset(ep.Null.Data(1))
-	data, err = eptest.TestRunner(runner, data)
+	data, err = eptest.Run(runner, data)
 
 	require.Equal(t, 0, data.Width())
 	require.Error(t, err)
@@ -48,7 +48,7 @@ func TestProject_errorInSecondRunner(t *testing.T) {
 	infinityRunner2 := &infinityRunner{}
 	runner := ep.Project(infinityRunner1, NewErrRunner(err), infinityRunner2)
 	data := ep.NewDataset(ep.Null.Data(1))
-	data, err = eptest.TestRunner(runner, data)
+	data, err = eptest.Run(runner, data)
 
 	require.Equal(t, 0, data.Width())
 	require.Error(t, err)
@@ -63,7 +63,7 @@ func TestProject_errorInThirdRunner(t *testing.T) {
 	infinityRunner2 := &infinityRunner{}
 	runner := ep.Project(infinityRunner1, infinityRunner2, NewErrRunner(err))
 	data := ep.NewDataset(ep.Null.Data(1))
-	data, err = eptest.TestRunner(runner, data)
+	data, err = eptest.Run(runner, data)
 
 	require.Equal(t, 0, data.Width())
 	require.Error(t, err)
@@ -82,7 +82,7 @@ func TestProject_errorInPipeline(t *testing.T) {
 		ep.Pipeline(infinityRunner3, NewErrRunner(err)),
 	)
 	data := ep.NewDataset(ep.Null.Data(1))
-	data, err = eptest.TestRunner(runner, data)
+	data, err = eptest.Run(runner, data)
 
 	require.Equal(t, 0, data.Width())
 	require.Error(t, err)
@@ -111,7 +111,7 @@ func TestProject_errorWithExchange(t *testing.T) {
 	runner = dist.Distribute(runner, port, port2)
 
 	data := ep.NewDataset(ep.Null.Data(1))
-	data, err = eptest.TestRunner(runner, data)
+	data, err = eptest.Run(runner, data)
 
 	require.Equal(t, 0, data.Width())
 	require.Error(t, err)
@@ -129,7 +129,7 @@ func TestProject_nested_errorInFirstRunner(t *testing.T) {
 		ep.Project(infinityRunner1, infinityRunner2),
 	)
 	data := ep.NewDataset(ep.Null.Data(1))
-	data, err = eptest.TestRunner(runner, data)
+	data, err = eptest.Run(runner, data)
 
 	require.Equal(t, 0, data.Width())
 	require.Error(t, err)
@@ -149,7 +149,7 @@ func TestProject_nested_errorInSecondRunner(t *testing.T) {
 		ep.Project(infinityRunner3, NewErrRunner(err)),
 	)
 	data := ep.NewDataset(ep.Null.Data(1))
-	data, err = eptest.TestRunner(runner, data)
+	data, err = eptest.Run(runner, data)
 
 	require.Equal(t, 0, data.Width())
 	require.Error(t, err)
@@ -163,7 +163,7 @@ func TestProject_nested_errorInSecondRunner(t *testing.T) {
 func TestProject_errorMismatchRows(t *testing.T) {
 	runner := ep.Project(&upper{}, &count{})
 	data := ep.NewDataset(strs([]string{"hello", "world"}))
-	_, err := eptest.TestRunner(runner, data)
+	_, err := eptest.Run(runner, data)
 	require.Error(t, err)
 	require.Equal(t, "mismatched number of rows", err.Error())
 }

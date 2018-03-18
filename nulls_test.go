@@ -7,5 +7,5 @@ import (
 )
 
 func TestNullsInvariant(t *testing.T) {
-	eptest.VerifyDataInvariant(t, ep.Null.Data(10))
+	eptest.VerifyDataInterfaceInvariant(t, ep.Null.Data(10))
 }

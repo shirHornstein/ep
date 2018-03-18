@@ -11,7 +11,7 @@ import (
 
 func TestDataInterface(t *testing.T) {
 	dataset := ep.NewDataset(ep.Null.Data(10), str.Data(10))
-	eptest.VerifyDataInvariant(t, dataset)
+	eptest.VerifyDataInterfaceInvariant(t, dataset)
 }
 
 func TestDataset_Sort_byLastColAscending(t *testing.T) {
