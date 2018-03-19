@@ -20,7 +20,6 @@ var _ = registerGob(&distRunner{})
 // Distributer is an object that can distribute Runners to run in parallel on
 // multiple nodes.
 type Distributer interface {
-
 	// Distribute a Runner to multiple node addresses
 	Distribute(runner Runner, addrs ...string) Runner
 
@@ -322,10 +321,14 @@ func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) error {
 		close(respErrs)
 	}()
 
-	// wait for either first error or closing of respErrs channel
-	e, _ := <-respErrs
-	errs = append(errs, e)
-	return errs[0]
+	// wait for respErrs channel, and select first meaningful error
+	var finalError error
+	for e := range respErrs {
+		if finalError == nil && e != errProjectState {
+			finalError = e
+		}
+	}
+	return finalError
 }
 
 // write a null-terminated string to a writer

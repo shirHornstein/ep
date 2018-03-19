@@ -93,29 +93,31 @@ func TestProject_errorInPipeline(t *testing.T) {
 }
 
 func TestProject_errorWithExchange(t *testing.T) {
-	err := fmt.Errorf("something bad happened")
-	infinityRunner := &infinityRunner{}
-
 	port := ":5551"
 	dist := eptest.NewPeer(t, port)
-	defer dist.Close()
 
-	port2 := ":5552"
+	port2 := ":5559"
 	peer2 := eptest.NewPeer(t, port2)
-	defer peer2.Close()
+	defer func() {
+		require.NoError(t, dist.Close())
+		require.NoError(t, peer2.Close())
+	}()
 
+	infinityRunner := &infinityRunner{}
+	mightErrored := &dataRunner{ep.NewDataset(ep.Null.Data(1)), port2}
 	runner := ep.Pipeline(
 		infinityRunner,
-		ep.Project(ep.Scatter(), NewErrRunner(err)),
+		ep.Scatter(),
+		ep.Project(ep.Broadcast(), ep.Pipeline(&nodeAddr{}, mightErrored)),
+		ep.Gather(),
 	)
 	runner = dist.Distribute(runner, port, port2)
 
 	data := ep.NewDataset(ep.Null.Data(1))
-	data, err = eptest.Run(runner, data, data, data, data)
+	data, err := eptest.Run(runner, data, data, data, data)
 
-	require.Equal(t, 0, data.Width())
 	require.Error(t, err)
-	require.Equal(t, "something bad happened", err.Error())
+	require.Equal(t, "error " + port2, err.Error())
 	require.Equal(t, false, infinityRunner.IsRunning(), "Infinity go-routine leak")
 }
 
