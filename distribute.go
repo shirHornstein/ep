@@ -321,8 +321,11 @@ func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) error {
 		close(respErrs)
 	}()
 
-	// wait for respErrs channel, and select first meaningful error
 	var finalError error
+	if len(errs) > 0 {
+		finalError = errs[0]
+	}
+	// wait for respErrs channel anyway, and select first meaningful error
 	for e := range respErrs {
 		if finalError == nil && e != errProjectState {
 			finalError = e

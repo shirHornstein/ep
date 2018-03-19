@@ -117,7 +117,7 @@ func TestProject_errorWithExchange(t *testing.T) {
 	data, err := eptest.Run(runner, data, data, data, data)
 
 	require.Error(t, err)
-	require.Equal(t, "error " + port2, err.Error())
+	require.Equal(t, "error "+port2, err.Error())
 	require.Equal(t, false, infinityRunner.IsRunning(), "Infinity go-routine leak")
 }
 
