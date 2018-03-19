@@ -10,7 +10,7 @@ var errMismatch = fmt.Errorf("mismatched number of rows")
 
 // Dataset is a composite Data interface, containing several internal Data
 // objects. It's a Data in itself, but allows traversing and manipulating the
-// contained Data intstances
+// contained Data instances
 type Dataset interface {
 	Data // It's a Data - you can use it anywhere you'd use a Data object
 
