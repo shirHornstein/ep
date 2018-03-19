@@ -69,8 +69,10 @@ type RunnerPlan interface {
 	Plan(ctx context.Context, arg interface{}) (Runner, error)
 }
 
-// PassThrough returns a new runner that lets all of its input through as-is
-func PassThrough() Runner { return &passthrough{} }
+// PassThrough returns a runner that lets all of its input through as-is
+func PassThrough() Runner { return passThroughSingleton }
+
+var passThroughSingleton = &passthrough{}
 
 type passthrough struct{}
 

@@ -9,9 +9,9 @@ var _ = Types.Register("NULL", Null)
 type nullType struct{}
 
 func (t *nullType) String() string     { return t.Name() }
+func (*nullType) Name() string         { return "NULL" }
 func (*nullType) Data(n int) Data      { return nulls(n) }
 func (*nullType) DataEmpty(n int) Data { return nulls(n) }
-func (*nullType) Name() string         { return "NULL" }
 func (*nullType) Is(t Type) bool {
 	return t.Name() == "NULL"
 }

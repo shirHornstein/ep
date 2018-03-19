@@ -7,10 +7,10 @@ import (
 // Data is an abstract interface representing a set of typed values. Implement
 // it for each type of data that you need to support
 type Data interface {
-	sort.Interface // data is sortable
-
 	// Type returns the data type of the contained values
 	Type() Type
+
+	sort.Interface // data is sortable
 
 	// Slice returns a new data object containing only the values from the start
 	// to end indices
