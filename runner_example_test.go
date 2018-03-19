@@ -58,8 +58,8 @@ func ExampleRunner() {
 	// [[HELLO WORLD]] <nil>
 }
 
-func ExampleRunnerFilterable_Filter() {
-	runner := Project(&question{}, &upper{}, &question{}).(RunnerFilterable)
+func ExampleFilterRunner_Filter() {
+	runner := Project(&question{}, &upper{}, &question{}).(FilterRunner)
 	err := runner.Filter([]bool{false, true, false})
 	fmt.Println(err)
 

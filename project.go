@@ -44,7 +44,7 @@ func (rs project) Filter(keep []bool) error {
 				rs[i] = DummyRunner()
 			}
 		} else {
-			if r, isFilterable := r.(RunnerFilterable); isFilterable {
+			if r, isFilterable := r.(FilterRunner); isFilterable {
 				r.Filter(keep[currIdx : currIdx+returnLen])
 			} else {
 				fmt.Printf("WARN: can't filter multiple results runner %T", r)

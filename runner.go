@@ -69,10 +69,10 @@ type RunnerPlan interface {
 	Plan(ctx context.Context, arg interface{}) (Runner, error)
 }
 
-// RunnerFilterable is a Runner that also exposes the ability to choose which
+// FilterRunner is a Runner that also exposes the ability to choose which
 // results to return, and which are irrelevant and can be replaced with dummy
 // placeholder
-type RunnerFilterable interface {
+type FilterRunner interface {
 	Runner // it's a Runner
 
 	// Filter modifies internal Runner to return only the columns that their

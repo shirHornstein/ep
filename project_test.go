@@ -172,7 +172,7 @@ func TestProject_errorMismatchRows(t *testing.T) {
 func TestProject_Filter(t *testing.T) {
 	q1 := &question{}
 	q2 := &question{}
-	runner := Project(q1, &upper{}, q2).(RunnerFilterable)
+	runner := Project(q1, &upper{}, q2).(FilterRunner)
 	runner.Filter([]bool{false, true, true})
 	data := NewDataset(strs([]string{"hello", "world"}))
 
@@ -189,7 +189,7 @@ func TestProject_Filter(t *testing.T) {
 func TestProject_Filter_all(t *testing.T) {
 	q1 := &question{}
 	q2 := &question{}
-	runner := Project(q1, &upper{}, q2).(RunnerFilterable)
+	runner := Project(q1, &upper{}, q2).(FilterRunner)
 	runner.Filter([]bool{false, false, false})
 	data := NewDataset(strs([]string{"hello", "world"}))
 
@@ -208,8 +208,8 @@ func TestProject_Filter_nestedWithInternalPartial(t *testing.T) {
 	q2 := &question{}
 	q3 := &question{}
 	q4 := &question{}
-	internalProject := Project(q2, &upper{}, q3).(RunnerFilterable)
-	runner := Project(q1, internalProject, q4).(RunnerFilterable)
+	internalProject := Project(q2, &upper{}, q3).(FilterRunner)
+	runner := Project(q1, internalProject, q4).(FilterRunner)
 	runner.Filter([]bool{false, false, true, true, false})
 	data := NewDataset(strs([]string{"hello", "world"}))
 
@@ -228,8 +228,8 @@ func TestProject_Filter_nestedWithInternalPartial(t *testing.T) {
 func TestProject_Filter_nestedWithInternalAll(t *testing.T) {
 	q1 := &question{}
 	q2 := &question{}
-	internalProject := Project(q1, &upper{}).(RunnerFilterable)
-	runner := Project(internalProject, q2).(RunnerFilterable)
+	internalProject := Project(q1, &upper{}).(FilterRunner)
+	runner := Project(internalProject, q2).(FilterRunner)
 	runner.Filter([]bool{false, false, false})
 	data := NewDataset(strs([]string{"hello", "world"}))
 
