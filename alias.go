@@ -35,7 +35,7 @@ func (a *alias) Filter(keep []bool) {
 		f.Filter(keep)
 	} else {
 		// TODO remove: temporary print for detecting non filterable runners
-		fmt.Printf("WARN: can't filter alias: %T", a.Runner)
+		fmt.Printf("WARN: can't filter alias: %T\n", a.Runner)
 	}
 }
 
@@ -86,7 +86,7 @@ func (s *scope) Filter(keep []bool) {
 		f.Filter(keep)
 	} else {
 		// TODO remove: temporary print for detecting non filterable runners
-		fmt.Printf("WARN: can't filter scope: %T", s.Runner)
+		fmt.Printf("WARN: can't filter scope: %T\n", s.Runner)
 	}
 }
 

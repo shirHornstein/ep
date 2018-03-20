@@ -143,6 +143,6 @@ func (rs pipeline) Filter(keep []bool) {
 		f.Filter(keep)
 	} else {
 		// TODO remove: temporary print for detecting non filterable runners
-		fmt.Printf("WARN: can't filter last runner in pipe: %T", last)
+		fmt.Printf("WARN: can't filter last runner in pipe: %T\n", last)
 	}
 }
