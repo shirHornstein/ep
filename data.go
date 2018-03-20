@@ -25,6 +25,16 @@ type Data interface {
 	// Len() * t rows
 	Duplicate(t int) Data
 
+	// IsNull checks if the given index contains null
+	IsNull(i int) bool
+
+	// MarkNull sets the value in the given index to null
+	MarkNull(i int)
+
+	// Equal checks if another data object refer to same underlying data
+	// as this one (shallow comparison)
+	Equal(Data) bool
+
 	// Strings returns the string representation of all of the Data values
 	Strings() []string
 }

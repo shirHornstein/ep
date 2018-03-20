@@ -37,13 +37,32 @@ func VerifyDataInterfaceInvariant(t *testing.T, data ep.Data) {
 	require.Equal(t, oldLen, data.Len())
 	require.Equal(t, dataString, fmt.Sprintf("%+v", data))
 
-	// allow types to not implement Strings() with a proper error message
-	defer func() {
-		if r := recover(); r != nil {
-			require.Contains(t, r.(string), "cannot be cast to strings")
-		}
-	}()
+	if _, isDataset := data.(ep.Dataset); !isDataset {
+		data.IsNull(0)
+		require.Equal(t, oldLen, data.Len())
+		require.Equal(t, dataString, fmt.Sprintf("%+v", data))
+
+		isEqual := data.Equal(data)
+		require.True(t, isEqual)
+		require.Equal(t, oldLen, data.Len())
+		require.Equal(t, dataString, fmt.Sprintf("%+v", data))
+		isEqual = data.Equal(nil)
+		require.False(t, isEqual)
+		require.Equal(t, oldLen, data.Len())
+		require.Equal(t, dataString, fmt.Sprintf("%+v", data))
+	}
+
 	data.Strings()
 	require.Equal(t, oldLen, data.Len())
 	require.Equal(t, dataString, fmt.Sprintf("%+v", data))
+}
+
+// VerifyDataMarkNull makes sure null marking updates the input data
+func VerifyDataMarkNull(t *testing.T, data ep.Data) {
+	if _, isDataset := data.(ep.Dataset); !isDataset {
+		idx := 1
+		require.False(t, data.IsNull(idx))
+		data.MarkNull(idx)
+		require.True(t, data.IsNull(idx))
+	}
 }

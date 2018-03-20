@@ -8,6 +8,13 @@ import (
 var _ = registerGob(NewDataset(), &datasetType{})
 var errMismatch = fmt.Errorf("mismatched number of rows")
 
+type datasetType struct{}
+
+func (sett *datasetType) Name() string         { return "Dataset" }
+func (sett *datasetType) String() string       { return sett.Name() }
+func (sett *datasetType) Data(n int) Data      { return make(dataset, n) }
+func (sett *datasetType) DataEmpty(n int) Data { return make(dataset, 0, n) }
+
 // Dataset is a composite Data interface, containing several internal Data
 // objects. It's a Data in itself, but allows traversing and manipulating the
 // contained Data instances
@@ -122,21 +129,21 @@ func (set dataset) Slice(start, end int) Data {
 }
 
 // Append a data (assumed by interface spec to be a Dataset)
-func (set dataset) Append(data Data) Data {
-	other := data.(dataset)
+func (set dataset) Append(other Data) Data {
+	data := other.(dataset)
 	if set == nil {
-		return other
-	} else if other == nil {
+		return data
+	} else if data == nil {
 		return set
 	}
 
-	if len(set) != len(other) {
+	if len(set) != len(data) {
 		panic("Unable to append mismatching number of columns")
 	}
 
 	res := make(dataset, set.Width())
 	for i := range set {
-		res[i] = set[i].Append(other[i])
+		res[i] = set[i].Append(data[i])
 	}
 	return res
 }
@@ -154,6 +161,21 @@ func (set dataset) Duplicate(t int) Data {
 	return res
 }
 
+// see Data.IsNull
+func (set dataset) IsNull(i int) bool {
+	panic("runtime error: not nullable")
+}
+
+// see Data.MarkNull
+func (set dataset) MarkNull(i int) {
+	panic("runtime error: not nullable")
+}
+
+// see Data.Equal
+func (set dataset) Equal(other Data) bool {
+	panic("runtime error: not comparable")
+}
+
 // see Data.Strings
 func (set dataset) Strings() []string {
 	var res []string
@@ -162,10 +184,3 @@ func (set dataset) Strings() []string {
 	}
 	return res
 }
-
-type datasetType struct{}
-
-func (sett *datasetType) Name() string         { return "Dataset" }
-func (sett *datasetType) String() string       { return sett.Name() }
-func (sett *datasetType) Data(n int) Data      { return make(dataset, n) }
-func (sett *datasetType) DataEmpty(n int) Data { return make(dataset, 0, n) }
