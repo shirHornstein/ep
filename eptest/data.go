@@ -3,11 +3,12 @@ package eptest
 import (
 	"fmt"
 	"github.com/panoplyio/ep"
-	"github.com/panoplyio/epsilon/types/typestest"
 	"github.com/stretchr/testify/require"
 	"reflect"
 	"testing"
 )
+
+const DataLength = 10
 
 // VerifyDataInterfaceInvariant makes sure all functions (except Swap())
 // does not modify input data, but creating a modified copy when needed
@@ -65,7 +66,7 @@ func VerifyNullHandling(t *testing.T, data ep.Data) {
 	expectedLen := data.Len()
 	expectedType := data.Type()
 	expectedAppendData := data.Type().Data(2)
-	expectedDuplicateData := data.Type().Data(5 * typestest.BaseDataLength)
+	expectedDuplicateData := data.Type().Data(5 * DataLength)
 
 	//mark Null
 	isNull := data.IsNull(idx)
