@@ -3,10 +3,10 @@ package eptest
 import (
 	"fmt"
 	"github.com/panoplyio/ep"
-	"github.com/stretchr/testify/require"
-	"testing"
-	"reflect"
 	"github.com/panoplyio/epsilon/types/typestest"
+	"github.com/stretchr/testify/require"
+	"reflect"
+	"testing"
 )
 
 // VerifyDataInterfaceInvariant makes sure all functions (except Swap())
