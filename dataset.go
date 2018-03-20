@@ -121,21 +121,21 @@ func (set dataset) Slice(start, end int) Data {
 }
 
 // Append a data (assumed by interface spec to be a Dataset)
-func (set dataset) Append(data Data) Data {
-	other := data.(dataset)
+func (set dataset) Append(other Data) Data {
+	data := other.(dataset)
 	if set == nil {
-		return other
-	} else if other == nil {
+		return data
+	} else if data == nil {
 		return set
 	}
 
-	if len(set) != len(other) {
+	if len(set) != len(data) {
 		panic("Unable to append mismatching number of columns")
 	}
 
 	res := make(dataset, set.Width())
 	for i := range set {
-		res[i] = set[i].Append(other[i])
+		res[i] = set[i].Append(data[i])
 	}
 	return res
 }
@@ -164,7 +164,7 @@ func (set dataset) MarkNull(i int) {
 }
 
 // see Data.Equal
-func (set dataset) Equal(data Data) bool {
+func (set dataset) Equal(other Data) bool {
 	panic("runtime error: not comparable")
 }
 
