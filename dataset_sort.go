@@ -33,7 +33,6 @@ func newConditionalSortDataset(set dataset, sortingCols []SortingCol) *condition
 	for i, col := range set {
 		unique := true
 		for j := 0; j < i; j++ {
-			// for efficiency - avoid reflection and check address of underlying array
 			if set[i].Equal(set[j]) {
 				unique = false
 			}
