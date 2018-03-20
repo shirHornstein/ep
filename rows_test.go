@@ -1,17 +1,18 @@
-package ep
+package ep_test
 
 import (
 	"context"
 	"database/sql/driver"
+	"github.com/panoplyio/ep"
 	"github.com/stretchr/testify/require"
 	"io"
 	"testing"
 )
 
 func TestRows(t *testing.T) {
-	data := NewDataset(strs([]string{"hello", "world"}))
-	runner := Pipeline(&dataRunner{Dataset: data}, &upper{})
-	rows := Rows(context.Background(), runner).(driver.Rows)
+	data := ep.NewDataset(strs([]string{"hello", "world"}))
+	runner := ep.Pipeline(&dataRunner{Dataset: data}, &upper{})
+	rows := ep.Rows(context.Background(), runner).(driver.Rows)
 	cols := rows.Columns()
 	require.Equal(t, 1, len(cols))
 	require.Equal(t, "upper", cols[0])

@@ -1,8 +1,9 @@
-package ep
+package ep_test
 
 import (
-	"context"
 	"fmt"
+	"github.com/panoplyio/ep"
+	"github.com/panoplyio/ep/eptest"
 	"github.com/stretchr/testify/require"
 	"net"
 	"strings"
@@ -15,18 +16,18 @@ import (
 // Pipelining into a Gather runner would recollected the scattered outputs
 func ExampleScatter() {
 	ln1, _ := net.Listen("tcp", ":5551")
-	dist1 := NewDistributer(":5551", ln1)
+	dist1 := ep.NewDistributer(":5551", ln1)
 	defer dist1.Close()
 
 	ln2, _ := net.Listen("tcp", ":5552")
-	dist2 := NewDistributer(":5552", ln2)
+	dist2 := ep.NewDistributer(":5552", ln2)
 	defer dist2.Close()
 
-	runner := dist1.Distribute(Scatter(), ":5551", ":5552")
+	runner := dist1.Distribute(ep.Scatter(), ":5551", ":5552")
 
-	data1 := NewDataset(strs{"hello", "world"})
-	data2 := NewDataset(strs{"foo", "bar"})
-	data, err := TestRunner(runner, data1, data2)
+	data1 := ep.NewDataset(strs{"hello", "world"})
+	data2 := ep.NewDataset(strs{"foo", "bar"})
+	data, err := eptest.Run(runner, data1, data2)
 	fmt.Println(data.Strings(), err) // no gather - only one batch should return
 
 	// Output:
@@ -35,33 +36,33 @@ func ExampleScatter() {
 
 func TestExchange_dialingError(t *testing.T) {
 	port1 := ":5551"
-	dist1 := mockPeer(t, port1)
+	dist1 := eptest.NewPeer(t, port1)
 
 	port2 := ":5552"
-	peer2 := mockErrorPeer(t, port2)
+	peer2 := eptest.NewDialingErrorPeer(t, port2)
 
 	port3 := ":5553"
-	peer3 := mockPeer(t, port3)
+	peer3 := eptest.NewPeer(t, port3)
 	defer func() {
 		require.NoError(t, dist1.Close())
 		require.NoError(t, peer2.Close())
 		require.NoError(t, peer3.Close())
 	}()
 
-	runner := dist1.Distribute(Scatter(), port1, port2, port3)
+	runner := dist1.Distribute(ep.Scatter(), port1, port2, port3)
 
-	data1 := NewDataset(strs{"hello", "world"})
-	data2 := NewDataset(strs{"foo", "bar"})
-	data, err := TestRunner(runner, data1, data2)
+	data1 := ep.NewDataset(strs{"hello", "world"})
+	data2 := ep.NewDataset(strs{"foo", "bar"})
+	data, err := eptest.Run(runner, data1, data2)
 
 	require.Error(t, err)
 
 	possibleErrors := []string{
-		// when interacting with peers after peers failure
+		// when interacting with peers after their failure
 		"write tcp",
 		"read tcp",
 
-		"bad connection",                        // reported by 5552, when dialing to :5553
+		"bad connection from port :5552",        // reported by 5552, when dialing to :5553
 		"ep: connect timeout; no incoming conn", // reported by 5553, when waiting to :5552
 	}
 	errMsg := err.Error()
@@ -77,121 +78,40 @@ func TestExchange_dialingError(t *testing.T) {
 // be short-circuited to act as a pass-through
 func TestScatter_singleNode(t *testing.T) {
 	port := ":5551"
-	dist := mockPeer(t, port)
+	dist := eptest.NewPeer(t, port)
 	defer func() {
 		require.NoError(t, dist.Close())
 	}()
 
-	runner := dist.Distribute(Scatter(), port)
+	runner := dist.Distribute(ep.Scatter(), port)
 
-	data1 := NewDataset(strs{"hello", "world"})
-	data2 := NewDataset(strs{"foo", "bar"})
-	data, err := TestRunner(runner, data1, data2)
+	data1 := ep.NewDataset(strs{"hello", "world"})
+	data2 := ep.NewDataset(strs{"foo", "bar"})
+	data, err := eptest.Run(runner, data1, data2)
 	require.NoError(t, err)
 	require.Equal(t, 1, data.Width())
 	require.Equal(t, 4, data.Len())
 }
 
-// Tests the scattering when there's just one node - the whole thing should
-// be short-circuited to act as a pass-through
-func TestExchangeInit_closeConnectionUponError(t *testing.T) {
-	port := ":5551"
-	dist := mockPeer(t, port)
-
-	port2 := ":5552"
-	peer := mockErrorPeer(t, port2)
-	defer func() {
-		require.NoError(t, dist.Close())
-		require.NoError(t, peer.Close())
-	}()
-
-	ctx := context.WithValue(context.Background(), distributerKey, dist)
-	ctx = context.WithValue(ctx, allNodesKey, []string{port, port2, ":5553"})
-	ctx = context.WithValue(ctx, masterNodeKey, port)
-	ctx = context.WithValue(ctx, thisNodeKey, port)
-
-	exchange := Scatter().(*exchange)
-	err := exchange.Init(ctx)
-
-	require.Error(t, err)
-	require.Equal(t, 2, len(exchange.conns))
-	require.IsType(t, &shortCircuit{}, exchange.conns[0])
-	require.True(t, (exchange.conns[0]).(*shortCircuit).closed, "open connections leak")
-}
-
 func TestScatter_and_Gather(t *testing.T) {
 	port1 := ":5551"
-	dist := mockPeer(t, port1)
+	dist := eptest.NewPeer(t, port1)
 
 	port2 := ":5552"
-	peer := mockPeer(t, port2)
+	peer := eptest.NewPeer(t, port2)
 	defer func() {
 		require.NoError(t, dist.Close())
 		require.NoError(t, peer.Close())
 	}()
 
-	runner := Pipeline(Scatter(), &nodeAddr{}, Gather())
+	runner := ep.Pipeline(ep.Scatter(), &nodeAddr{}, ep.Gather())
 	runner = dist.Distribute(runner, port1, port2)
 
-	data1 := NewDataset(strs{"hello", "world"})
-	data2 := NewDataset(strs{"foo", "bar"})
-	data, err := TestRunner(runner, data1, data2)
+	data1 := ep.NewDataset(strs{"hello", "world"})
+	data2 := ep.NewDataset(strs{"foo", "bar"})
+	data, err := eptest.Run(runner, data1, data2)
 
 	require.NoError(t, err)
+	require.NotNil(t, data)
 	require.Equal(t, "[[hello world foo bar] [:5552 :5552 :5551 :5551]]", fmt.Sprintf("%v", data))
-}
-
-// UID should be unique per generated exchange function
-func TestExchange_unique(t *testing.T) {
-	s1 := Scatter().(*exchange)
-	s2 := Scatter().(*exchange)
-	s3 := Gather().(*exchange)
-	require.NotEqual(t, s1.UID, s2.UID)
-	require.NotEqual(t, s2.UID, s3.UID)
-}
-
-var _ = registerGob(&nodeAddr{})
-
-type nodeAddr struct{}
-
-func (*nodeAddr) Returns() []Type { return []Type{Wildcard, str} }
-func (*nodeAddr) Run(ctx context.Context, inp, out chan Dataset) error {
-	addr := ctx.Value(thisNodeKey).(string)
-	for data := range inp {
-		res := make(strs, data.Len())
-		for i := range res {
-			res[i] = addr
-		}
-
-		outset := []Data{}
-		for i := 0; i < data.Width(); i++ {
-			outset = append(outset, data.At(i))
-		}
-
-		outset = append(outset, res)
-		out <- NewDataset(outset...)
-	}
-	return nil
-}
-
-func mockPeer(t *testing.T, port string) Distributer {
-	ln, err := net.Listen("tcp", port)
-	require.NoError(t, err)
-	return NewDistributer(port, ln)
-}
-
-func mockErrorPeer(t *testing.T, port string) Distributer {
-	ln, err := net.Listen("tcp", port)
-	require.NoError(t, err)
-	dialer := &errDialer{ln, fmt.Errorf("bad connection")}
-	return NewDistributer(port, dialer)
-}
-
-type errDialer struct {
-	net.Listener
-	Err error
-}
-
-func (e *errDialer) Dial(net, addr string) (net.Conn, error) {
-	return nil, e.Err
 }

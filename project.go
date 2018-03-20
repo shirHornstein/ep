@@ -69,7 +69,7 @@ func (rs project) Run(origCtx context.Context, inp, out chan Dataset) (err error
 		wg.Wait()
 		// choose first error out from all errors, that isn't project internal error
 		for _, errI := range errs {
-			if errI != nil && errI != errProjectState {
+			if errI != nil && errI.Error() != errProjectState.Error() {
 				err = errI
 				break
 			}
