@@ -1,9 +1,11 @@
-package ep
+package ep_test
 
 import (
+	"github.com/panoplyio/ep"
+	"github.com/panoplyio/ep/eptest"
 	"testing"
 )
 
 func TestNullsInvariant(t *testing.T) {
-	VerifyDataInvariant(t, Null.Data(10))
+	eptest.VerifyDataInterfaceInvariant(t, ep.Null.Data(10))
 }

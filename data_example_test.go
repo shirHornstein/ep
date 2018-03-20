@@ -1,29 +1,30 @@
-package ep
+package ep_test
 
 import (
 	"fmt"
+	"github.com/panoplyio/ep"
 	"sort"
 )
 
+var _ = ep.Types.Register("string", str)
 var str = &strType{}
-var _ = Types.Register("string", str)
 
 type strType struct{}
 
-func (*strType) Name() string         { return "string" }
-func (s *strType) String() string     { return s.Name() }
-func (*strType) Data(n int) Data      { return make(strs, n) }
-func (*strType) DataEmpty(n int) Data { return make(strs, 0, n) }
+func (s *strType) String() string        { return s.Name() }
+func (*strType) Name() string            { return "string" }
+func (*strType) Data(n int) ep.Data      { return make(strs, n) }
+func (*strType) DataEmpty(n int) ep.Data { return make(strs, 0, n) }
 
 type strs []string
 
-func (strs) Type() Type             { return str }
-func (vs strs) Len() int            { return len(vs) }
-func (vs strs) Less(i, j int) bool  { return vs[i] < vs[j] }
-func (vs strs) Swap(i, j int)       { vs[i], vs[j] = vs[j], vs[i] }
-func (vs strs) Slice(s, e int) Data { return vs[s:e] }
-func (vs strs) Append(o Data) Data  { return append(vs, o.(strs)...) }
-func (vs strs) Duplicate(t int) Data {
+func (strs) Type() ep.Type               { return str }
+func (vs strs) Len() int                 { return len(vs) }
+func (vs strs) Less(i, j int) bool       { return vs[i] < vs[j] }
+func (vs strs) Swap(i, j int)            { vs[i], vs[j] = vs[j], vs[i] }
+func (vs strs) Slice(s, e int) ep.Data   { return vs[s:e] }
+func (vs strs) Append(o ep.Data) ep.Data { return append(vs, o.(strs)...) }
+func (vs strs) Duplicate(t int) ep.Data {
 	ans := make(strs, 0, vs.Len()*t)
 	for i := 0; i < t; i++ {
 		ans = append(ans, vs...)
@@ -42,10 +43,10 @@ func (vs strs) Equal(d Data) bool {
 }
 
 func ExampleData() {
-	var strs Data = strs([]string{"hello", "world", "foo", "bar"})
+	var strs ep.Data = strs([]string{"hello", "world", "foo", "bar"})
 	sort.Sort(strs)
 	strs = strs.Slice(0, 2)
-	fmt.Println(strs.Strings()) // [bar foo]
+	fmt.Println(strs.Strings())
 
 	// Output: [bar foo]
 }

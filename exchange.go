@@ -87,16 +87,25 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 		}
 	}()
 
-	defer func() {
-		// wait for all receivers to finish
-		for range errs {
-		}
-	}()
 	// send the local data to the peers, until completion or error. Also listen
 	// for the completion of the received go-routine above. When both sending
 	// and receiving is complete, exit. Upon error, exit early.
 	rcvDone := false
 	sndDone := false
+	defer func() {
+		// in case of cancellation, select below stops without sending EOF message
+		// to all peers. Therefore other peers will not close connections, hence ex.Receive
+		// will be blocked forever. This will lead to deadlock as current exchange waits on
+		// errs channel that will not be closed
+		if !sndDone {
+			eofMsg := &errMsg{io.EOF.Error()}
+			ex.EncodeAll(eofMsg)
+		}
+
+		// wait for all receivers to finish
+		for range errs {
+		}
+	}()
 	for err == nil && (!rcvDone || !sndDone) {
 		select {
 		case data, ok := <-inp:

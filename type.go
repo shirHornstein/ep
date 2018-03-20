@@ -1,5 +1,7 @@
 package ep
 
+import "fmt"
+
 // Wildcard is a pseudo-type used to denote types that are dependent on their
 // input type. For example, a function returning [Wildcard, Int] effectively
 // returns its input followed by an int column. It should never be used in the
@@ -27,8 +29,10 @@ var _ = registerGob(&modifierType{}, Wildcard, Any)
 
 // Type is an interface that represents specific data types
 type Type interface {
+	fmt.Stringer
+
+	// Name returns the name of the type
 	Name() string
-	String() string
 
 	// Data returns a new Data object of this type, containing `n` zero-values
 	Data(n int) Data
