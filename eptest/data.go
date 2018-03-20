@@ -37,7 +37,7 @@ func VerifyDataInterfaceInvariant(t *testing.T, data ep.Data) {
 	require.Equal(t, oldLen, data.Len())
 	require.Equal(t, dataString, fmt.Sprintf("%+v", data))
 
-	if _, isDataset := data.(dataset); !isDataset {
+	if _, isDataset := data.(ep.Dataset); !isDataset {
 		data.IsNull(0)
 		require.Equal(t, oldLen, data.Len())
 		require.Equal(t, dataString, fmt.Sprintf("%+v", data))
@@ -58,8 +58,8 @@ func VerifyDataInterfaceInvariant(t *testing.T, data ep.Data) {
 }
 
 // VerifyDataMarkNull makes sure null marking updates the input data
-func VerifyDataMarkNull(t *testing.T, data Data) {
-	if _, isDataset := data.(dataset); !isDataset {
+func VerifyDataMarkNull(t *testing.T, data ep.Data) {
+	if _, isDataset := data.(ep.Dataset); !isDataset {
 		idx := 1
 		require.False(t, data.IsNull(idx))
 		data.MarkNull(idx)
