@@ -34,7 +34,7 @@ func (vs strs) Duplicate(t int) ep.Data {
 func (vs strs) IsNull(i int) bool { return false }
 func (vs strs) MarkNull(i int)    {}
 func (vs strs) Strings() []string { return vs }
-func (vs strs) Equal(d Data) bool {
+func (vs strs) Equal(d ep.Data) bool {
 	st, ok := d.(strs)
 	if !ok {
 		return false
