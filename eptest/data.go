@@ -4,11 +4,10 @@ import (
 	"fmt"
 	"github.com/panoplyio/ep"
 	"github.com/stretchr/testify/require"
-	"reflect"
 	"testing"
 )
 
-const DataLength = 10
+const dataLength = 10
 
 // VerifyDataInterfaceInvariant makes sure all functions (except Swap())
 // does not modify input data, but creating a modified copy when needed
@@ -61,12 +60,11 @@ func VerifyDataInterfaceInvariant(t *testing.T, data ep.Data) {
 }
 
 // VerifyNullHandling makes sure null marking updates the input data
-func VerifyNullHandling(t *testing.T, data ep.Data) {
+func VerifyNullHandling(t *testing.T, typ ep.Type) {
+	data := typ.Data(dataLength)
 	idx := 1
 	expectedLen := data.Len()
 	expectedType := data.Type()
-	expectedAppendData := data.Type().Data(2)
-	expectedDuplicateData := data.Type().Data(5 * DataLength)
 
 	//mark Null
 	isNull := data.IsNull(idx)
@@ -92,17 +90,17 @@ func VerifyNullHandling(t *testing.T, data ep.Data) {
 	dataType := data.Type()
 	require.Equal(t, expectedType, dataType, "Type() test is incorrect")
 
-	slicedData := data.Slice(0, idx)
-	require.Equal(t, reflect.ValueOf(data).Elem().FieldByName("Values").Slice(0, idx).String(), reflect.ValueOf(slicedData).Elem().FieldByName("Values").String(), "Slice() test: Values are incorrect")
-	require.Equal(t, reflect.ValueOf(data).Elem().FieldByName("NullsIndicators").Slice(0, idx).String(), reflect.ValueOf(slicedData).Elem().FieldByName("NullsIndicators").String(), "Slice() test: NullsIndicators are incorrect")
+	slicedData := data.Slice(0, size/2)
+	require.True(t, slicedData.IsNull(idx), "Slice() test is incorrect")
 
 	appendData := data.Append(data)
-	require.Equal(t, reflect.ValueOf(expectedAppendData).Elem().FieldByName("Values").String(), reflect.ValueOf(appendData).Elem().FieldByName("Values").String(), "Append() test: Values are incorrect")
-	require.Equal(t, reflect.ValueOf(expectedAppendData).Elem().FieldByName("NullsIndicators").String(), reflect.ValueOf(appendData).Elem().FieldByName("NullsIndicators").String(), "Append() test: NullsIndicators are incorrect")
+	require.True(t, appendData.IsNull(idx), "Append() test is incorrect")
+	require.True(t, appendData.IsNull(idx+dataLength), "Append() test is incorrect")
 
-	duplicateData := data.Duplicate(5)
-	require.Equal(t, reflect.ValueOf(expectedDuplicateData).Elem().FieldByName("Values").String(), reflect.ValueOf(duplicateData).Elem().FieldByName("Values").String(), "Duplicate() test: Values are incorrect")
-	require.Equal(t, reflect.ValueOf(expectedDuplicateData).Elem().FieldByName("NullsIndicators").String(), reflect.ValueOf(duplicateData).Elem().FieldByName("NullsIndicators").String(), "Duplicate() test: NullsIndicators are incorrect")
+	duplicateData := data.Duplicate(3)
+	require.True(t, duplicateData.IsNull(idx), "Duplicate() test is incorrect")
+	require.True(t, duplicateData.IsNull(idx+dataLength), "Duplicate() test is incorrect")
+	require.True(t, duplicateData.IsNull(idx+2*dataLength), "Duplicate() test is incorrect")
 
 	s := data.Strings()
 	require.True(t, len(s[idx]) == 0, "Strings() test is incorrect")
