@@ -1,5 +1,7 @@
 package ep
 
+import "fmt"
+
 var _ = registerGob(&alias{})
 var _ = registerGob(&scope{})
 
@@ -25,6 +27,16 @@ func (a *alias) Returns() []Type {
 		return []Type{SetAlias(inpTypes[0], a.Label)}
 	}
 	panic("Invalid usage of alias. Consider use scope")
+}
+
+// Filter implements ep.FilterRunner
+func (a *alias) Filter(keep []bool) {
+	if f, isFilterable := a.Runner.(FilterRunner); isFilterable {
+		f.Filter(keep)
+	} else {
+		// TODO remove: temporary print for detecting non filterable runners
+		fmt.Printf("WARN: can't filter alias: %T", a.Runner)
+	}
 }
 
 // SetAlias sets an alias for the given typed column.
@@ -56,16 +68,26 @@ type scope struct {
 }
 
 // Returns implements ep.Runner
-func (a *scope) Returns() []Type {
-	inpTypes := a.Runner.Returns()
+func (s *scope) Returns() []Type {
+	inpTypes := s.Runner.Returns()
 	outTypes := make([]Type, len(inpTypes))
 	for i, t := range inpTypes {
-		if a.Label != "" {
-			t = Modify(t, "Scope", a.Label)
+		if s.Label != "" {
+			t = Modify(t, "Scope", s.Label)
 		}
 		outTypes[i] = t
 	}
 	return outTypes
+}
+
+// Filter implements ep.FilterRunner
+func (s *scope) Filter(keep []bool) {
+	if f, isFilterable := s.Runner.(FilterRunner); isFilterable {
+		f.Filter(keep)
+	} else {
+		// TODO remove: temporary print for detecting non filterable runners
+		fmt.Printf("WARN: can't filter scope: %T", s.Runner)
+	}
 }
 
 // GetScope returns the scope alias of the given typed column

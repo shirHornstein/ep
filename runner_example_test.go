@@ -18,14 +18,12 @@ func ExampleRunner() {
 
 func ExampleFilterRunner_Filter() {
 	runner := ep.Project(&question{}, &upper{}, &question{}).(ep.FilterRunner)
-	err := runner.Filter([]bool{false, true, false})
-	fmt.Println(err)
+	runner.Filter([]bool{false, true, false})
 
 	data := ep.NewDataset(strs([]string{"hello", "world"}))
-	data, err = eptest.Run(runner, data)
-	fmt.Println(data.Strings(), err)
+	res, err := eptest.Run(runner, data)
+	fmt.Println(res.Strings(), err)
 
 	// Output:
-	// <nil>
 	// [[] [HELLO WORLD] []] <nil>
 }

@@ -78,7 +78,7 @@ type FilterRunner interface {
 	// Filter modifies internal Runner to return only the columns that their
 	// corresponding 'keep' values are true.
 	// length of 'keep' should be same as internal Runner's return types
-	Filter(keep []bool) error
+	Filter(keep []bool)
 }
 
 // PassThrough returns a runner that lets all of its input through as-is

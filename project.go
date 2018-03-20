@@ -34,7 +34,7 @@ func (rs project) Returns() []Type {
 	return types
 }
 
-func (rs project) Filter(keep []bool) error {
+func (rs project) Filter(keep []bool) {
 	currIdx := 0
 	for i, r := range rs {
 		returnLen := len(r.Returns())
@@ -53,7 +53,6 @@ func (rs project) Filter(keep []bool) error {
 		}
 		currIdx += returnLen
 	}
-	return nil
 }
 
 // Run dispatches the same input to all inner runners, then collects and
