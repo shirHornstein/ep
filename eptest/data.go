@@ -66,3 +66,16 @@ func VerifyDataMarkNull(t *testing.T, data ep.Data) {
 		require.True(t, data.IsNull(idx))
 	}
 }
+
+// VerifyStringFuncWithNullData makes sure null marking updates the input data
+// & String() returns empty string for nulls
+func VerifyStringFuncWithNullData(t *testing.T, data ep.Data) {
+	if _, isDataset := data.(ep.Dataset); !isDataset {
+		idx := 1
+		require.False(t, data.IsNull(idx))
+		data.MarkNull(idx)
+		require.True(t, data.IsNull(idx))
+		s := data.Strings()
+		require.True(t, len(s[idx]) == 0)
+	}
+}
