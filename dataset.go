@@ -8,6 +8,13 @@ import (
 var _ = registerGob(NewDataset(), &datasetType{})
 var errMismatch = fmt.Errorf("mismatched number of rows")
 
+type datasetType struct{}
+
+func (sett *datasetType) Name() string         { return "Dataset" }
+func (sett *datasetType) String() string       { return sett.Name() }
+func (sett *datasetType) Data(n int) Data      { return make(dataset, n) }
+func (sett *datasetType) DataEmpty(n int) Data { return make(dataset, 0, n) }
+
 // Dataset is a composite Data interface, containing several internal Data
 // objects. It's a Data in itself, but allows traversing and manipulating the
 // contained Data instances
@@ -169,10 +176,3 @@ func (set dataset) Strings() []string {
 	}
 	return res
 }
-
-type datasetType struct{}
-
-func (sett *datasetType) Name() string         { return "Dataset" }
-func (sett *datasetType) String() string       { return sett.Name() }
-func (sett *datasetType) Data(n int) Data      { return make(dataset, n) }
-func (sett *datasetType) DataEmpty(n int) Data { return make(dataset, 0, n) }
