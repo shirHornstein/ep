@@ -24,4 +24,13 @@ func (nulls) Swap(int, int)            {}
 func (nulls) Slice(i, j int) Data      { return nulls(j - i) }
 func (vs nulls) Append(data Data) Data { return vs + data.(nulls) }
 func (vs nulls) Duplicate(t int) Data  { return vs * nulls(t) }
-func (vs nulls) Strings() []string     { return make([]string, vs) }
+func (vs nulls) IsNull(i int) bool     { return true }
+func (vs nulls) MarkNull(i int)        {}
+func (vs nulls) Equal(data Data) bool {
+	d, ok := data.(nulls)
+	if !ok {
+		return false
+	}
+	return d == vs
+}
+func (vs nulls) Strings() []string { return make([]string, vs) }
