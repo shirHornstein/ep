@@ -64,7 +64,7 @@ func VerifyDataNullsHandling(t *testing.T, typ ep.Type) {
 	data := typ.Data(dataLength)
 	nullIdx := 1
 
-	t.Run("TestData_IsNull_noNulls", func(t *testing.T) {
+	t.Run("TestData_IsNull_withoutNulls", func(t *testing.T) {
 		isNull := data.IsNull(nullIdx)
 		require.False(t, isNull)
 	})
