@@ -16,7 +16,7 @@ func (*nullType) Data(n int) Data {
 	}
 	return nulls(n)
 }
-func (t *nullType) DataEmpty(n int) Data { return t.Data(n) }
+func (t *nullType) DataEmpty(n int) Data { return variadicNulls{-1} }
 func (*nullType) Is(t Type) bool {
 	return t.Name() == "NULL"
 }
@@ -43,5 +43,6 @@ func (vs nulls) Strings() []string { return make([]string, vs) }
 // variadicNulls inherits nulls to allow nulls with flexible length
 type variadicNulls struct{ nulls }
 
-func (variadicNulls) Len() int          { return -1 }
-func (variadicNulls) Strings() []string { return []string{} }
+func (variadicNulls) Len() int                 { return -1 }
+func (vs variadicNulls) Append(data Data) Data { return vs }
+func (variadicNulls) Strings() []string        { return []string{} }
