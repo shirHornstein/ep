@@ -7,8 +7,6 @@ import (
 	"testing"
 )
 
-const dataLength = 10
-
 // VerifyDataInterfaceInvariant makes sure all functions (except Swap())
 // does not modify input data, but creating a modified copy when needed
 func VerifyDataInterfaceInvariant(t *testing.T, data ep.Data) {
@@ -60,9 +58,10 @@ func VerifyDataInterfaceInvariant(t *testing.T, data ep.Data) {
 }
 
 // VerifyDataNullsHandling makes sure all functions handle nulls
-func VerifyDataNullsHandling(t *testing.T, typ ep.Type) {
-	data := typ.Data(dataLength)
+func VerifyDataNullsHandling(t *testing.T, data ep.Data) {
 	nullIdx := 1
+	dataLength := data.Len()
+	typ := data.Type()
 
 	t.Run("TestData_IsNull_withoutNulls", func(t *testing.T) {
 		isNull := data.IsNull(nullIdx)
