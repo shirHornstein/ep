@@ -122,12 +122,13 @@ func (r *rows) Next(dest []driver.Value) error {
 	return r.Next(dest)
 }
 
-// see driver.ColumnTypeDatabaseTypeName(index int)
+// see driver.ColumnTypeDatabaseTypeName
 func (r *rows) ColumnTypeDatabaseTypeName(index int) string {
 	types := r.Returns()
 	return strings.ToUpper(types[index].Name())
 }
 
+// see driver.RowsColumnTypeNullable
 func (r *rows) ColumnTypeNullable(index int) (nullable, ok bool) {
 	return true, true
 }
