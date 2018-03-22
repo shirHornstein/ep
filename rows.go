@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql/driver"
 	"io"
+	"strings"
 )
 
 // Rows creates a new Runner that also implements driver.Rows, useful for cases
@@ -121,7 +122,12 @@ func (r *rows) Next(dest []driver.Value) error {
 	return r.Next(dest)
 }
 
-// see driver.ColumnTypeNullable(index int)
+// see driver.ColumnTypeDatabaseTypeName(index int)
+func (r *rows) ColumnTypeDatabaseTypeName(index int) string {
+	types := r.Returns()
+	return strings.ToUpper(types[index].Name())
+}
+
 func (r *rows) ColumnTypeNullable(index int) (nullable, ok bool) {
 	return true, true
 }
