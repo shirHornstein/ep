@@ -1,7 +1,5 @@
 package ep
 
-import "fmt"
-
 var _ = registerGob(&alias{})
 var _ = registerGob(&scope{})
 
@@ -33,9 +31,6 @@ func (a *alias) Returns() []Type {
 func (a *alias) Filter(keep []bool) {
 	if f, isFilterable := a.Runner.(FilterRunner); isFilterable {
 		f.Filter(keep)
-	} else {
-		// TODO remove: temporary print for detecting non filterable runners
-		fmt.Printf("WARN: can't filter alias: %T\n", a.Runner)
 	}
 }
 
@@ -84,9 +79,6 @@ func (s *scope) Returns() []Type {
 func (s *scope) Filter(keep []bool) {
 	if f, isFilterable := s.Runner.(FilterRunner); isFilterable {
 		f.Filter(keep)
-	} else {
-		// TODO remove: temporary print for detecting non filterable runners
-		fmt.Printf("WARN: can't filter scope: %T\n", s.Runner)
 	}
 }
 

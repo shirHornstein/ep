@@ -2,7 +2,6 @@ package ep
 
 import (
 	"context"
-	"fmt"
 	"sync"
 )
 
@@ -141,8 +140,5 @@ func (rs pipeline) Filter(keep []bool) {
 	}
 	if f, isFilterable := last.(FilterRunner); isFilterable {
 		f.Filter(keep)
-	} else {
-		// TODO remove: temporary print for detecting non filterable runners
-		fmt.Printf("WARN: can't filter last runner in pipe: %T\n", last)
 	}
 }
