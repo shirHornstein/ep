@@ -170,6 +170,80 @@ func TestProject_errorMismatchRows(t *testing.T) {
 	require.Equal(t, "mismatched number of rows", err.Error())
 }
 
+func TestProject_Filter(t *testing.T) {
+	q1 := &question{}
+	q2 := &question{}
+	runner := ep.Project(q1, &upper{}, q2).(ep.FilterRunner)
+	runner.Filter([]bool{false, true, true})
+	data := ep.NewDataset(strs([]string{"hello", "world"}))
+
+	data, err := eptest.Run(runner, data)
+	require.NoError(t, err)
+
+	require.Equal(t, 3, data.Width())
+	require.Equal(t, 2, data.Len())
+	require.False(t, q1.called)
+	require.True(t, q2.called)
+	require.Equal(t, "[[] [HELLO WORLD] [is hello? is world?]]", fmt.Sprintf("%+v", data.Strings()))
+}
+
+func TestProject_Filter_all(t *testing.T) {
+	q1 := &question{}
+	q2 := &question{}
+	runner := ep.Project(q1, &upper{}, q2).(ep.FilterRunner)
+	runner.Filter([]bool{false, false, false})
+	data := ep.NewDataset(strs([]string{"hello", "world"}))
+
+	data, err := eptest.Run(runner, data)
+	require.NoError(t, err)
+
+	require.Equal(t, 3, data.Width())
+	require.Equal(t, -1, data.Len())
+	require.False(t, q1.called)
+	require.False(t, q2.called)
+	require.Equal(t, "[[] [] []]", fmt.Sprintf("%+v", data.Strings()))
+}
+
+func TestProject_Filter_nestedWithInternalPartial(t *testing.T) {
+	q1 := &question{}
+	q2 := &question{}
+	q3 := &question{}
+	q4 := &question{}
+	internalProject := ep.Project(q2, &upper{}, q3).(ep.FilterRunner)
+	runner := ep.Project(q1, internalProject, q4).(ep.FilterRunner)
+	runner.Filter([]bool{false, false, true, true, false})
+	data := ep.NewDataset(strs([]string{"hello", "world"}))
+
+	data, err := eptest.Run(runner, data)
+	require.NoError(t, err)
+
+	require.Equal(t, 5, data.Width())
+	require.Equal(t, 2, data.Len())
+	require.False(t, q1.called)
+	require.False(t, q2.called)
+	require.True(t, q3.called)
+	require.False(t, q4.called)
+	require.Equal(t, "[[] [] [HELLO WORLD] [is hello? is world?] []]", fmt.Sprintf("%+v", data.Strings()))
+}
+
+func TestProject_Filter_nestedWithInternalAll(t *testing.T) {
+	q1 := &question{}
+	q2 := &question{}
+	internalProject := ep.Project(q1, &upper{}).(ep.FilterRunner)
+	runner := ep.Project(internalProject, q2).(ep.FilterRunner)
+	runner.Filter([]bool{false, false, false})
+	data := ep.NewDataset(strs([]string{"hello", "world"}))
+
+	data, err := eptest.Run(runner, data)
+	require.NoError(t, err)
+
+	require.Equal(t, 3, data.Width())
+	require.Equal(t, -1, data.Len())
+	require.False(t, q1.called)
+	require.False(t, q2.called)
+	require.Equal(t, "[[] [] []]", fmt.Sprintf("%+v", data.Strings()))
+}
+
 type count struct{}
 
 func (*count) Returns() []ep.Type { return []ep.Type{str} }

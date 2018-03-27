@@ -61,7 +61,9 @@ func (set dataset) Expand(other Dataset) (Dataset, error) {
 	} else if other == nil {
 		return set, nil
 	}
-	if set.Len() != other.Len() {
+	// when expanding with variadicNulls - don't force same length
+	isAnyVariadicNulls := set.Len() < 0 || other.Len() < 0
+	if set.Len() != other.Len() && !isAnyVariadicNulls {
 		return nil, errMismatch
 	}
 	otherCols := other.(dataset)
@@ -84,7 +86,13 @@ func (set dataset) Len() int {
 	if set == nil || len(set) == 0 {
 		return 0
 	}
-
+	// return length of first non variadicNulls column
+	for _, col := range set {
+		colLength := col.Len()
+		if colLength >= 0 {
+			return colLength
+		}
+	}
 	return set[0].Len()
 }
 

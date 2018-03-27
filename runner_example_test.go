@@ -15,3 +15,15 @@ func ExampleRunner() {
 	// Output:
 	// [[HELLO WORLD]] <nil>
 }
+
+func ExampleFilterRunner_Filter() {
+	runner := ep.Project(&question{}, &upper{}, &question{}).(ep.FilterRunner)
+	runner.Filter([]bool{false, true, false})
+
+	data := ep.NewDataset(strs([]string{"hello", "world"}))
+	res, err := eptest.Run(runner, data)
+	fmt.Println(res.Strings(), err)
+
+	// Output:
+	// [[] [HELLO WORLD] []] <nil>
+}

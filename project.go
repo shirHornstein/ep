@@ -34,6 +34,24 @@ func (rs project) Returns() []Type {
 	return types
 }
 
+func (rs project) Filter(keep []bool) {
+	currIdx := 0
+	for i, r := range rs {
+		returnLen := len(r.Returns())
+		// simplest (and most common for project) case - r return single value
+		if returnLen == 1 {
+			if !keep[currIdx] {
+				rs[i] = getDummyRunner()
+			}
+		} else {
+			if r, isFilterable := r.(FilterRunner); isFilterable {
+				r.Filter(keep[currIdx : currIdx+returnLen])
+			}
+		}
+		currIdx += returnLen
+	}
+}
+
 // Run dispatches the same input to all inner runners, then collects and
 // joins their results into a single dataset output
 func (rs project) Run(origCtx context.Context, inp, out chan Dataset) (err error) {

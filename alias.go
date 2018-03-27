@@ -27,6 +27,13 @@ func (a *alias) Returns() []Type {
 	panic("Invalid usage of alias. Consider use scope")
 }
 
+// Filter implements ep.FilterRunner
+func (a *alias) Filter(keep []bool) {
+	if f, isFilterable := a.Runner.(FilterRunner); isFilterable {
+		f.Filter(keep)
+	}
+}
+
 // SetAlias sets an alias for the given typed column.
 // Useful for runner that need aliasing each column internally
 func SetAlias(col Type, alias string) Type {
@@ -56,16 +63,23 @@ type scope struct {
 }
 
 // Returns implements ep.Runner
-func (a *scope) Returns() []Type {
-	inpTypes := a.Runner.Returns()
+func (s *scope) Returns() []Type {
+	inpTypes := s.Runner.Returns()
 	outTypes := make([]Type, len(inpTypes))
 	for i, t := range inpTypes {
-		if a.Label != "" {
-			t = Modify(t, "Scope", a.Label)
+		if s.Label != "" {
+			t = Modify(t, "Scope", s.Label)
 		}
 		outTypes[i] = t
 	}
 	return outTypes
+}
+
+// Filter implements ep.FilterRunner
+func (s *scope) Filter(keep []bool) {
+	if f, isFilterable := s.Runner.(FilterRunner); isFilterable {
+		f.Filter(keep)
+	}
 }
 
 // GetScope returns the scope alias of the given typed column

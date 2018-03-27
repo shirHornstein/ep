@@ -4,7 +4,7 @@ import (
 	"context"
 )
 
-var _ = registerGob(&passthrough{}, &pick{})
+var _ = registerGob(&passthrough{}, &pick{}, &dummyRunner{})
 
 // Runner represents objects that can receive a stream of input datasets,
 // manipulate them in some way (filter, mapping, reduction, expansion, etc.) and
@@ -69,6 +69,18 @@ type RunnerPlan interface {
 	Plan(ctx context.Context, arg interface{}) (Runner, error)
 }
 
+// FilterRunner is a Runner that also exposes the ability to choose which
+// results to return, and which are irrelevant and can be replaced with dummy
+// placeholder
+type FilterRunner interface {
+	Runner // it's a Runner
+
+	// Filter modifies internal Runner to return only the columns that their
+	// corresponding 'keep' values are true.
+	// length of 'keep' should be same as internal Runner's return types
+	Filter(keep []bool)
+}
+
 // PassThrough returns a runner that lets all of its input through as-is
 func PassThrough() Runner { return passThroughSingleton }
 
@@ -113,6 +125,23 @@ func (r *pick) Run(_ context.Context, inp, out chan Dataset) error {
 			result = NewDataset(res...)
 		}
 		out <- result
+	}
+	return nil
+}
+
+// getDummyRunner returns a runner that does nothing and just returns a variadic
+// length batch for each input batch
+func getDummyRunner() Runner { return dummyRunnerSingleton }
+
+var dummyRunnerSingleton = &dummyRunner{}
+
+type dummyRunner struct{}
+
+func (*dummyRunner) Args() []Type    { return []Type{Wildcard} }
+func (*dummyRunner) Returns() []Type { return []Type{Null} }
+func (*dummyRunner) Run(_ context.Context, inp, out chan Dataset) error {
+	for range inp {
+		out <- NewDataset(Null.Data(-1))
 	}
 	return nil
 }

@@ -141,10 +141,14 @@ func (*upper) Run(_ context.Context, inp, out chan ep.Dataset) error {
 	return nil
 }
 
-type question struct{}
+type question struct {
+	// called flag helps tests ensure runner was/wasn't called
+	called bool
+}
 
 func (*question) Returns() []ep.Type { return []ep.Type{ep.SetAlias(str, "question")} }
-func (*question) Run(_ context.Context, inp, out chan ep.Dataset) error {
+func (q *question) Run(_ context.Context, inp, out chan ep.Dataset) error {
+	q.called = true
 	for data := range inp {
 		if data.At(0).Type() == ep.Null {
 			out <- data

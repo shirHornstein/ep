@@ -130,3 +130,15 @@ func (rs pipeline) returnsOne(j int) []Type {
 	}
 	return res
 }
+
+func (rs pipeline) Filter(keep []bool) {
+	last := rs[len(rs)-1]
+	// pipeline contains at least 2 runners.
+	// if last is exchange, filter its input (i.e. one runner before last)
+	if _, isExchanger := last.(*exchange); isExchanger {
+		last = rs[len(rs)-2]
+	}
+	if f, isFilterable := last.(FilterRunner); isFilterable {
+		f.Filter(keep)
+	}
+}
