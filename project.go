@@ -41,7 +41,7 @@ func (rs project) Filter(keep []bool) {
 		// simplest (and most common for project) case - r return single value
 		if returnLen == 1 {
 			if !keep[currIdx] {
-				rs[i] = DummyRunner()
+				rs[i] = getDummyRunner()
 			}
 		} else {
 			if r, isFilterable := r.(FilterRunner); isFilterable {
