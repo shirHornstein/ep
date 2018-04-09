@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/gob"
 	"fmt"
-	"github.com/satori/go.uuid"
 	"io"
 	"net"
+
+	"github.com/satori/go.uuid"
+	"stathat.com/c/consistent"
 )
 
 var _ = registerGob(&exchange{}, &req{}, &errMsg{})
@@ -16,6 +18,7 @@ const (
 	sendScatter   = 2
 	sendBroadcast = 3
 	sendPartition = 4
+	sendRoute     = 5
 )
 
 // Scatter returns an exchange Runner that scatters its input uniformly to
@@ -42,16 +45,29 @@ func Broadcast() Runner {
 	return &exchange{UID: uid.String(), SendTo: sendBroadcast}
 }
 
+// Route returns an exchange Runner that routes the data between nodes using
+// consistent hashing algorithm. The first column of an incoming dataset
+// must be a string containing a unique id of that dataset. This id will be
+// used to find an appropriate endpoint for this data, and discarded:
+// the output of this runner will not have this column. The output will not
+// necessarily be in the same order as the input
+func Route() Runner {
+	uid, _ := uuid.NewV4()
+	return &exchange{UID: uid.String(), SendTo: sendRoute}
+}
+
 // exchange is a Runner that exchanges data between peer nodes
 type exchange struct {
 	UID    string
 	SendTo int
 
-	encs     []encoder   // encoders to all destination connections
-	decs     []decoder   // decoders from all source connections
-	conns    []io.Closer // all open connections (used for closing)
-	encsNext int         // Encoders Round Robin next index
-	decsNext int         // Decoders Round Robin next index
+	encs      []encoder              // encoders to all destination connections
+	decs      []decoder              // decoders from all source connections
+	conns     []io.Closer            // all open connections (used for closing)
+	encsNext  int                    // Encoders Round Robin next index
+	decsNext  int                    // Decoders Round Robin next index
+	hashRing  *consistent.Consistent // hash ring for consistent hashing
+	encsByKey map[string]encoder     // encoders mapped by key (node address)
 }
 
 func (ex *exchange) Returns() []Type { return []Type{Wildcard} }
@@ -145,6 +161,8 @@ func (ex *exchange) Send(data Dataset) error {
 		return ex.EncodeNext(data)
 	case sendPartition:
 		return ex.EncodePartition(data)
+	case sendRoute:
+		return ex.EncodeRoute(data)
 	default:
 		return ex.EncodeAll(data)
 	}
@@ -194,6 +212,60 @@ func (ex *exchange) EncodePartition(e interface{}) error {
 	return nil
 }
 
+// EncodeRoute uses consistent hashing algorithm to select a target node
+// to which every row is sent. When a cluster remains in the same state,
+// the same payload will always arrive to the same node. When a cluster is
+// changed, most of the payloads will still reach the same nodes, except for
+// a small number of nodes affected by this change
+func (ex *exchange) EncodeRoute(e interface{}) error {
+	data, ok := e.(Dataset)
+	if !ok {
+		return fmt.Errorf("EncodeRoute called without a dataset")
+	}
+
+	ids := data.At(0).Strings()
+	data = StripHashColumn(data)
+	for i, key := range ids {
+		enc, err := ex.getRouteEncoder(key)
+		if err != nil {
+			return err
+		}
+
+		req := &req{GetRow(data, i)}
+		err = enc.Encode(req)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (ex *exchange) getRouteEncoder(key string) (encoder, error) {
+	endpoint, err := ex.hashRing.Get(key)
+	if err != nil {
+		return nil, fmt.Errorf("cannot find a target node: %s", err)
+	}
+
+	enc, ok := ex.encsByKey[endpoint]
+	if ok {
+		return enc, nil
+	}
+
+	return nil, fmt.Errorf("no matching node found")
+}
+
+// StripHashColumn removes the first column from a dataset
+func StripHashColumn(dataset Dataset) Dataset {
+	_, newDataset := dataset.Split(dataset.Width() - 1)
+	return newDataset
+}
+
+// GetRow returns a single row from a given Dataset
+func GetRow(dataset Dataset, n int) Dataset {
+	return dataset.Slice(n, n+1).(Dataset)
+}
+
 // Decode an object from the next source connection in a round robin
 func (ex *exchange) DecodeNext() (Dataset, error) {
 	if len(ex.decs) == 0 {
@@ -219,6 +291,9 @@ func (ex *exchange) DecodeNext() (Dataset, error) {
 
 // initialize the connections, encoders & decoders
 func (ex *exchange) Init(ctx context.Context) (err error) {
+	ex.hashRing = consistent.New()
+	ex.encsByKey = make(map[string]encoder)
+
 	dist, _ := ctx.Value(distributerKey).(interface {
 		Connect(addr, uid string) (net.Conn, error)
 	})
@@ -246,24 +321,29 @@ func (ex *exchange) Init(ctx context.Context) (err error) {
 		}
 	}()
 	var conn net.Conn
-	for _, n := range targetNodes {
-		if n == thisNode {
+	for _, node := range targetNodes {
+		if node == thisNode {
 			shortCircuit = newShortCircuit()
 			ex.conns = append(ex.conns, shortCircuit)
 			ex.encs = append(ex.encs, shortCircuit)
+			ex.hashRing.Add(node)
+			ex.encsByKey[node] = shortCircuit
 			continue
 		}
 
-		msg := "THIS " + thisNode + " OTHER " + n
+		msg := "THIS " + thisNode + " OTHER " + node
 
-		conn, err = dist.Connect(n, ex.UID)
+		conn, err = dist.Connect(node, ex.UID)
 		if err != nil {
 			return err
 		}
 
-		connsMap[n] = conn
+		connsMap[node] = conn
 		ex.conns = append(ex.conns, conn)
-		ex.encs = append(ex.encs, dbgEncoder{gob.NewEncoder(conn), msg})
+		enc := dbgEncoder{gob.NewEncoder(conn), msg}
+		ex.encs = append(ex.encs, enc)
+		ex.hashRing.Add(node)
+		ex.encsByKey[node] = enc
 	}
 
 	// if we're also a destination, listen to all nodes

@@ -2,12 +2,15 @@ package ep_test
 
 import (
 	"fmt"
-	"github.com/panoplyio/ep"
-	"github.com/panoplyio/ep/eptest"
-	"github.com/stretchr/testify/require"
+	"math/rand"
 	"net"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/panoplyio/ep"
+	"github.com/panoplyio/ep/eptest"
+	"github.com/stretchr/testify/require"
 )
 
 // Example of Scatter with just 2 nodes. The datasets are scattered in
@@ -114,4 +117,61 @@ func TestScatter_and_Gather(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, data)
 	require.Equal(t, "[[hello world foo bar] [:5552 :5552 :5551 :5551]]", fmt.Sprintf("%v", data))
+}
+
+func TestStripHashColumn(t *testing.T) {
+	ids := strs([]string{"id1", "id2", "id3", "id4"})
+	things := strs([]string{"meh", "nya", "shtoot", "foo"})
+
+	data := ep.NewDataset(ids, things)
+	newData := ep.StripHashColumn(data)
+
+	require.Equal(t, 4, newData.Len())
+	require.Equal(t, 1, newData.Width())
+	require.Equal(t, things.Strings(), newData.At(0).Strings())
+}
+
+func TestExchange_GetRow(t *testing.T) {
+	firstColumn := strs([]string{"one", "two", "forty two"})
+	secondColumn := strs([]string{"meh", "shtoot", "", "foo"})
+
+	data := ep.NewDataset(firstColumn, secondColumn)
+	row := ep.GetRow(data, 1)
+
+	require.Equal(t, 1, row.Len())
+	require.Equal(t, 2, row.Width())
+	require.Equal(t, "[[two] [shtoot]]", fmt.Sprintf("%v", row))
+}
+
+func TestRoute_AndGather(t *testing.T) {
+	rand.Seed(time.Now().UTC().UnixNano())
+	maxPort := 7000
+	minPort := 6000
+	randomPort := rand.Intn(maxPort-minPort) + minPort
+
+	port1 := fmt.Sprintf(":%d", randomPort)
+	dist := eptest.NewPeer(t, port1)
+
+	port2 := fmt.Sprintf(":%d", randomPort+1)
+	peer := eptest.NewPeer(t, port2)
+	defer func() {
+		require.NoError(t, dist.Close())
+		require.NoError(t, peer.Close())
+	}()
+
+	runner := ep.Pipeline(ep.Route(), ep.PassThrough(), ep.Gather())
+	runner = dist.Distribute(runner, port1, port2)
+
+	firstColumn := strs{"this", "is", "sparta"}
+	secondColumn := strs{"meh", "shtoot", "nya"}
+
+	data := ep.NewDataset(firstColumn, secondColumn)
+	res, err := eptest.Run(runner, data)
+
+	require.NoError(t, err)
+	require.NotNil(t, res)
+
+	// route->gather does not ensure the same order of entries
+	// first column is discarded
+	require.ElementsMatch(t, secondColumn, res.At(0))
 }
