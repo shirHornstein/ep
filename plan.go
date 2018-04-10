@@ -21,7 +21,7 @@ func Plan(ctx context.Context, k interface{}) (Runner, error) {
 }
 
 // PlanWithArgs is similar to Plan, except that it first filters the runners to
-// only keep Runners that has the args provided.
+// only keep RunnerArgs instances that have the args provided.
 func PlanWithArgs(ctx context.Context, k interface{}, args []Type) (Runner, error) {
 	var err error
 	var rs []Runner
@@ -57,6 +57,8 @@ func PlanWithArgs(ctx context.Context, k interface{}, args []Type) (Runner, erro
 // by convention - lowercase is function names, uppercase is SQL constructs
 type runnersReg map[interface{}][]Runner
 
+// Register a key-runner pair to be globally accessible via the Get() function
+// using the same key.
 func (reg runnersReg) Register(k interface{}, r Runner) runnersReg {
 	registerGob(r)
 	k = registryKey(k)
@@ -64,16 +66,20 @@ func (reg runnersReg) Register(k interface{}, r Runner) runnersReg {
 	return reg
 }
 
+// Get a list of Runners that were previously registered to the provided key
+// via the Register() function.
 func (reg runnersReg) Get(k interface{}) []Runner {
 	return reg[registryKey(k)]
 }
 
+// GetWithArgs is similar to Get() except that it first filters the runners to
+// only keep RunnerArgs instances that have the args provided.
 func (reg runnersReg) GetWithArgs(k interface{}, args []Type) []Runner {
 	rs := reg.Get(k)
 	res := make([]Runner, 0, len(rs))
 	for _, r := range rs {
 		r, ok := r.(RunnerArgs)
-		if ok && !AreEqualTypes(r.Args(), args) {
+		if ok && AreEqualTypes(r.Args(), args) {
 			res = append(rs, r)
 		}
 	}
@@ -83,6 +89,8 @@ func (reg runnersReg) GetWithArgs(k interface{}, args []Type) []Runner {
 // registry of types
 type typesReg map[interface{}][]Type
 
+// Register a key-type pair to be globally accessible via the Get() function
+// using the same key.
 func (reg typesReg) Register(k interface{}, t Type) typesReg {
 	registerGob(t, t.Data(0))
 	k = registryKey(k)
@@ -90,6 +98,8 @@ func (reg typesReg) Register(k interface{}, t Type) typesReg {
 	return reg
 }
 
+// Get a list of Types that were previously registered to the provided key
+// via the Register() function.
 func (reg typesReg) Get(k interface{}) []Type {
 	return reg[registryKey(k)]
 }
