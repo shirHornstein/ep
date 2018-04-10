@@ -27,12 +27,3 @@ func ExampleCut() {
 	// Output:
 	// [[hello] [world foo] [bar]]
 }
-
-func ExamplePartition() {
-	var d ep.Data = strs([]string{"hello", "world", "hello", "bar"})
-	data := ep.Partition(d)
-	fmt.Println(data.Strings())
-
-	// Output:
-	// [[bar] [hello hello] [world]]
-}

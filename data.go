@@ -62,27 +62,3 @@ func Cut(data Data, cutpoints ...int) Data {
 
 	return NewDataset(res...)
 }
-
-// Partition the Data into several sub-segments such that each segment contains
-// the same value, repeated multiple times. Dataset also implements the Data
-// interface is a valid input to this function.
-//
-// NOTE that partitioning will re-order the data to create the minimum number of
-// batches. Thus is does not maintain order
-func Partition(data Data) Data {
-	sort.Sort(data)
-	var last string
-	var cutpoints []int
-	for i, s := range data.Strings() {
-		if i == 0 {
-			last = s
-		}
-
-		if last != s {
-			cutpoints = append(cutpoints, i)
-			last = s
-		}
-	}
-
-	return Cut(data, cutpoints...)
-}
