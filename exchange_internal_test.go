@@ -46,7 +46,7 @@ func TestExchange_unique(t *testing.T) {
 	require.NotEqual(t, s2.UID, s3.UID)
 }
 
-func TestRoute_AddsMembersToHashRing(t *testing.T) {
+func TestPartition_AddsMembersToHashRing(t *testing.T) {
 	port := ":5551"
 	ln, err := net.Listen("tcp", port)
 	require.NoError(t, err)
@@ -74,14 +74,14 @@ func TestRoute_AddsMembersToHashRing(t *testing.T) {
 	ctx = context.WithValue(ctx, masterNodeKey, port)
 	ctx = context.WithValue(ctx, thisNodeKey, port)
 
-	router := Route().(*exchange)
-	router.Init(ctx)
+	partition := Partition().(*exchange)
+	partition.Init(ctx)
 
-	members := router.hashRing.Members()
+	members := partition.hashRing.Members()
 	require.ElementsMatchf(t, members, allNodes, "%s != %s", members, allNodes)
 }
 
-func TestExchange_EncodeRouteFailsWithoutDataset(t *testing.T) {
+func TestExchange_EncodePartitionFailsWithoutDataset(t *testing.T) {
 	port := ":5551"
 	ln, err := net.Listen("tcp", port)
 	require.NoError(t, err)
@@ -108,13 +108,13 @@ func TestExchange_EncodeRouteFailsWithoutDataset(t *testing.T) {
 	ctx = context.WithValue(ctx, masterNodeKey, port)
 	ctx = context.WithValue(ctx, thisNodeKey, port)
 
-	router := Route().(*exchange)
-	router.Init(ctx)
+	partition := Partition().(*exchange)
+	partition.Init(ctx)
 
-	require.Error(t, router.EncodeRoute([]int{42}))
+	require.Error(t, partition.EncodePartition([]int{42}))
 }
 
-func TestExchange_GetRouteEncoderIsConsistent(t *testing.T) {
+func TestExchange_GetPartitionEncoderIsConsistent(t *testing.T) {
 	rand.Seed(time.Now().UTC().UnixNano())
 	maxPort := 7000
 	minPort := 6000
@@ -145,16 +145,16 @@ func TestExchange_GetRouteEncoderIsConsistent(t *testing.T) {
 	ctx = context.WithValue(ctx, masterNodeKey, port)
 	ctx = context.WithValue(ctx, thisNodeKey, port)
 
-	router := Route().(*exchange)
-	router.Init(ctx)
+	partition := Partition().(*exchange)
+	partition.Init(ctx)
 
 	hashKey := fmt.Sprintf("this-is-a-key-%d", rand.Intn(1e12))
-	enc, err := router.getRouteEncoder(hashKey)
+	enc, err := partition.getPartitionEncoder(hashKey)
 	require.NoError(t, err)
 
-	// verify that getRouteEncoder returns the same result over 100 calls
+	// verify that getPartitionEncoder returns the same result over 100 calls
 	for i := 0; i < 100; i++ {
-		nextEncoder, err := router.getRouteEncoder(hashKey)
+		nextEncoder, err := partition.getPartitionEncoder(hashKey)
 		require.NoError(t, err)
 		require.Equal(t, enc, nextEncoder)
 	}

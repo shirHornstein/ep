@@ -143,7 +143,7 @@ func TestExchange_GetRow(t *testing.T) {
 	require.Equal(t, "[[two] [shtoot]]", fmt.Sprintf("%v", row))
 }
 
-func TestRoute_AndGather(t *testing.T) {
+func TestPartition_AndGather(t *testing.T) {
 	rand.Seed(time.Now().UTC().UnixNano())
 	maxPort := 7000
 	minPort := 6000
@@ -159,7 +159,7 @@ func TestRoute_AndGather(t *testing.T) {
 		require.NoError(t, peer.Close())
 	}()
 
-	runner := ep.Pipeline(ep.Route(), ep.PassThrough(), ep.Gather())
+	runner := ep.Pipeline(ep.Partition(), ep.PassThrough(), ep.Gather())
 	runner = dist.Distribute(runner, port1, port2)
 
 	firstColumn := strs{"this", "is", "sparta"}
@@ -171,7 +171,7 @@ func TestRoute_AndGather(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, res)
 
-	// route->gather does not ensure the same order of entries
+	// partition->gather does not ensure the same order of entries
 	// first column is discarded
 	require.ElementsMatch(t, secondColumn, res.At(0))
 }

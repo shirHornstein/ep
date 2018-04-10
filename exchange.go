@@ -18,7 +18,6 @@ const (
 	sendScatter   = 2
 	sendBroadcast = 3
 	sendPartition = 4
-	sendRoute     = 5
 )
 
 // Scatter returns an exchange Runner that scatters its input uniformly to
@@ -45,15 +44,15 @@ func Broadcast() Runner {
 	return &exchange{UID: uid.String(), SendTo: sendBroadcast}
 }
 
-// Route returns an exchange Runner that routes the data between nodes using
+// Partition returns an exchange Runner that routes the data between nodes using
 // consistent hashing algorithm. The first column of an incoming dataset
 // must be a string containing a unique id of that dataset. This id will be
 // used to find an appropriate endpoint for this data, and discarded:
 // the output of this runner will not have this column. The output will not
 // necessarily be in the same order as the input
-func Route() Runner {
+func Partition() Runner {
 	uid, _ := uuid.NewV4()
-	return &exchange{UID: uid.String(), SendTo: sendRoute}
+	return &exchange{UID: uid.String(), SendTo: sendPartition}
 }
 
 // exchange is a Runner that exchanges data between peer nodes
@@ -161,8 +160,6 @@ func (ex *exchange) Send(data Dataset) error {
 		return ex.EncodeNext(data)
 	case sendPartition:
 		return ex.EncodePartition(data)
-	case sendRoute:
-		return ex.EncodeRoute(data)
 	default:
 		return ex.EncodeAll(data)
 	}
@@ -209,24 +206,15 @@ func (ex *exchange) EncodeNext(e interface{}) error {
 
 // Encode an object to a destination connection selected by partitioning
 func (ex *exchange) EncodePartition(e interface{}) error {
-	return nil
-}
-
-// EncodeRoute uses consistent hashing algorithm to select a target node
-// to which every row is sent. When a cluster remains in the same state,
-// the same payload will always arrive to the same node. When a cluster is
-// changed, most of the payloads will still reach the same nodes, except for
-// a small number of nodes affected by this change
-func (ex *exchange) EncodeRoute(e interface{}) error {
 	data, ok := e.(Dataset)
 	if !ok {
-		return fmt.Errorf("EncodeRoute called without a dataset")
+		return fmt.Errorf("EncodePartition called without a dataset")
 	}
 
 	ids := data.At(0).Strings()
 	data = StripHashColumn(data)
 	for i, key := range ids {
-		enc, err := ex.getRouteEncoder(key)
+		enc, err := ex.getPartitionEncoder(key)
 		if err != nil {
 			return err
 		}
@@ -241,7 +229,7 @@ func (ex *exchange) EncodeRoute(e interface{}) error {
 	return nil
 }
 
-func (ex *exchange) getRouteEncoder(key string) (encoder, error) {
+func (ex *exchange) getPartitionEncoder(key string) (encoder, error) {
 	endpoint, err := ex.hashRing.Get(key)
 	if err != nil {
 		return nil, fmt.Errorf("cannot find a target node: %s", err)
