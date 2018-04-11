@@ -306,8 +306,6 @@ func (ex *exchange) Init(ctx context.Context) (err error) {
 			continue
 		}
 
-		msg := "THIS " + thisNode + " OTHER " + node
-
 		conn, err = dist.Connect(node, ex.UID)
 		if err != nil {
 			return err
@@ -315,7 +313,7 @@ func (ex *exchange) Init(ctx context.Context) (err error) {
 
 		connsMap[node] = conn
 		ex.conns = append(ex.conns, conn)
-		enc := dbgEncoder{gob.NewEncoder(conn), msg}
+		enc := gob.NewEncoder(conn)
 		ex.encs = append(ex.encs, enc)
 		ex.hashRing.Add(node)
 		ex.encsByKey[node] = enc
@@ -357,18 +355,6 @@ type encoder interface {
 }
 type decoder interface {
 	Decode(interface{}) error
-}
-
-type dbgEncoder struct {
-	encoder
-	msg string
-}
-
-func (enc dbgEncoder) Encode(e interface{}) error {
-	// fmt.Println("ENCODE", enc.msg, e)
-	err := enc.encoder.Encode(e)
-	// fmt.Println("ENCODE DONE", enc.msg, e, err)
-	return err
 }
 
 type dbgDecoder struct {
