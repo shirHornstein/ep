@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -135,7 +136,7 @@ func TestPartition_AndGather(t *testing.T) {
 		require.NoError(t, peer.Close())
 	}()
 
-	runner := ep.Pipeline(ep.Partition(), ep.PassThrough(), ep.Gather())
+	runner := ep.Pipeline(ep.Partition(0), ep.PassThrough(), ep.Gather())
 	runner = dist.Distribute(runner, port1, port2)
 
 	firstColumn := strs{"this", "is", "sparta"}
@@ -150,4 +151,57 @@ func TestPartition_AndGather(t *testing.T) {
 	// partition->gather does not ensure the same order of entries
 	require.ElementsMatch(t, firstColumn, res.At(0))
 	require.ElementsMatch(t, secondColumn, res.At(1))
+}
+
+func TestPartition_UsesProvidedColumn(t *testing.T) {
+	port1 := fmt.Sprintf(":%d", 5551)
+	dist := eptest.NewPeer(t, port1)
+
+	port2 := fmt.Sprintf(":%d", 5552)
+	peer := eptest.NewPeer(t, port2)
+	defer func() {
+		require.NoError(t, dist.Close())
+		require.NoError(t, peer.Close())
+	}()
+
+	// to the exact opposite
+	// deliberately opposite values: column switch has to change to output
+	firstColumn := strs{"one", "two"}
+	secondColumn := strs{"two", "one"}
+
+	data := ep.NewDataset(firstColumn, secondColumn)
+
+	runner := ep.Pipeline(ep.Partition(0), &nodeAddr{}, ep.Gather())
+	runner = dist.Distribute(runner, port1, port2)
+	firstRes, err := eptest.Run(runner, data)
+
+	require.NoError(t, err)
+	require.NotNil(t, firstRes)
+
+	runner = ep.Pipeline(ep.Partition(1), &nodeAddr{}, ep.Gather())
+	runner = dist.Distribute(runner, port1, port2)
+	secondRes, err := eptest.Run(runner, data)
+
+	require.NoError(t, err)
+	require.NotNil(t, secondRes)
+
+	/*
+		Expected output similar to:
+		[[one two] [two one] [:5552 :5551]]
+		[[two one] [one two] [:5552 :5551]]
+	*/
+
+	firstResAt0 := firstRes.At(0)
+	firstResAt1 := firstRes.At(1)
+	secondResAt1 := secondRes.At(1)
+	secondResAt0 := secondRes.At(0)
+	if reflect.DeepEqual(firstRes.At(2), secondRes.At(2)) {
+		// node addresses are the same - data should be different
+		require.Equalf(t, firstResAt0, secondResAt1, "%s != %s", firstResAt0, secondResAt1)
+		require.Equalf(t, firstResAt1, secondResAt0, "%s != %s", firstResAt1, secondResAt0)
+	} else {
+		// node addresses are different - data should be the same
+		require.Equalf(t, firstResAt0, secondResAt0, "%s != %s", firstResAt0, secondResAt0)
+		require.Equalf(t, firstResAt1, secondResAt1, "%s != %s", firstResAt1, secondResAt1)
+	}
 }

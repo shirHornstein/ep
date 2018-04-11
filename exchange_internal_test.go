@@ -74,7 +74,7 @@ func TestPartition_AddsMembersToHashRing(t *testing.T) {
 	ctx = context.WithValue(ctx, masterNodeKey, port)
 	ctx = context.WithValue(ctx, thisNodeKey, port)
 
-	partition := Partition().(*exchange)
+	partition := Partition(0).(*exchange)
 	partition.Init(ctx)
 
 	members := partition.hashRing.Members()
@@ -108,7 +108,7 @@ func TestExchange_EncodePartitionFailsWithoutDataset(t *testing.T) {
 	ctx = context.WithValue(ctx, masterNodeKey, port)
 	ctx = context.WithValue(ctx, thisNodeKey, port)
 
-	partition := Partition().(*exchange)
+	partition := Partition(0).(*exchange)
 	partition.Init(ctx)
 
 	require.Error(t, partition.EncodePartition([]int{42}))
@@ -145,7 +145,7 @@ func TestExchange_GetPartitionEncoderIsConsistent(t *testing.T) {
 	ctx = context.WithValue(ctx, masterNodeKey, port)
 	ctx = context.WithValue(ctx, thisNodeKey, port)
 
-	partition := Partition().(*exchange)
+	partition := Partition(0).(*exchange)
 	partition.Init(ctx)
 
 	hashKey := fmt.Sprintf("this-is-a-key-%d", rand.Intn(1e12))

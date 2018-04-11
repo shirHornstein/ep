@@ -45,13 +45,12 @@ func Broadcast() Runner {
 }
 
 // Partition returns an exchange Runner that routes the data between nodes using
-// consistent hashing algorithm. The first column of an incoming dataset
-// must be a string containing a unique id of that dataset. This id will be
-// used to find an appropriate endpoint for this data. The output will not
-// necessarily be in the same order as the input
-func Partition() Runner {
+// consistent hashing algorithm. The provided column of an incoming dataset
+// will be used to find an appropriate endpoint for this data.
+// The output will not necessarily be in the same order as the input.
+func Partition(column int) Runner {
 	uid, _ := uuid.NewV4()
-	return &exchange{UID: uid.String(), SendTo: sendPartition}
+	return &exchange{UID: uid.String(), SendTo: sendPartition, partitionCol: column}
 }
 
 // exchange is a Runner that exchanges data between peer nodes
@@ -59,13 +58,14 @@ type exchange struct {
 	UID    string
 	SendTo int
 
-	encs      []encoder              // encoders to all destination connections
-	decs      []decoder              // decoders from all source connections
-	conns     []io.Closer            // all open connections (used for closing)
-	encsNext  int                    // Encoders Round Robin next index
-	decsNext  int                    // Decoders Round Robin next index
-	hashRing  *consistent.Consistent // hash ring for consistent hashing
-	encsByKey map[string]encoder     // encoders mapped by key (node address)
+	encs         []encoder              // encoders to all destination connections
+	decs         []decoder              // decoders from all source connections
+	conns        []io.Closer            // all open connections (used for closing)
+	encsNext     int                    // Encoders Round Robin next index
+	decsNext     int                    // Decoders Round Robin next index
+	hashRing     *consistent.Consistent // hash ring for consistent hashing
+	encsByKey    map[string]encoder     // encoders mapped by key (node address)
+	partitionCol int                    // column index to use for partitioning
 }
 
 func (ex *exchange) Returns() []Type { return []Type{Wildcard} }
@@ -210,7 +210,7 @@ func (ex *exchange) EncodePartition(e interface{}) error {
 		return fmt.Errorf("EncodePartition called without a dataset")
 	}
 
-	ids := data.At(0).Strings()
+	ids := data.At(ex.partitionCol).Strings()
 	for i, key := range ids {
 		enc, err := ex.getPartitionEncoder(key)
 		if err != nil {
