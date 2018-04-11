@@ -210,6 +210,14 @@ func (ex *exchange) EncodePartition(e interface{}) error {
 		return fmt.Errorf("EncodePartition called without a dataset")
 	}
 
+	// dataByEncoder holds datasets grouped by encoders that were assigned these
+	// datasets using consistent hashing algorithm. Datasets are partitioned
+	// in memory using this map, and then every dataset is sent to a
+	// corresponding node
+	dataByEncoder := make(map[encoder]Dataset)
+
+	// ids are values that are used for partitioning.
+	// Based on these values the data will be spread between nodes
 	ids := data.At(ex.partitionCol).Strings()
 	for i, key := range ids {
 		enc, err := ex.getPartitionEncoder(key)
@@ -217,8 +225,18 @@ func (ex *exchange) EncodePartition(e interface{}) error {
 			return err
 		}
 
-		req := &req{data.Slice(i, i+1).(Dataset)}
-		err = enc.Encode(req)
+		_, ok := dataByEncoder[enc]
+		if !ok {
+			dataByEncoder[enc] = NewDataset()
+		}
+
+		dataByEncoder[enc] = dataByEncoder[enc].Append(data.Slice(i, i+1)).(Dataset)
+	}
+
+	// at this point partitioning is complete, and datasets are ready to be sent
+	for enc, data := range dataByEncoder {
+		req := &req{data}
+		err := enc.Encode(req)
 		if err != nil {
 			return err
 		}
@@ -227,6 +245,9 @@ func (ex *exchange) EncodePartition(e interface{}) error {
 	return nil
 }
 
+// getPartitionEncoder uses a hash ring to find a node that should handle
+// a provided key. This function returns an encoder that handles data
+// transmission to the matched node.
 func (ex *exchange) getPartitionEncoder(key string) (encoder, error) {
 	endpoint, err := ex.hashRing.Get(key)
 	if err != nil {
@@ -266,7 +287,13 @@ func (ex *exchange) DecodeNext() (Dataset, error) {
 
 // initialize the connections, encoders & decoders
 func (ex *exchange) Init(ctx context.Context) (err error) {
+	// hashRing handles partitioning between nodes
 	ex.hashRing = consistent.New()
+
+	// encsByKey holds encoders mapped to node addresses.
+	// Partitioning assigns datasets to string addresses of nodes,
+	// while only encoders can actually send data.
+	// By using a map we can find an encoder for every address
 	ex.encsByKey = make(map[string]encoder)
 
 	dist, _ := ctx.Value(distributerKey).(interface {
