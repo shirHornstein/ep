@@ -219,7 +219,7 @@ func (ex *exchange) EncodePartition(e interface{}) error {
 			return err
 		}
 
-		req := &req{GetRow(data, i)}
+		req := &req{data.Slice(i, i+1).(Dataset)}
 		err = enc.Encode(req)
 		if err != nil {
 			return err
@@ -247,11 +247,6 @@ func (ex *exchange) getPartitionEncoder(key string) (encoder, error) {
 func StripHashColumn(dataset Dataset) Dataset {
 	_, newDataset := dataset.Split(dataset.Width() - 1)
 	return newDataset
-}
-
-// GetRow returns a single row from a given Dataset
-func GetRow(dataset Dataset, n int) Dataset {
-	return dataset.Slice(n, n+1).(Dataset)
 }
 
 // Decode an object from the next source connection in a round robin

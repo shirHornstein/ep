@@ -131,18 +131,6 @@ func TestStripHashColumn(t *testing.T) {
 	require.Equal(t, things.Strings(), newData.At(0).Strings())
 }
 
-func TestExchange_GetRow(t *testing.T) {
-	firstColumn := strs([]string{"one", "two", "forty two"})
-	secondColumn := strs([]string{"meh", "shtoot", "", "foo"})
-
-	data := ep.NewDataset(firstColumn, secondColumn)
-	row := ep.GetRow(data, 1)
-
-	require.Equal(t, 1, row.Len())
-	require.Equal(t, 2, row.Width())
-	require.Equal(t, "[[two] [shtoot]]", fmt.Sprintf("%v", row))
-}
-
 func TestPartition_AndGather(t *testing.T) {
 	rand.Seed(time.Now().UTC().UnixNano())
 	maxPort := 7000
