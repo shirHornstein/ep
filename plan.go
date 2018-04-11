@@ -16,9 +16,22 @@ var Types = make(typesReg)
 // preregistered using the `Runners.Register()` function. if the arg is a
 // struct, it's first converted into a string by reflecting its full type name
 // and path. See Planning & Registries in the main doc.
-func Plan(ctx context.Context, arg interface{}) (Runner, error) {
+func Plan(ctx context.Context, k interface{}) (Runner, error) {
+	return PlanWithArgs(ctx, k, nil)
+}
+
+// PlanWithArgs is similar to Plan, except that it first filters the runners to
+// only keep RunnerArgs instances that have the args provided.
+func PlanWithArgs(ctx context.Context, k interface{}, args []Type) (Runner, error) {
 	var err error
-	for _, r := range Runners.Get(arg) {
+	var rs []Runner
+	if args != nil {
+		rs = Runners.GetWithArgs(k, args)
+	} else {
+		rs = Runners.Get(k)
+	}
+
+	for _, r := range rs {
 		// check if the runner is plannable
 		p, ok := r.(RunnerPlan)
 		if !ok {
@@ -27,14 +40,14 @@ func Plan(ctx context.Context, arg interface{}) (Runner, error) {
 		}
 
 		// otherwise - let it plan itself
-		r, err = p.Plan(ctx, arg)
+		r, err = p.Plan(ctx, k)
 		if err == nil {
 			return r, nil
 		}
 	}
 
 	if err == nil {
-		err = &errUnregistered{arg}
+		err = &errUnregistered{k}
 	}
 
 	return nil, err
@@ -44,6 +57,8 @@ func Plan(ctx context.Context, arg interface{}) (Runner, error) {
 // by convention - lowercase is function names, uppercase is SQL constructs
 type runnersReg map[interface{}][]Runner
 
+// Register a key-runner pair to be globally accessible via the Get() function
+// using the same key.
 func (reg runnersReg) Register(k interface{}, r Runner) runnersReg {
 	registerGob(r)
 	k = registryKey(k)
@@ -51,13 +66,31 @@ func (reg runnersReg) Register(k interface{}, r Runner) runnersReg {
 	return reg
 }
 
+// Get a list of Runners that were previously registered to the provided key
+// via the Register() function.
 func (reg runnersReg) Get(k interface{}) []Runner {
 	return reg[registryKey(k)]
+}
+
+// GetWithArgs is similar to Get() except that it first filters the runners to
+// only keep RunnerArgs instances that have the args provided.
+func (reg runnersReg) GetWithArgs(k interface{}, args []Type) []Runner {
+	rs := reg.Get(k)
+	res := make([]Runner, 0, len(rs))
+	for _, r := range rs {
+		r, ok := r.(RunnerArgs)
+		if ok && AreEqualTypes(r.Args(), args) {
+			res = append(rs, r)
+		}
+	}
+	return res
 }
 
 // registry of types
 type typesReg map[interface{}][]Type
 
+// Register a key-type pair to be globally accessible via the Get() function
+// using the same key.
 func (reg typesReg) Register(k interface{}, t Type) typesReg {
 	registerGob(t, t.Data(0))
 	k = registryKey(k)
@@ -65,6 +98,8 @@ func (reg typesReg) Register(k interface{}, t Type) typesReg {
 	return reg
 }
 
+// Get a list of Types that were previously registered to the provided key
+// via the Register() function.
 func (reg typesReg) Get(k interface{}) []Type {
 	return reg[registryKey(k)]
 }
