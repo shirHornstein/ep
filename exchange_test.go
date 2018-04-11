@@ -119,18 +119,6 @@ func TestScatter_and_Gather(t *testing.T) {
 	require.Equal(t, "[[hello world foo bar] [:5552 :5552 :5551 :5551]]", fmt.Sprintf("%v", data))
 }
 
-func TestStripHashColumn(t *testing.T) {
-	ids := strs([]string{"id1", "id2", "id3", "id4"})
-	things := strs([]string{"meh", "nya", "shtoot", "foo"})
-
-	data := ep.NewDataset(ids, things)
-	newData := ep.StripHashColumn(data)
-
-	require.Equal(t, 4, newData.Len())
-	require.Equal(t, 1, newData.Width())
-	require.Equal(t, things.Strings(), newData.At(0).Strings())
-}
-
 func TestPartition_AndGather(t *testing.T) {
 	rand.Seed(time.Now().UTC().UnixNano())
 	maxPort := 7000
@@ -160,6 +148,6 @@ func TestPartition_AndGather(t *testing.T) {
 	require.NotNil(t, res)
 
 	// partition->gather does not ensure the same order of entries
-	// first column is discarded
-	require.ElementsMatch(t, secondColumn, res.At(0))
+	require.ElementsMatch(t, firstColumn, res.At(0))
+	require.ElementsMatch(t, secondColumn, res.At(1))
 }

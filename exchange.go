@@ -47,8 +47,7 @@ func Broadcast() Runner {
 // Partition returns an exchange Runner that routes the data between nodes using
 // consistent hashing algorithm. The first column of an incoming dataset
 // must be a string containing a unique id of that dataset. This id will be
-// used to find an appropriate endpoint for this data, and discarded:
-// the output of this runner will not have this column. The output will not
+// used to find an appropriate endpoint for this data. The output will not
 // necessarily be in the same order as the input
 func Partition() Runner {
 	uid, _ := uuid.NewV4()
@@ -212,7 +211,6 @@ func (ex *exchange) EncodePartition(e interface{}) error {
 	}
 
 	ids := data.At(0).Strings()
-	data = StripHashColumn(data)
 	for i, key := range ids {
 		enc, err := ex.getPartitionEncoder(key)
 		if err != nil {
@@ -241,12 +239,6 @@ func (ex *exchange) getPartitionEncoder(key string) (encoder, error) {
 	}
 
 	return nil, fmt.Errorf("no matching node found")
-}
-
-// StripHashColumn removes the first column from a dataset
-func StripHashColumn(dataset Dataset) Dataset {
-	_, newDataset := dataset.Split(dataset.Width() - 1)
-	return newDataset
 }
 
 // Decode an object from the next source connection in a round robin
