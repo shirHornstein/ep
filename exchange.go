@@ -224,12 +224,12 @@ func (ex *exchange) EncodePartition(e interface{}) error {
 			return err
 		}
 
-		_, ok := dataByEncoder[enc]
+		d, ok := dataByEncoder[enc]
 		if !ok {
-			dataByEncoder[enc] = NewDataset()
+			d = NewDataset()
 		}
 
-		dataByEncoder[enc] = dataByEncoder[enc].Append(data.Slice(i, i+1)).(Dataset)
+		dataByEncoder[enc] = d.Append(data.Slice(i, i+1)).(Dataset)
 	}
 
 	// at this point partitioning is complete, and datasets are ready to be sent
