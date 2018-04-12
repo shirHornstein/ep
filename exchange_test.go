@@ -129,17 +129,17 @@ func TestPartition_AndGather(t *testing.T) {
 	randomPort := rand.Intn(maxPort-minPort) + minPort
 
 	port1 := fmt.Sprintf(":%d", randomPort)
-	dist := eptest.NewPeer(t, port1)
+	peer1 := eptest.NewPeer(t, port1)
 
 	port2 := fmt.Sprintf(":%d", randomPort+1)
-	peer := eptest.NewPeer(t, port2)
+	peer2 := eptest.NewPeer(t, port2)
 	defer func() {
-		require.NoError(t, dist.Close())
-		require.NoError(t, peer.Close())
+		require.NoError(t, peer1.Close())
+		require.NoError(t, peer2.Close())
 	}()
 
 	runner := ep.Pipeline(ep.Partition(0), ep.PassThrough(), ep.Gather())
-	runner = dist.Distribute(runner, port1, port2)
+	runner = peer1.Distribute(runner, port1, port2)
 
 	firstColumn := strs{"this", "is", "sparta"}
 	secondColumn := strs{"meh", "shtoot", "nya"}
@@ -157,13 +157,13 @@ func TestPartition_AndGather(t *testing.T) {
 
 func TestPartition_UsesProvidedColumn(t *testing.T) {
 	port1 := fmt.Sprintf(":%d", 5551)
-	dist := eptest.NewPeer(t, port1)
+	peer1 := eptest.NewPeer(t, port1)
 
 	port2 := fmt.Sprintf(":%d", 5552)
-	peer := eptest.NewPeer(t, port2)
+	peer2 := eptest.NewPeer(t, port2)
 	defer func() {
-		require.NoError(t, dist.Close())
-		require.NoError(t, peer.Close())
+		require.NoError(t, peer1.Close())
+		require.NoError(t, peer2.Close())
 	}()
 
 	// to the exact opposite
@@ -174,14 +174,14 @@ func TestPartition_UsesProvidedColumn(t *testing.T) {
 	data := ep.NewDataset(firstColumn, secondColumn)
 
 	runner := ep.Pipeline(ep.Partition(0), &nodeAddr{}, ep.Gather())
-	runner = dist.Distribute(runner, port1, port2)
+	runner = peer1.Distribute(runner, port1, port2)
 	firstRes, err := eptest.Run(runner, data)
 
 	require.NoError(t, err)
 	require.NotNil(t, firstRes)
 
 	runner = ep.Pipeline(ep.Partition(1), &nodeAddr{}, ep.Gather())
-	runner = dist.Distribute(runner, port1, port2)
+	runner = peer1.Distribute(runner, port1, port2)
 	secondRes, err := eptest.Run(runner, data)
 
 	require.NoError(t, err)
@@ -210,13 +210,13 @@ func TestPartition_UsesProvidedColumn(t *testing.T) {
 
 func TestPartition_SendsCompleteDatasets(t *testing.T) {
 	port1 := fmt.Sprintf(":%d", 5551)
-	dist := eptest.NewPeer(t, port1)
+	peer1 := eptest.NewPeer(t, port1)
 
 	port2 := fmt.Sprintf(":%d", 5552)
-	peer := eptest.NewPeer(t, port2)
+	peer2 := eptest.NewPeer(t, port2)
 	defer func() {
-		require.NoError(t, dist.Close())
-		require.NoError(t, peer.Close())
+		require.NoError(t, peer1.Close())
+		require.NoError(t, peer2.Close())
 	}()
 
 	firstColumn := strs{"foo", "bar", "meh", "nya", "shtoot", "a", "few", "more", "things"}
@@ -224,7 +224,7 @@ func TestPartition_SendsCompleteDatasets(t *testing.T) {
 
 	data := ep.NewDataset(firstColumn, secondColumn)
 	runner := ep.Pipeline(ep.Partition(1), &datasetSize{}, ep.Gather())
-	runner = dist.Distribute(runner, port1, port2)
+	runner = peer1.Distribute(runner, port1, port2)
 
 	res, err := eptest.Run(runner, data)
 	require.NoError(t, err)
