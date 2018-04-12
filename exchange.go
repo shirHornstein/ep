@@ -289,7 +289,6 @@ func (ex *exchange) Init(ctx context.Context) (err error) {
 	// hashRing handles partitioning between nodes
 	ex.hashRing = consistent.New()
 
-	// encsByKey holds encoders mapped to node addresses.
 	// Partitioning assigns datasets to string addresses of nodes,
 	// while only encoders can actually send data.
 	// By using a map we can find an encoder for every address
