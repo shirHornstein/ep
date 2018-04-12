@@ -1,14 +1,20 @@
 package ep_test
 
 import (
+	"context"
 	"fmt"
 	"github.com/panoplyio/ep"
 	"github.com/panoplyio/ep/eptest"
 	"github.com/stretchr/testify/require"
+	"math/rand"
 	"net"
+	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
+
+var _ = ep.Runners.Register("datasetSize", &datasetSize{})
 
 // Example of Scatter with just 2 nodes. The datasets are scattered in
 // round-robin to the two nodes such that each node receives half of the
@@ -114,4 +120,130 @@ func TestScatter_and_Gather(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, data)
 	require.Equal(t, "[[hello world foo bar] [:5552 :5552 :5551 :5551]]", fmt.Sprintf("%v", data))
+}
+
+func TestPartition_AndGather(t *testing.T) {
+	rand.Seed(time.Now().UTC().UnixNano())
+	maxPort := 7000
+	minPort := 6000
+	randomPort := rand.Intn(maxPort-minPort) + minPort
+
+	port1 := fmt.Sprintf(":%d", randomPort)
+	peer1 := eptest.NewPeer(t, port1)
+
+	port2 := fmt.Sprintf(":%d", randomPort+1)
+	peer2 := eptest.NewPeer(t, port2)
+	defer func() {
+		require.NoError(t, peer1.Close())
+		require.NoError(t, peer2.Close())
+	}()
+
+	runner := ep.Pipeline(ep.Partition(0), ep.PassThrough(), ep.Gather())
+	runner = peer1.Distribute(runner, port1, port2)
+
+	firstColumn := strs{"this", "is", "sparta"}
+	secondColumn := strs{"meh", "shtoot", "nya"}
+
+	data := ep.NewDataset(firstColumn, secondColumn)
+	res, err := eptest.Run(runner, data)
+
+	require.NoError(t, err)
+	require.NotNil(t, res)
+
+	// partition->gather does not ensure the same order of entries
+	require.ElementsMatch(t, firstColumn, res.At(0))
+	require.ElementsMatch(t, secondColumn, res.At(1))
+}
+
+func TestPartition_UsesProvidedColumn(t *testing.T) {
+	port1 := fmt.Sprintf(":%d", 5551)
+	peer1 := eptest.NewPeer(t, port1)
+
+	port2 := fmt.Sprintf(":%d", 5552)
+	peer2 := eptest.NewPeer(t, port2)
+	defer func() {
+		require.NoError(t, peer1.Close())
+		require.NoError(t, peer2.Close())
+	}()
+
+	// to the exact opposite
+	// deliberately opposite values: column switch has to change to output
+	firstColumn := strs{"one", "two"}
+	secondColumn := strs{"two", "one"}
+
+	data := ep.NewDataset(firstColumn, secondColumn)
+
+	runner := ep.Pipeline(ep.Partition(0), &nodeAddr{}, ep.Gather())
+	runner = peer1.Distribute(runner, port1, port2)
+	firstRes, err := eptest.Run(runner, data)
+
+	require.NoError(t, err)
+	require.NotNil(t, firstRes)
+
+	runner = ep.Pipeline(ep.Partition(1), &nodeAddr{}, ep.Gather())
+	runner = peer1.Distribute(runner, port1, port2)
+	secondRes, err := eptest.Run(runner, data)
+
+	require.NoError(t, err)
+	require.NotNil(t, secondRes)
+
+	/*
+		Expected output similar to:
+		[[one two] [two one] [:5552 :5551]]
+		[[two one] [one two] [:5552 :5551]]
+	*/
+
+	firstResAt0 := firstRes.At(0)
+	firstResAt1 := firstRes.At(1)
+	secondResAt1 := secondRes.At(1)
+	secondResAt0 := secondRes.At(0)
+	if reflect.DeepEqual(firstRes.At(2), secondRes.At(2)) {
+		// node addresses are the same - data should be different
+		require.Equalf(t, firstResAt0, secondResAt1, "%s != %s", firstResAt0, secondResAt1)
+		require.Equalf(t, firstResAt1, secondResAt0, "%s != %s", firstResAt1, secondResAt0)
+	} else {
+		// node addresses are different - data should be the same
+		require.Equalf(t, firstResAt0, secondResAt0, "%s != %s", firstResAt0, secondResAt0)
+		require.Equalf(t, firstResAt1, secondResAt1, "%s != %s", firstResAt1, secondResAt1)
+	}
+}
+
+func TestPartition_SendsCompleteDatasets(t *testing.T) {
+	port1 := fmt.Sprintf(":%d", 5551)
+	peer1 := eptest.NewPeer(t, port1)
+
+	port2 := fmt.Sprintf(":%d", 5552)
+	peer2 := eptest.NewPeer(t, port2)
+	defer func() {
+		require.NoError(t, peer1.Close())
+		require.NoError(t, peer2.Close())
+	}()
+
+	firstColumn := strs{"foo", "bar", "meh", "nya", "shtoot", "a", "few", "more", "things"}
+	secondColumn := strs{"f", "s", "f", "f", "s", "f", "f", "f", "s"}
+
+	data := ep.NewDataset(firstColumn, secondColumn)
+	runner := ep.Pipeline(ep.Partition(1), &datasetSize{}, ep.Gather())
+	runner = peer1.Distribute(runner, port1, port2)
+
+	res, err := eptest.Run(runner, data)
+	require.NoError(t, err)
+
+	// there are 6 "f" and 3 "s" in second column which is used for partitioning
+	expected := []string{"6", "3"}
+	sizes := res.At(0)
+
+	require.Equal(t, 2, sizes.Len())
+	require.ElementsMatch(t, expected, sizes.Strings())
+}
+
+type datasetSize struct{}
+
+func (*datasetSize) Returns() []ep.Type { return []ep.Type{str} }
+func (*datasetSize) Run(_ context.Context, inp, out chan ep.Dataset) error {
+	for data := range inp {
+		n := fmt.Sprintf("%v", data.Len())
+		out <- ep.NewDataset(strs{n})
+	}
+	return nil
 }

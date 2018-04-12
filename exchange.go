@@ -7,6 +7,7 @@ import (
 	"github.com/satori/go.uuid"
 	"io"
 	"net"
+	"stathat.com/c/consistent"
 )
 
 var _ = registerGob(&exchange{}, &req{}, &errMsg{})
@@ -42,16 +43,28 @@ func Broadcast() Runner {
 	return &exchange{UID: uid.String(), SendTo: sendBroadcast}
 }
 
+// Partition returns an exchange Runner that routes the data between nodes using
+// consistent hashing algorithm. The provided column of an incoming dataset
+// will be used to find an appropriate endpoint for this data.
+// The output will not necessarily be in the same order as the input.
+func Partition(column int) Runner {
+	uid, _ := uuid.NewV4()
+	return &exchange{UID: uid.String(), SendTo: sendPartition, partitionCol: column}
+}
+
 // exchange is a Runner that exchanges data between peer nodes
 type exchange struct {
 	UID    string
 	SendTo int
 
-	encs     []encoder   // encoders to all destination connections
-	decs     []decoder   // decoders from all source connections
-	conns    []io.Closer // all open connections (used for closing)
-	encsNext int         // Encoders Round Robin next index
-	decsNext int         // Decoders Round Robin next index
+	encs         []encoder              // encoders to all destination connections
+	decs         []decoder              // decoders from all source connections
+	conns        []io.Closer            // all open connections (used for closing)
+	encsNext     int                    // Encoders Round Robin next index
+	decsNext     int                    // Decoders Round Robin next index
+	hashRing     *consistent.Consistent // hash ring for consistent hashing
+	encsByKey    map[string]encoder     // encoders mapped by key (node address)
+	partitionCol int                    // column index to use for partitioning
 }
 
 func (ex *exchange) Returns() []Type { return []Type{Wildcard} }
@@ -191,7 +204,61 @@ func (ex *exchange) EncodeNext(e interface{}) error {
 
 // Encode an object to a destination connection selected by partitioning
 func (ex *exchange) EncodePartition(e interface{}) error {
+	data, ok := e.(Dataset)
+	if !ok {
+		return fmt.Errorf("EncodePartition called without a dataset")
+	}
+
+	// dataByEncoder holds datasets grouped by encoders that were assigned these
+	// datasets using consistent hashing algorithm. Datasets are partitioned
+	// in memory using this map, and then every dataset is sent to a
+	// corresponding node
+	dataByEncoder := make(map[encoder]Dataset)
+
+	// ids are values that are used for partitioning.
+	// Based on these values the data will be spread between nodes
+	ids := data.At(ex.partitionCol).Strings()
+	for i, key := range ids {
+		enc, err := ex.getPartitionEncoder(key)
+		if err != nil {
+			return err
+		}
+
+		d, ok := dataByEncoder[enc]
+		if !ok {
+			d = NewDataset()
+		}
+
+		dataByEncoder[enc] = d.Append(data.Slice(i, i+1)).(Dataset)
+	}
+
+	// at this point partitioning is complete, and datasets are ready to be sent
+	for enc, data := range dataByEncoder {
+		req := &req{data}
+		err := enc.Encode(req)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
+}
+
+// getPartitionEncoder uses a hash ring to find a node that should handle
+// a provided key. This function returns an encoder that handles data
+// transmission to the matched node.
+func (ex *exchange) getPartitionEncoder(key string) (encoder, error) {
+	endpoint, err := ex.hashRing.Get(key)
+	if err != nil {
+		return nil, fmt.Errorf("cannot find a target node: %s", err)
+	}
+
+	enc, ok := ex.encsByKey[endpoint]
+	if !ok {
+		return nil, fmt.Errorf("no matching node found")
+	}
+
+	return enc, nil
 }
 
 // Decode an object from the next source connection in a round robin
@@ -219,6 +286,14 @@ func (ex *exchange) DecodeNext() (Dataset, error) {
 
 // initialize the connections, encoders & decoders
 func (ex *exchange) Init(ctx context.Context) (err error) {
+	// hashRing handles partitioning between nodes
+	ex.hashRing = consistent.New()
+
+	// Partitioning assigns datasets to string addresses of nodes,
+	// while only encoders can actually send data.
+	// By using a map we can find an encoder for every address
+	ex.encsByKey = make(map[string]encoder)
+
 	dist, _ := ctx.Value(distributerKey).(interface {
 		Connect(addr, uid string) (net.Conn, error)
 	})
@@ -246,24 +321,27 @@ func (ex *exchange) Init(ctx context.Context) (err error) {
 		}
 	}()
 	var conn net.Conn
-	for _, n := range targetNodes {
-		if n == thisNode {
+	for _, node := range targetNodes {
+		if node == thisNode {
 			shortCircuit = newShortCircuit()
 			ex.conns = append(ex.conns, shortCircuit)
 			ex.encs = append(ex.encs, shortCircuit)
+			ex.hashRing.Add(node)
+			ex.encsByKey[node] = shortCircuit
 			continue
 		}
 
-		msg := "THIS " + thisNode + " OTHER " + n
-
-		conn, err = dist.Connect(n, ex.UID)
+		conn, err = dist.Connect(node, ex.UID)
 		if err != nil {
 			return err
 		}
 
-		connsMap[n] = conn
+		connsMap[node] = conn
 		ex.conns = append(ex.conns, conn)
-		ex.encs = append(ex.encs, dbgEncoder{gob.NewEncoder(conn), msg})
+		enc := gob.NewEncoder(conn)
+		ex.encs = append(ex.encs, enc)
+		ex.hashRing.Add(node)
+		ex.encsByKey[node] = enc
 	}
 
 	// if we're also a destination, listen to all nodes
@@ -302,18 +380,6 @@ type encoder interface {
 }
 type decoder interface {
 	Decode(interface{}) error
-}
-
-type dbgEncoder struct {
-	encoder
-	msg string
-}
-
-func (enc dbgEncoder) Encode(e interface{}) error {
-	// fmt.Println("ENCODE", enc.msg, e)
-	err := enc.encoder.Encode(e)
-	// fmt.Println("ENCODE DONE", enc.msg, e, err)
-	return err
 }
 
 type dbgDecoder struct {
