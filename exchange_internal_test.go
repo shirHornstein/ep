@@ -47,10 +47,10 @@ func TestExchange_unique(t *testing.T) {
 }
 
 func TestPartition_AddsMembersToHashRing(t *testing.T) {
-	port := ":5551"
-	ln, err := net.Listen("tcp", port)
+	port1 := ":5551"
+	ln, err := net.Listen("tcp", port1)
 	require.NoError(t, err)
-	dist := NewDistributer(port, ln)
+	peer1 := NewDistributer(port1, ln)
 
 	port2 := ":5552"
 	ln, err = net.Listen("tcp", port2)
@@ -63,16 +63,16 @@ func TestPartition_AddsMembersToHashRing(t *testing.T) {
 	peer3 := NewDistributer(port3, ln)
 
 	defer func() {
-		require.NoError(t, dist.Close())
+		require.NoError(t, peer1.Close())
 		require.NoError(t, peer2.Close())
 		require.NoError(t, peer3.Close())
 	}()
 
-	allNodes := []string{port, port2, port3}
-	ctx := context.WithValue(context.Background(), distributerKey, dist)
+	allNodes := []string{port1, port2, port3}
+	ctx := context.WithValue(context.Background(), distributerKey, peer1)
 	ctx = context.WithValue(ctx, allNodesKey, allNodes)
-	ctx = context.WithValue(ctx, masterNodeKey, port)
-	ctx = context.WithValue(ctx, thisNodeKey, port)
+	ctx = context.WithValue(ctx, masterNodeKey, port1)
+	ctx = context.WithValue(ctx, thisNodeKey, port1)
 
 	partition := Partition(0).(*exchange)
 	partition.Init(ctx)
@@ -82,10 +82,10 @@ func TestPartition_AddsMembersToHashRing(t *testing.T) {
 }
 
 func TestExchange_EncodePartitionFailsWithoutDataset(t *testing.T) {
-	port := ":5551"
-	ln, err := net.Listen("tcp", port)
+	port1 := ":5551"
+	ln, err := net.Listen("tcp", port1)
 	require.NoError(t, err)
-	dist := NewDistributer(port, ln)
+	peer1 := NewDistributer(port1, ln)
 
 	port2 := ":5552"
 	ln, err = net.Listen("tcp", port2)
@@ -98,15 +98,15 @@ func TestExchange_EncodePartitionFailsWithoutDataset(t *testing.T) {
 	peer3 := NewDistributer(port3, ln)
 
 	defer func() {
-		require.NoError(t, dist.Close())
+		require.NoError(t, peer1.Close())
 		require.NoError(t, peer2.Close())
 		require.NoError(t, peer3.Close())
 	}()
 
-	ctx := context.WithValue(context.Background(), distributerKey, dist)
-	ctx = context.WithValue(ctx, allNodesKey, []string{port, port2, port3})
-	ctx = context.WithValue(ctx, masterNodeKey, port)
-	ctx = context.WithValue(ctx, thisNodeKey, port)
+	ctx := context.WithValue(context.Background(), distributerKey, peer1)
+	ctx = context.WithValue(ctx, allNodesKey, []string{port1, port2, port3})
+	ctx = context.WithValue(ctx, masterNodeKey, port1)
+	ctx = context.WithValue(ctx, thisNodeKey, port1)
 
 	partition := Partition(0).(*exchange)
 	partition.Init(ctx)
@@ -119,10 +119,11 @@ func TestExchange_GetPartitionEncoderIsConsistent(t *testing.T) {
 	maxPort := 7000
 	minPort := 6000
 	randomPort := rand.Intn(maxPort-minPort) + minPort
-	port := fmt.Sprintf(":%d", randomPort)
-	ln, err := net.Listen("tcp", port)
+
+	port1 := fmt.Sprintf(":%d", randomPort)
+	ln, err := net.Listen("tcp", port1)
 	require.NoError(t, err)
-	dist := NewDistributer(port, ln)
+	peer1 := NewDistributer(port1, ln)
 
 	port2 := fmt.Sprintf(":%d", randomPort+1)
 	ln, err = net.Listen("tcp", port2)
@@ -135,15 +136,15 @@ func TestExchange_GetPartitionEncoderIsConsistent(t *testing.T) {
 	peer3 := NewDistributer(port3, ln)
 
 	defer func() {
-		require.NoError(t, dist.Close())
+		require.NoError(t, peer1.Close())
 		require.NoError(t, peer2.Close())
 		require.NoError(t, peer3.Close())
 	}()
 
-	ctx := context.WithValue(context.Background(), distributerKey, dist)
-	ctx = context.WithValue(ctx, allNodesKey, []string{port, port2, port3})
-	ctx = context.WithValue(ctx, masterNodeKey, port)
-	ctx = context.WithValue(ctx, thisNodeKey, port)
+	ctx := context.WithValue(context.Background(), distributerKey, peer1)
+	ctx = context.WithValue(ctx, allNodesKey, []string{port1, port2, port3})
+	ctx = context.WithValue(ctx, masterNodeKey, port1)
+	ctx = context.WithValue(ctx, thisNodeKey, port1)
 
 	partition := Partition(0).(*exchange)
 	partition.Init(ctx)
