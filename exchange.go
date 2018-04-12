@@ -254,11 +254,11 @@ func (ex *exchange) getPartitionEncoder(key string) (encoder, error) {
 	}
 
 	enc, ok := ex.encsByKey[endpoint]
-	if ok {
-		return enc, nil
+	if !ok {
+		return nil, fmt.Errorf("no matching node found")
 	}
 
-	return nil, fmt.Errorf("no matching node found")
+	return enc, nil
 }
 
 // Decode an object from the next source connection in a round robin
