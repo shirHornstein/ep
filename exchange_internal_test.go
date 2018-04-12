@@ -3,12 +3,11 @@ package ep
 import (
 	"context"
 	"fmt"
+	"github.com/stretchr/testify/require"
 	"math/rand"
 	"net"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/require"
 )
 
 // Tests the scattering when there's just one node - the whole thing should

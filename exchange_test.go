@@ -3,16 +3,15 @@ package ep_test
 import (
 	"context"
 	"fmt"
+	"github.com/panoplyio/ep"
+	"github.com/panoplyio/ep/eptest"
+	"github.com/stretchr/testify/require"
 	"math/rand"
 	"net"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/panoplyio/ep"
-	"github.com/panoplyio/ep/eptest"
-	"github.com/stretchr/testify/require"
 )
 
 var _ = ep.Runners.Register("datasetSize", &datasetSize{})

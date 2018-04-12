@@ -4,10 +4,9 @@ import (
 	"context"
 	"encoding/gob"
 	"fmt"
+	"github.com/satori/go.uuid"
 	"io"
 	"net"
-
-	"github.com/satori/go.uuid"
 	"stathat.com/c/consistent"
 )
 
