@@ -1,8 +1,7 @@
 package ep
 
 import (
-    // "fmt"
-    "context"
+	"context"
 )
 
 // MapInpToOut wraps around a runner such that it maps the input to that runner
@@ -28,15 +27,15 @@ import (
 // NOTE that the nested runner cannot be composed of one-time runners like
 // exchange (Scatter, Broadcast, etc.), which cannot be executed more than once.
 func MapInpToOut(r Runner) Runner {
-    return &mapInpToOut{r}
+	return &mapInpToOut{r}
 }
 
-type mapInpToOut struct { Runner }
+type mapInpToOut struct{ Runner }
 
 // Returns all of the inputs types joined by all of the output types of the
 // nested runner
 func (r *mapInpToOut) Returns() []Type {
-    return append([]Type{Wildcard}, r.Runner.Returns()...)
+	return append([]Type{Wildcard}, r.Runner.Returns()...)
 }
 
 // Run has no way of knowning when the output of one input ends and another
@@ -50,35 +49,35 @@ func (r *mapInpToOut) Returns() []Type {
 // for places where performance is less of a concern. In general - if there's a
 // different way to avoid using MapInpToOut, it's possibly preferrable.
 func (r *mapInpToOut) Run(ctx context.Context, inp, out chan Dataset) error {
-    var err error
-    for data := range inp {
-        for i := 0; i < data.Len(); i++ {
-            d := data.Slice(i, i + 1).(Dataset) // one row at a time.
-            innerOut := make(chan Dataset)
-            innerInp := make(chan Dataset, 1)
-            innerInp <- d
-            close(innerInp)
+	var err error
+	for data := range inp {
+		for i := 0; i < data.Len(); i++ {
+			d := data.Slice(i, i+1).(Dataset) // one row at a time.
+			innerOut := make(chan Dataset)
+			innerInp := make(chan Dataset, 1)
+			innerInp <- d
+			close(innerInp)
 
-            // run the inner runner to completion with the single input. this is
-            // because otherwise we will not be able to map every output row to
-            // input row that generated it. There's no 1-to-1 correlation, or
-            // any guarantee on the number or size of batches being processed.
-            go func () {
-                defer close(innerOut)
-                err = r.Runner.Run(ctx, innerInp, innerOut)
-            }()
+			// run the inner runner to completion with the single input. this is
+			// because otherwise we will not be able to map every output row to
+			// input row that generated it. There's no 1-to-1 correlation, or
+			// any guarantee on the number or size of batches being processed.
+			go func() {
+				defer close(innerOut)
+				err = r.Runner.Run(ctx, innerInp, innerOut)
+			}()
 
-            for res := range innerOut {
-                // no error; length of both sides is the same.
-                res, _ := d.Duplicate(res.Len()).(Dataset).Expand(res)
-                out <- res
-            }
+			for res := range innerOut {
+				// no error; length of both sides is the same.
+				res, _ := d.Duplicate(res.Len()).(Dataset).Expand(res)
+				out <- res
+			}
 
-            if err != nil {
-                return err
-            }
-        }
-    }
+			if err != nil {
+				return err
+			}
+		}
+	}
 
-    return nil
+	return nil
 }
