@@ -65,10 +65,21 @@ type exchange struct {
 	hashRing     *consistent.Consistent // hash ring for consistent hashing
 	encsByKey    map[string]encoder     // encoders mapped by key (node address)
 	partitionCol int                    // column index to use for partitioning
+	inited       bool                   // was this runner initialized
 }
 
 func (ex *exchange) Returns() []Type { return []Type{Wildcard} }
 func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) {
+	if ex.inited {
+		// exchanged uses a predefined UID and connection listeners on all of
+		// the nodes. Running it again would conflict with the existing UID,
+		// leading to desynchronization between the nodes. Thus it's not
+		// currently supported. TODO: reconsider this architecture? Perhaps
+		// we can distribute the exchange upon Run()?
+		return fmt.Errorf("exhcnage cannot be Run() more than once")
+	}
+
+	ex.inited = true
 	defer func() {
 		closeErr := ex.Close()
 		// prefer real existing error over close error

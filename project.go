@@ -14,13 +14,25 @@ var errProjectState = fmt.Errorf("mismatched runners state")
 // dataset to return. It is required that all runners produce Datasets of the
 // same length.
 func Project(runners ...Runner) Runner {
-	if len(runners) == 0 {
+	// flatten nested projects. note we should examine only first level, as any
+	// pre-created project was already flatten during its creation
+	var flat project
+	for _, r := range runners {
+		p, isProj := r.(project)
+		if isProj {
+			flat = append(flat, p...)
+		} else {
+			flat = append(flat, r)
+		}
+	}
+
+	if len(flat) == 0 {
 		panic("at least 1 runner is required for projecting")
-	} else if len(runners) == 1 {
+	} else if len(flat) == 1 {
 		return runners[0]
 	}
 
-	return project(runners)
+	return flat
 }
 
 type project []Runner
