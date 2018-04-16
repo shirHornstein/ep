@@ -1,7 +1,6 @@
 package ep_test
 
 import (
-	"context"
 	"fmt"
 	"github.com/panoplyio/ep"
 	"github.com/panoplyio/ep/eptest"
@@ -17,22 +16,4 @@ func ExampleMapInpToOut() {
 
 	// Output:
 	// [[XY XY ABC ABC ABC] [X Y A B C]] <nil>
-}
-
-// runner that accepts strings, and breaks up the characters in the string to
-// one character per row.
-type breakChars struct{}
-
-func (*breakChars) Returns() []ep.Type { return []ep.Type{str} }
-func (*breakChars) Run(ctx context.Context, inp, out chan ep.Dataset) error {
-	for data := range inp {
-		for _, s := range data.At(0).(strs) {
-			res := make(strs, len(s))
-			for i, c := range s { // iterate on the characters
-				res[i] = string(c)
-			}
-			out <- ep.NewDataset(res)
-		}
-	}
-	return nil
 }
