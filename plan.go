@@ -80,7 +80,7 @@ func (reg runnersReg) GetWithArgs(k interface{}, args []Type) []Runner {
 	for _, r := range rs {
 		r, ok := r.(RunnerArgs)
 		if ok && AreEqualTypes(r.Args(), args) {
-			res = append(rs, r)
+			res = append(res, r)
 		}
 	}
 	return res
