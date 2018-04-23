@@ -6,7 +6,8 @@ import (
 	"sync"
 )
 
-var _ = registerGob(project([]Runner{}))
+var _ = registerGob(project([]Runner{}), &dummyRunner{})
+
 var errProjectState = fmt.Errorf("mismatched runners state")
 
 // Project returns a horizontal composite projection runner that dispatches
@@ -53,7 +54,7 @@ func (rs project) Filter(keep []bool) {
 		// simplest (and most common for project) case - r return single value
 		if returnLen == 1 {
 			if !keep[currIdx] {
-				rs[i] = getDummyRunner()
+				rs[i] = dummyRunnerSingleton
 			}
 		} else {
 			if r, isFilterable := r.(FilterRunner); isFilterable {
@@ -67,6 +68,7 @@ func (rs project) Filter(keep []bool) {
 // Run dispatches the same input to all inner runners, then collects and
 // joins their results into a single dataset output
 func (rs project) Run(origCtx context.Context, inp, out chan Dataset) (err error) {
+	rs.useDummySingleton()
 	// set up the left and right channels
 	inps := make([]chan Dataset, len(rs))
 	outs := make([]chan Dataset, len(rs))
@@ -152,14 +154,18 @@ func (rs project) Run(origCtx context.Context, inp, out chan Dataset) (err error
 	// collect & join the output from all runners, in order
 	for {
 		result := NewDataset()
-		var allOpen bool
+		allOpen, allDummies := true, true
 		for i := range rs {
 			curr, open := <-outs[i]
 
-			// verify all still open or all closed
-			if i == 0 {
-				allOpen = open // init allOpen according to first out channel
-			} else if allOpen != open {
+			if rs[i] == dummyRunnerSingleton {
+				// dummy runners shouldn't affect state check
+				curr, open = variadicNullBatch, allOpen
+			} else if allDummies {
+				allDummies = false
+				// init allOpen according to first out channel of non dummy runner
+				allOpen = open
+			} else if allOpen != open { // verify all still open or all closed
 				return errProjectState
 			}
 
@@ -178,5 +184,34 @@ func (rs project) Run(origCtx context.Context, inp, out chan Dataset) (err error
 		if err == nil {
 			out <- result
 		}
+
+		if allDummies {
+			return
+		}
 	}
+}
+
+// useDummySingleton replaces all dummies with pre-defined singleton to allow addresses comparison
+// instead of casting for each batch.
+// required for distribute runner that creates new dummy instances instead of using singleton
+func (rs project) useDummySingleton() {
+	for i, r := range rs {
+		if _, isDummy := r.(*dummyRunner); isDummy {
+			rs[i] = dummyRunnerSingleton
+		}
+	}
+}
+
+// dummyRunnerSingleton is a runner that does nothing and just drain inp
+var dummyRunnerSingleton = &dummyRunner{}
+
+// variadicNullBatch is used for replacing unused columns
+var variadicNullBatch = NewDataset(Null.Data(-1))
+
+type dummyRunner struct{}
+
+func (*dummyRunner) Args() []Type    { return []Type{Wildcard} }
+func (*dummyRunner) Returns() []Type { return []Type{Null} }
+func (*dummyRunner) Run(_ context.Context, inp, out chan Dataset) error {
+	return nil
 }

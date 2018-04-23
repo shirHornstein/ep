@@ -4,7 +4,7 @@ import (
 	"context"
 )
 
-var _ = registerGob(&passthrough{}, &pick{}, &dummyRunner{})
+var _ = registerGob(&passthrough{}, &pick{})
 
 // Runner represents objects that can receive a stream of input datasets,
 // manipulate them in some way (filter, mapping, reduction, expansion, etc.) and
@@ -125,23 +125,6 @@ func (r *pick) Run(_ context.Context, inp, out chan Dataset) error {
 			result = NewDataset(res...)
 		}
 		out <- result
-	}
-	return nil
-}
-
-// getDummyRunner returns a runner that does nothing and just returns a variadic
-// length batch for each input batch
-func getDummyRunner() Runner { return dummyRunnerSingleton }
-
-var dummyRunnerSingleton = &dummyRunner{}
-
-type dummyRunner struct{}
-
-func (*dummyRunner) Args() []Type    { return []Type{Wildcard} }
-func (*dummyRunner) Returns() []Type { return []Type{Null} }
-func (*dummyRunner) Run(_ context.Context, inp, out chan Dataset) error {
-	for range inp {
-		out <- NewDataset(Null.Data(-1))
 	}
 	return nil
 }
