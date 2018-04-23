@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestPipeline_creation_single_runner(t *testing.T) {
+func TestPipeline_creationSingleRunner(t *testing.T) {
 	runner := Pipeline(Gather())
 	_, isPipe := runner.(pipeline)
 	require.False(t, isPipe)
@@ -18,25 +18,25 @@ func TestPipeline_creation_single_runner(t *testing.T) {
 	projectWithPipeline := Pipeline(Project(Pipeline(Scatter(), Scatter()), Gather()))
 	_, isPipe = projectWithPipeline.(pipeline)
 	require.False(t, isPipe)
-
-	nestedPipeline := Pipeline(Pipeline(Scatter(), Scatter()))
-	p, isPipe := nestedPipeline.(pipeline)
-	require.True(t, isPipe)
-	require.Equal(t, 2, len(p))
-	_, isPipe = p[0].(pipeline)
-	require.False(t, isPipe)
 }
 
-func TestPipeline_creation_flat(t *testing.T) {
+func TestPipeline_creationFlat(t *testing.T) {
 	runner := Pipeline(Gather(), Scatter())
 	runner = Pipeline(runner, Pipeline(Scatter(), Pipeline(Scatter(), Scatter())))
 
 	p, isPipe := runner.(pipeline)
 	require.True(t, isPipe)
 	require.Equal(t, 5, len(p))
+
+	nestedPipeline := Pipeline(Pipeline(Scatter(), Scatter()))
+	p, isPipe = nestedPipeline.(pipeline)
+	require.True(t, isPipe)
+	require.Equal(t, 2, len(p))
+	_, isPipe = p[0].(pipeline)
+	require.False(t, isPipe)
 }
 
-func TestPipeline_creation_flat_skip_passthrogh(t *testing.T) {
+func TestPipeline_creationFlatSkipPassthrogh(t *testing.T) {
 	runner := Pipeline(Gather(), PassThrough())
 	runner = Pipeline(runner, Pipeline(Scatter(), Pipeline(PassThrough(), Scatter())))
 
@@ -46,7 +46,7 @@ func TestPipeline_creation_flat_skip_passthrogh(t *testing.T) {
 	require.Equal(t, 3, len(p))
 }
 
-func TestPipeline_creation_dont_flat_project(t *testing.T) {
+func TestPipeline_creationDontFlatProject(t *testing.T) {
 	runner := Project(Gather(), Pipeline(Scatter(), Scatter()), Pipeline(Scatter(), Scatter()))
 	runner = Pipeline(runner, Gather())
 
@@ -55,7 +55,7 @@ func TestPipeline_creation_dont_flat_project(t *testing.T) {
 	require.Equal(t, 2, len(p))
 }
 
-func TestPipeline_creation_single_runner_after_flat(t *testing.T) {
+func TestPipeline_creationSingleRunnerAfterFlat(t *testing.T) {
 	runner := Pipeline(PassThrough(), Gather(), PassThrough())
 	_, isPipe := runner.(pipeline)
 	require.False(t, isPipe)
