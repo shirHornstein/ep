@@ -39,7 +39,7 @@ type project []Runner
 
 // Returns a concatenation of all runners' return types
 func (rs project) Returns() []Type {
-	types := []Type{}
+	var types []Type
 	for _, r := range rs {
 		types = append(types, r.Returns()...)
 	}
