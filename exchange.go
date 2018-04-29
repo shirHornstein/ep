@@ -12,11 +12,14 @@ import (
 
 var _ = registerGob(&exchange{}, &req{}, &errMsg{})
 
+type exchangeType int
+
 const (
-	sendGather    = 1
-	sendScatter   = 2
-	sendBroadcast = 3
-	sendPartition = 4
+	exType exchangeType = iota
+	gather
+	scatter
+	broadcast
+	partition
 )
 
 // Scatter returns an exchange Runner that scatters its input uniformly to
@@ -24,7 +27,7 @@ const (
 // robin to the nodes.
 func Scatter() Runner {
 	uid, _ := uuid.NewV4()
-	return &exchange{UID: uid.String(), SendTo: sendScatter}
+	return &exchange{UID: uid.String(), Type: scatter}
 }
 
 // Gather returns an exchange Runner that gathers all of its input into a
@@ -32,7 +35,7 @@ func Scatter() Runner {
 // node it will be passthrough from all of the other nodes
 func Gather() Runner {
 	uid, _ := uuid.NewV4()
-	return &exchange{UID: uid.String(), SendTo: sendGather}
+	return &exchange{UID: uid.String(), Type: gather}
 }
 
 // Broadcast returns an exchange Runner that duplicates its input to all
@@ -40,7 +43,7 @@ func Gather() Runner {
 // all nodes (order not guaranteed)
 func Broadcast() Runner {
 	uid, _ := uuid.NewV4()
-	return &exchange{UID: uid.String(), SendTo: sendBroadcast}
+	return &exchange{UID: uid.String(), Type: broadcast}
 }
 
 // Partition returns an exchange Runner that routes the data between nodes using
@@ -49,13 +52,13 @@ func Broadcast() Runner {
 // The output will not necessarily be in the same order as the input.
 func Partition(column int) Runner {
 	uid, _ := uuid.NewV4()
-	return &exchange{UID: uid.String(), SendTo: sendPartition, partitionCol: column}
+	return &exchange{UID: uid.String(), Type: partition, partitionCol: column}
 }
 
 // exchange is a Runner that exchanges data between peer nodes
 type exchange struct {
-	UID    string
-	SendTo int
+	UID  string
+	Type exchangeType
 
 	encs         []encoder              // encoders to all destination connections
 	decs         []decoder              // decoders from all source connections
@@ -164,10 +167,10 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 
 // Send a dataset to destination nodes
 func (ex *exchange) Send(data Dataset) error {
-	switch ex.SendTo {
-	case sendScatter:
+	switch ex.Type {
+	case scatter:
 		return ex.EncodeNext(data)
-	case sendPartition:
+	case partition:
 		return ex.EncodePartition(data)
 	default:
 		return ex.EncodeAll(data)
@@ -318,7 +321,7 @@ func (ex *exchange) Init(ctx context.Context) (err error) {
 	masterNode := ctx.Value(masterNodeKey).(string)
 
 	targetNodes := allNodes
-	if ex.SendTo == sendGather {
+	if ex.Type == gather {
 		targetNodes = []string{masterNode}
 	}
 
