@@ -33,7 +33,6 @@ type Data interface {
 
 	// Equal checks if another data object refer to same underlying data
 	// as this one (shallow comparison)
-	// used for efficiency - avoid reflection and check address of underlying array while sorting
 	Equal(Data) bool
 
 	// Strings returns the string representation of all of the Data values
