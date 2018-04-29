@@ -172,7 +172,7 @@ func (set dataset) MarkNull(i int) {
 }
 
 // see Data.Nulls
-func (set dataset) Nulls() [] bool {
+func (set dataset) Nulls() []bool {
 	panic("runtime error: not nullable")
 }
 

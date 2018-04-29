@@ -32,7 +32,7 @@ type Data interface {
 	MarkNull(i int)
 
 	// Nulls returns a boolean array according to all null values
-	Nulls() [] bool
+	Nulls() []bool
 
 	// Equal checks if another data object refer to same underlying data
 	// as this one (shallow comparison)
