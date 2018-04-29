@@ -171,6 +171,11 @@ func (set dataset) MarkNull(i int) {
 	panic("runtime error: not nullable")
 }
 
+// see Data.Nulls
+func (set dataset) Nulls() [] bool {
+	panic("runtime error: not nullable")
+}
+
 // see Data.Equal
 func (set dataset) Equal(other Data) bool {
 	panic("runtime error: not comparable")

@@ -31,6 +31,9 @@ type Data interface {
 	// MarkNull sets the value in the given index to null
 	MarkNull(i int)
 
+	// Nulls returns a boolean array according to all null values
+	Nulls() [] bool
+
 	// Equal checks if another data object refer to same underlying data
 	// as this one (shallow comparison)
 	Equal(Data) bool

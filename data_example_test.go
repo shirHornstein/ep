@@ -33,6 +33,7 @@ func (vs strs) Duplicate(t int) ep.Data {
 }
 func (vs strs) IsNull(i int) bool { return false }
 func (vs strs) MarkNull(i int)    {}
+func (vs strs) Nulls() [] bool    { return make([] bool, vs.Len()) }
 func (vs strs) Strings() []string { return vs }
 func (vs strs) Equal(other ep.Data) bool {
 	return fmt.Sprintf("%p", vs) == fmt.Sprintf("%p", other)

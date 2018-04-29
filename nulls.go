@@ -31,6 +31,13 @@ func (vs nulls) Append(data Data) Data { return vs + data.(nulls) }
 func (vs nulls) Duplicate(t int) Data  { return vs * nulls(t) }
 func (vs nulls) IsNull(i int) bool     { return true }
 func (vs nulls) MarkNull(i int)        {}
+func (vs nulls) Nulls() [] bool {
+	res := make([] bool, vs.Len())
+	for i, _ := range res {
+		res[i] = true
+	}
+	return res
+}
 func (vs nulls) Equal(data Data) bool {
 	d, ok := data.(nulls)
 	if !ok {
