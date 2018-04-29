@@ -33,6 +33,7 @@ func newConditionalSortDataset(set dataset, sortingCols []SortingCol) *condition
 	for i, col := range set {
 		unique := true
 		for j := 0; j < i; j++ {
+			// use shallow comparison in case dataset contains two different columns with the same data
 			if set[i].Equal(set[j]) {
 				unique = false
 			}
