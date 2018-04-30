@@ -42,6 +42,10 @@ func VerifyDataInterfaceInvariant(t *testing.T, data ep.Data) {
 		require.Equal(t, oldLen, data.Len())
 		require.Equal(t, dataString, fmt.Sprintf("%+v", data))
 
+		data.Nulls()
+		require.Equal(t, oldLen, data.Len())
+		require.Equal(t, dataString, fmt.Sprintf("%+v", data))
+
 		isEqual := data.Equal(data)
 		require.True(t, isEqual)
 		require.Equal(t, oldLen, data.Len())
@@ -120,6 +124,12 @@ func VerifyDataNullsHandling(t *testing.T, data ep.Data) {
 		require.True(t, duplicatedData.IsNull(nullIdx+dataLength))
 		require.True(t, duplicatedData.IsNull(nullIdx+2*dataLength))
 		require.False(t, duplicatedData.IsNull(2*dataLength))
+	})
+
+	t.Run("TestData_Nulls_withNulls", func(t *testing.T) {
+		nullsIndicators := data.Nulls()
+		require.False(t, nullsIndicators[0])
+		require.True(t, nullsIndicators[nullIdx])
 	})
 
 	t.Run("TestData_Equal_withNulls", func(t *testing.T) {
