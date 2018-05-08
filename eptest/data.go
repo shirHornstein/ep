@@ -62,7 +62,7 @@ func VerifyDataInterfaceInvariant(t *testing.T, data ep.Data) {
 }
 
 // VerifyDataNullsHandling makes sure all functions handle nulls
-func VerifyDataNullsHandling(t *testing.T, data ep.Data) {
+func VerifyDataNullsHandling(t *testing.T, data ep.Data, expectedNullString string) {
 	nullIdx := 1
 	dataLength := data.Len()
 	typ := data.Type()
@@ -139,6 +139,6 @@ func VerifyDataNullsHandling(t *testing.T, data ep.Data) {
 
 	t.Run("TestData_Strings_withNulls", func(t *testing.T) {
 		strings := data.Strings()
-		require.True(t, len(strings[nullIdx]) == 0)
+		require.True(t, strings[nullIdx] == expectedNullString)
 	})
 }
