@@ -17,13 +17,11 @@ type Data interface {
 	// to end indices
 	Slice(start, end int) Data
 
-	// Append another data object to this one. It can be assumed that the type
-	// of the input data is similar to the current one, otherwise it's safe to
-	// panic
+	// Append another data object to this one. It can be assumed that the type of
+	// the input data is similar to the current one, otherwise it's safe to panic
 	Append(Data) Data
 
-	// Duplicate duplicates this object t times and returns new data with
-	// Len() * t rows
+	// Duplicate this object t times and returns new data with Len() * t rows
 	Duplicate(t int) Data
 
 	// IsNull checks if the given index contains null
@@ -39,8 +37,9 @@ type Data interface {
 	// as this one (shallow comparison)
 	Equal(Data) bool
 
-	// Copy copies single row from given data to this data, located in toRow.
-	// equivalent to this[toRow] = from.Slice(fromRow, fromRow+1)
+	// Copy single row from given data at fromRow position to this data, located
+	// at toRow position.
+	// Equivalent to this[toRow] = from.Slice(fromRow, fromRow+1)
 	Copy(from Data, fromRow, toRow int)
 
 	// Strings returns the string representation of all of the Data values

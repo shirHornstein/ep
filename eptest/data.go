@@ -52,7 +52,6 @@ func VerifyDataInterfaceInvariant(t *testing.T, data ep.Data) {
 	if _, isDataset := data.(ep.Dataset); !isDataset {
 		t.Run("TestData_IsNull_invariant", func(t *testing.T) {
 			data.IsNull(0)
-
 			require.Equal(t, oldLen, data.Len())
 			require.Equal(t, dataString, fmt.Sprintf("%+v", data))
 		})
@@ -159,11 +158,12 @@ func VerifyDataNullsHandling(t *testing.T, data ep.Data, expectedNullString stri
 	})
 
 	t.Run("TestData_Copy_withNulls", func(t *testing.T) {
-		additionalNullIdx := nullIdx + 2
-		require.NotEqual(t, data.IsNull(nullIdx), data.IsNull(additionalNullIdx))
+		newNullIdx := nullIdx + 2
+		require.False(t, data.IsNull(newNullIdx))
+		require.NotEqual(t, data.IsNull(nullIdx), data.IsNull(newNullIdx))
 
-		data.Copy(data, nullIdx, additionalNullIdx)
-		require.Equal(t, data.IsNull(nullIdx), data.IsNull(additionalNullIdx))
+		data.Copy(data, nullIdx, newNullIdx)
+		require.Equal(t, data.IsNull(nullIdx), data.IsNull(newNullIdx))
 	})
 
 	t.Run("TestData_Strings_withNulls", func(t *testing.T) {
