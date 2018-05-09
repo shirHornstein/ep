@@ -5,7 +5,8 @@ import (
 )
 
 // Data is an abstract interface representing a set of typed values. Implement
-// it for each type of data that you need to support
+// it for each type of data that you need to support.
+// NOTE: all indices received as arguments should be in range [0, Len())
 type Data interface {
 	// Type returns the data type of the contained values
 	Type() Type
@@ -37,6 +38,10 @@ type Data interface {
 	// Equal checks if another data object refer to same underlying data
 	// as this one (shallow comparison)
 	Equal(Data) bool
+
+	// Copy copies single row from given data to this data, located in toRow.
+	// equivalent to this[toRow] = from.Slice(fromRow, fromRow+1)
+	Copy(from Data, fromRow, toRow int)
 
 	// Strings returns the string representation of all of the Data values
 	Strings() []string

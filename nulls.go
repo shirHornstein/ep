@@ -29,8 +29,8 @@ func (nulls) Swap(int, int)            {}
 func (nulls) Slice(i, j int) Data      { return nulls(j - i) }
 func (vs nulls) Append(data Data) Data { return vs + data.(nulls) }
 func (vs nulls) Duplicate(t int) Data  { return vs * nulls(t) }
-func (vs nulls) IsNull(i int) bool     { return true }
-func (vs nulls) MarkNull(i int)        {}
+func (vs nulls) IsNull(int) bool       { return true }
+func (vs nulls) MarkNull(int)          {}
 func (vs nulls) Nulls() []bool {
 	res := make([]bool, vs.Len())
 	for i := range res {
@@ -45,7 +45,8 @@ func (vs nulls) Equal(data Data) bool {
 	}
 	return d == vs
 }
-func (vs nulls) Strings() []string { return make([]string, vs) }
+func (vs nulls) Copy(Data, int, int) {}
+func (vs nulls) Strings() []string   { return make([]string, vs) }
 
 // variadicNulls inherits nulls to allow nulls with flexible length
 type variadicNulls struct{ nulls }
