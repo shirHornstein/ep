@@ -34,10 +34,15 @@ func (vs strs) Duplicate(t int) ep.Data {
 func (vs strs) IsNull(i int) bool { return false }
 func (vs strs) MarkNull(i int)    {}
 func (vs strs) Nulls() []bool     { return make([]bool, vs.Len()) }
-func (vs strs) Strings() []string { return vs }
 func (vs strs) Equal(other ep.Data) bool {
+	// for efficiency - avoid reflection and check address of underlying arrays
 	return fmt.Sprintf("%p", vs) == fmt.Sprintf("%p", other)
 }
+func (vs strs) Copy(from ep.Data, fromRow, toRow int) {
+	src := from.(strs)
+	vs[toRow] = src[fromRow]
+}
+func (vs strs) Strings() []string { return vs }
 
 func ExampleData() {
 	var strs ep.Data = strs([]string{"hello", "world", "foo", "bar"})

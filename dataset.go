@@ -181,6 +181,14 @@ func (set dataset) Equal(other Data) bool {
 	panic("runtime error: not comparable")
 }
 
+// see Data.Copy
+func (set dataset) Copy(from Data, fromRow, toRow int) {
+	src := from.(dataset)
+	for i, d := range set {
+		d.Copy(src.At(i), fromRow, toRow)
+	}
+}
+
 // see Data.Strings
 func (set dataset) Strings() []string {
 	var res []string

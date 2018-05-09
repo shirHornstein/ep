@@ -5,7 +5,8 @@ import (
 )
 
 // Data is an abstract interface representing a set of typed values. Implement
-// it for each type of data that you need to support
+// it for each type of data that you need to support.
+// NOTE: all indices received as arguments should be in range [0, Len())
 type Data interface {
 	// Type returns the data type of the contained values
 	Type() Type
@@ -16,13 +17,13 @@ type Data interface {
 	// to end indices
 	Slice(start, end int) Data
 
-	// Append another data object to this one. It can be assumed that the type
-	// of the input data is similar to the current one, otherwise it's safe to
-	// panic
+	// Append takes another data object and appends it to this one.
+	// It can be assumed that the type of the input data is similar
+	// to the current one, otherwise it's safe to panic
 	Append(Data) Data
 
-	// Duplicate duplicates this object t times and returns new data with
-	// Len() * t rows
+	// Duplicate returns new data object containing this object t
+	// times. returned value has Len() * t rows
 	Duplicate(t int) Data
 
 	// IsNull checks if the given index contains null
@@ -37,6 +38,11 @@ type Data interface {
 	// Equal checks if another data object refer to same underlying data
 	// as this one (shallow comparison)
 	Equal(Data) bool
+
+	// Copy copies single row from given data at fromRow position to this data,
+	// located at toRow position.
+	// Equivalent to this[toRow] = from.Slice(fromRow, fromRow+1)
+	Copy(from Data, fromRow, toRow int)
 
 	// Strings returns the string representation of all of the Data values
 	Strings() []string
