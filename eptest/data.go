@@ -13,52 +13,73 @@ func VerifyDataInterfaceInvariant(t *testing.T, data ep.Data) {
 	oldLen := data.Len()
 	dataString := fmt.Sprintf("%+v", data)
 
-	data.Len()
-	require.Equal(t, oldLen, data.Len())
-	require.Equal(t, dataString, fmt.Sprintf("%+v", data))
+	t.Run("TestData_Type_invariant", func(t *testing.T) {
+		data.Type()
+		require.Equal(t, oldLen, data.Len())
+		require.Equal(t, dataString, fmt.Sprintf("%+v", data))
+	})
 
-	data.Less(0, oldLen/2)
-	require.Equal(t, oldLen, data.Len())
-	require.Equal(t, dataString, fmt.Sprintf("%+v", data))
+	t.Run("TestData_Len_invariant", func(t *testing.T) {
+		data.Len()
+		require.Equal(t, oldLen, data.Len())
+		require.Equal(t, dataString, fmt.Sprintf("%+v", data))
+	})
 
-	data.Type()
-	require.Equal(t, oldLen, data.Len())
-	require.Equal(t, dataString, fmt.Sprintf("%+v", data))
+	t.Run("TestData_Less_invariant", func(t *testing.T) {
+		data.Less(0, oldLen/2)
+		require.Equal(t, oldLen, data.Len())
+		require.Equal(t, dataString, fmt.Sprintf("%+v", data))
+	})
 
-	data.Slice(0, oldLen/2)
-	require.Equal(t, oldLen, data.Len())
-	require.Equal(t, dataString, fmt.Sprintf("%+v", data))
+	t.Run("TestData_Slice_invariant", func(t *testing.T) {
+		data.Slice(0, oldLen/2)
+		require.Equal(t, oldLen, data.Len())
+		require.Equal(t, dataString, fmt.Sprintf("%+v", data))
+	})
 
-	data.Append(data)
-	require.Equal(t, oldLen, data.Len())
-	require.Equal(t, dataString, fmt.Sprintf("%+v", data))
+	t.Run("TestData_Append_invariant", func(t *testing.T) {
+		data.Append(data)
+		require.Equal(t, oldLen, data.Len())
+		require.Equal(t, dataString, fmt.Sprintf("%+v", data))
+	})
 
-	data.Duplicate(5)
-	require.Equal(t, oldLen, data.Len())
-	require.Equal(t, dataString, fmt.Sprintf("%+v", data))
+	t.Run("TestData_Duplicate_invariant", func(t *testing.T) {
+		data.Duplicate(5)
+		require.Equal(t, oldLen, data.Len())
+		require.Equal(t, dataString, fmt.Sprintf("%+v", data))
+	})
 
 	if _, isDataset := data.(ep.Dataset); !isDataset {
-		data.IsNull(0)
-		require.Equal(t, oldLen, data.Len())
-		require.Equal(t, dataString, fmt.Sprintf("%+v", data))
+		t.Run("TestData_IsNull_invariant", func(t *testing.T) {
+			data.IsNull(0)
 
-		data.Nulls()
-		require.Equal(t, oldLen, data.Len())
-		require.Equal(t, dataString, fmt.Sprintf("%+v", data))
+			require.Equal(t, oldLen, data.Len())
+			require.Equal(t, dataString, fmt.Sprintf("%+v", data))
+		})
 
-		isEqual := data.Equal(data)
-		require.True(t, isEqual)
-		require.Equal(t, oldLen, data.Len())
-		require.Equal(t, dataString, fmt.Sprintf("%+v", data))
-		isEqual = data.Equal(nil)
-		require.False(t, isEqual)
-		require.Equal(t, oldLen, data.Len())
-		require.Equal(t, dataString, fmt.Sprintf("%+v", data))
+		t.Run("TestData_Nulls_invariant", func(t *testing.T) {
+			data.Nulls()
+			require.Equal(t, oldLen, data.Len())
+			require.Equal(t, dataString, fmt.Sprintf("%+v", data))
+		})
+
+		t.Run("TestData_Equal_invariant", func(t *testing.T) {
+			isEqual := data.Equal(data)
+			require.True(t, isEqual)
+			require.Equal(t, oldLen, data.Len())
+			require.Equal(t, dataString, fmt.Sprintf("%+v", data))
+			isEqual = data.Equal(nil)
+			require.False(t, isEqual)
+			require.Equal(t, oldLen, data.Len())
+			require.Equal(t, dataString, fmt.Sprintf("%+v", data))
+		})
 	}
 
-	data.Strings()
-	require.Equal(t, oldLen, data.Len())
-	require.Equal(t, dataString, fmt.Sprintf("%+v", data))
+	t.Run("TestData_Strings_invariant", func(t *testing.T) {
+		data.Strings()
+		require.Equal(t, oldLen, data.Len())
+		require.Equal(t, dataString, fmt.Sprintf("%+v", data))
+	})
 }
 
 // VerifyDataNullsHandling makes sure all functions handle nulls
@@ -135,6 +156,14 @@ func VerifyDataNullsHandling(t *testing.T, data ep.Data, expectedNullString stri
 	t.Run("TestData_Equal_withNulls", func(t *testing.T) {
 		isEqual := data.Equal(data)
 		require.True(t, isEqual)
+	})
+
+	t.Run("TestData_Copy_withNulls", func(t *testing.T) {
+		additionalNullIdx := nullIdx + 2
+		require.NotEqual(t, data.IsNull(nullIdx), data.IsNull(additionalNullIdx))
+
+		data.Copy(data, nullIdx, additionalNullIdx)
+		require.Equal(t, data.IsNull(nullIdx), data.IsNull(additionalNullIdx))
 	})
 
 	t.Run("TestData_Strings_withNulls", func(t *testing.T) {
