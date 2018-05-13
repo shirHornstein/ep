@@ -21,16 +21,17 @@ func (*nullType) Is(t Type) bool {
 	return t.Name() == "NULL"
 }
 
-type nulls int                         // number of nulls in the set
-func (nulls) Type() Type               { return Null }
-func (vs nulls) Len() int              { return int(vs) }
-func (nulls) Less(int, int) bool       { return false }
-func (nulls) Swap(int, int)            {}
-func (nulls) Slice(i, j int) Data      { return nulls(j - i) }
-func (vs nulls) Append(data Data) Data { return vs + data.(nulls) }
-func (vs nulls) Duplicate(t int) Data  { return vs * nulls(t) }
-func (vs nulls) IsNull(int) bool       { return true }
-func (vs nulls) MarkNull(int)          {}
+type nulls int                              // number of nulls in the set
+func (nulls) Type() Type                    { return Null }
+func (vs nulls) Len() int                   { return int(vs) }
+func (nulls) Less(int, int) bool            { return false }
+func (nulls) Swap(int, int)                 {}
+func (nulls) LessOther(Data, int, int) bool { return false }
+func (nulls) Slice(i, j int) Data           { return nulls(j - i) }
+func (vs nulls) Append(data Data) Data      { return vs + data.(nulls) }
+func (vs nulls) Duplicate(t int) Data       { return vs * nulls(t) }
+func (vs nulls) IsNull(int) bool            { return true }
+func (vs nulls) MarkNull(int)               {}
 func (vs nulls) Nulls() []bool {
 	res := make([]bool, vs.Len())
 	for i := range res {

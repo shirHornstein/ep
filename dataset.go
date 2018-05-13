@@ -79,6 +79,11 @@ func (set dataset) Split(secondWidth int) (Dataset, Dataset) {
 	return set[:firstWidth], set[firstWidth:]
 }
 
+// see Data.Type
+func (set dataset) Type() Type {
+	return &datasetType{}
+}
+
 // see sort.Interface.
 // Len of the dataset (number of rows). Assumed that all columns are of equal
 // length, and thus only checks the first
@@ -114,9 +119,15 @@ func (set dataset) Swap(i, j int) {
 	}
 }
 
-// see Data.Type
-func (set dataset) Type() Type {
-	return &datasetType{}
+// see Data.LessOther
+func (set dataset) LessOther(other Data, otherRow, thisRow int) bool {
+	// if no data - don't trigger any change
+	if set == nil || len(set) == 0 || other == nil {
+		return false
+	}
+	data := other.(dataset)
+	otherColumn := data.At(len(data) - 1)
+	return set.At(len(set)-1).LessOther(otherColumn, otherRow, thisRow)
 }
 
 // see Data.Slice. Returns a dataset

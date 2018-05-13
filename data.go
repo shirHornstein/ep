@@ -11,12 +11,16 @@ import (
 // 2. besides Equal, all Data received as arguments should have same type as this
 // 3. mutable functions (MarkNull, Swap, Copy) should be called only within creation
 //    scope or at gathering point. i.e. when no other runner have access to this
-//    object. not following this rule will end up with data race. 
+//    object. not following this rule will end up with data race.
 type Data interface {
 	// Type returns the data type of the contained values
 	Type() Type
 
 	sort.Interface // data is sortable
+
+	// LessOther reports whether the element with index thisRow should sort
+	// before the element with index otherRow within other data object
+	LessOther(other Data, otherRow, thisRow int) bool
 
 	// Slice returns a new data object containing only the values from the start
 	// to end indices
