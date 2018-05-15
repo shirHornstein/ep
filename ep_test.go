@@ -13,6 +13,7 @@ var _ = ep.Runners.
 	Register("infinityRunner", &infinityRunner{}).
 	Register("dataRunner", &dataRunner{}).
 	Register("nodeAddr", &nodeAddr{}).
+	Register("count", &count{}).
 	Register("upper", &upper{}).
 	Register("question", &question{})
 
@@ -118,6 +119,16 @@ func (*nodeAddr) Run(ctx context.Context, inp, out chan ep.Dataset) error {
 
 		outset = append(outset, res)
 		out <- ep.NewDataset(outset...)
+	}
+	return nil
+}
+
+type count struct{}
+
+func (*count) Returns() []ep.Type { return []ep.Type{str} }
+func (*count) Run(_ context.Context, inp, out chan ep.Dataset) error {
+	for data := range inp {
+		out <- ep.NewDataset(strs{fmt.Sprintf("%d", data.Len())})
 	}
 	return nil
 }
