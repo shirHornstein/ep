@@ -15,11 +15,12 @@ var _ = registerGob(&exchange{}, &req{}, &errMsg{})
 type exchangeType int
 
 const (
-	exType exchangeType = iota
+	exType      exchangeType = iota
 	gather
 	scatter
 	broadcast
 	partition
+	gatherMerge
 )
 
 // Gather returns an exchange Runner that gathers all of its input into a
@@ -60,15 +61,20 @@ type exchange struct {
 	UID  string
 	Type exchangeType
 
-	encs         []encoder              // encoders to all destination connections
-	decs         []decoder              // decoders from all source connections
-	conns        []io.Closer            // all open connections (used for closing)
-	encsNext     int                    // Encoders Round Robin next index
-	decsNext     int                    // Decoders Round Robin next index
+	inited   bool        // was this runner initialized
+	encs     []encoder   // encoders to all destination connections
+	decs     []decoder   // decoders from all source connections
+	conns    []io.Closer // all open connections (used for closing)
+	encsNext int         // Encoders Round Robin next index
+	decsNext int         // Decoders Round Robin next index
+
+	// partition specific variables
 	hashRing     *consistent.Consistent // hash ring for consistent hashing
 	encsByKey    map[string]encoder     // encoders mapped by key (node address)
 	partitionCol int                    // column index to use for partitioning
-	inited       bool                   // was this runner initialized
+
+	// gatherMerge specific variables
+	next chan int
 }
 
 func (ex *exchange) Returns() []Type { return []Type{Wildcard} }
@@ -101,17 +107,7 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 	errs := make(chan error)
 	go func() {
 		defer close(errs)
-		for {
-			data, recErr := ex.receive()
-			if recErr == io.EOF {
-				errs <- nil
-				break
-			} else if recErr != nil {
-				errs <- recErr
-				return
-			}
-			out <- data
-		}
+		errs <- ex.receive(out)
 	}()
 
 	// send the local data to the peers, until completion or error. Also listen
@@ -178,8 +174,76 @@ func (ex *exchange) send(data Dataset) error {
 }
 
 // receive receives a dataset from next source node
-func (ex *exchange) receive() (Dataset, error) {
-	return ex.decodeNext()
+func (ex *exchange) receive(out chan Dataset) error {
+	if ex.Type == gatherMerge {
+		return ex.receiveMerge(out)
+	}
+
+	for {
+		data, recErr := ex.decodeNext()
+		if recErr == io.EOF {
+			return nil
+		} else if recErr != nil {
+			return recErr
+		}
+		out <- data
+	}
+}
+
+// decodeNext decodes an object from the next source connection in a round robin
+func (ex *exchange) decodeNext() (Dataset, error) {
+	if len(ex.decs) == 0 {
+		return nil, io.EOF
+	}
+
+	i := (ex.decsNext + 1) % len(ex.decs)
+
+	req := &req{}
+	err := ex.decs[i].Decode(req)
+	if err != nil {
+		if err == io.EOF {
+			// remove the current decoder and try again
+			ex.decs = append(ex.decs[:i], ex.decs[i+1:]...)
+			return ex.decodeNext()
+		}
+		return nil, err
+	}
+
+	ex.decsNext = i
+	return req.Payload.(Dataset), nil
+}
+
+func (ex *exchange) receiveMerge(out chan Dataset) error {
+	// first, mark that init was completed to allow merger to start
+	// requesting data
+	out <- nil
+
+	for {
+		data, err := ex.decodeNextToMerge()
+		if err == io.EOF {
+			return nil
+		} else if err != nil {
+			return err
+		}
+		out <- data
+	}
+}
+
+func (ex *exchange) decodeNextToMerge() (Dataset, error) {
+	i := <-ex.next
+	if i == -1 {
+		return nil, io.EOF
+	}
+
+	req := &req{}
+	err := ex.decs[i].Decode(req)
+	if err != nil {
+		if err == io.EOF {
+			err = nil
+		}
+		return nil, err
+	}
+	return req.Payload.(Dataset), nil
 }
 
 // Close closes all open connections
@@ -276,29 +340,6 @@ func (ex *exchange) getPartitionEncoder(key string) (encoder, error) {
 	return enc, nil
 }
 
-// decodeNext decodes an object from the next source connection in a round robin
-func (ex *exchange) decodeNext() (Dataset, error) {
-	if len(ex.decs) == 0 {
-		return nil, io.EOF
-	}
-
-	i := (ex.decsNext + 1) % len(ex.decs)
-
-	req := &req{}
-	err := ex.decs[i].Decode(req)
-	if err != nil {
-		if err == io.EOF {
-			// remove the current decoder and try again
-			ex.decs = append(ex.decs[:i], ex.decs[i+1:]...)
-			return ex.decodeNext()
-		}
-		return nil, err
-	}
-
-	ex.decsNext = i
-	return req.Payload.(Dataset), nil
-}
-
 // init initializes the connections, encoders & decoders
 func (ex *exchange) init(ctx context.Context) (err error) {
 	// hashRing handles partitioning between nodes
@@ -322,7 +363,7 @@ func (ex *exchange) init(ctx context.Context) (err error) {
 	masterNode := ctx.Value(masterNodeKey).(string)
 
 	targetNodes := allNodes
-	if ex.Type == gather {
+	if ex.Type == gather || ex.Type == gatherMerge {
 		targetNodes = []string{masterNode}
 	}
 
@@ -385,7 +426,9 @@ func (ex *exchange) init(ctx context.Context) (err error) {
 		ex.conns = append(ex.conns, conn)
 		ex.decs = append(ex.decs, dbgDecoder{gob.NewDecoder(conn), msg})
 	}
-
+	if ex.Type == gatherMerge {
+		ex.next = make(chan int)
+	}
 	return nil
 }
 

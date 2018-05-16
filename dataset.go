@@ -139,7 +139,7 @@ func (set dataset) Slice(start, end int) Data {
 	return res
 }
 
-// Append a data (assumed by interface spec to be a Dataset)
+// see Data.Append (assumed by interface spec to be a Dataset)
 func (set dataset) Append(other Data) Data {
 	data := other.(dataset)
 	if set == nil {
