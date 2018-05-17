@@ -37,7 +37,7 @@ func TestDataset_LessOther(t *testing.T) {
 	var d1 ep.Data = strs([]string{"hello", "world", "foo", "bar", "bar", "a", "z"})
 	var d2 ep.Data = strs([]string{"a", "b", "c", "d", "e", "f", "g"})
 	dataset := ep.NewDataset(d2, d1)
-	other := ep.NewDataset(d2)
+	other := ep.NewDataset(d2, d2)
 
 	isLess := dataset.LessOther(other, 0, 4)
 	require.False(t, isLess)

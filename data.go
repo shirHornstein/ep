@@ -11,15 +11,15 @@ import (
 // 2. besides Equal, all Data received as arguments should have same type as this
 // 3. mutable functions (MarkNull, Swap, Copy) should be called only within creation
 //    scope or at gathering point. i.e. when no other runner have access to this
-//    object. not following this rule will end up with data race.
+//    object. not following this rule will end up with data race
 type Data interface {
 	// Type returns the data type of the contained values
 	Type() Type
 
 	sort.Interface // data is sortable
 
-	// LessOther reports whether the element with index thisRow should sort
-	// before the element with index otherRow within other data object
+	// LessOther reports whether thisRow-th element should sort before the
+	// otherRow-th element in other data object
 	LessOther(other Data, otherRow, thisRow int) bool
 
 	// Slice returns a new data object containing only the values from the start
@@ -58,14 +58,14 @@ type Data interface {
 }
 
 // Clone the contents of the provided Data. Dataset also implements the Data
-// interface is a valid input to this function.
+// interface is a valid input to this function
 func Clone(data Data) Data {
 	return data.Type().Data(0).Append(data)
 }
 
 // Cut the Data into several sub-segments at the provided cut-point indices. It's
 // effectively the same as calling Data.Slice() multiple times. Dataset also
-// implements the Data interface is a valid input to this function.
+// implements the Data interface is a valid input to this function
 func Cut(data Data, cutpoints ...int) Data {
 	res := []Data{}
 	var last int
