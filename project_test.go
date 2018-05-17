@@ -1,7 +1,6 @@
 package ep_test
 
 import (
-	"context"
 	"fmt"
 	"github.com/panoplyio/ep"
 	"github.com/panoplyio/ep/eptest"
@@ -260,17 +259,4 @@ func TestProject_Filter_nestedWithInternalAll(t *testing.T) {
 	require.False(t, q1.called)
 	require.True(t, q2.called)
 	require.Equal(t, "[[] [] [is hello? is world?]]", fmt.Sprintf("%+v", data.Strings()))
-}
-
-type count struct{}
-
-func (*count) Returns() []ep.Type { return []ep.Type{str} }
-func (*count) Run(_ context.Context, inp, out chan ep.Dataset) error {
-	c := 0
-	for data := range inp {
-		c += data.Len()
-	}
-
-	out <- ep.NewDataset(strs{fmt.Sprintf("%d", c)})
-	return nil
 }

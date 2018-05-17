@@ -1,7 +1,6 @@
 package ep_test
 
 import (
-	"context"
 	"fmt"
 	"github.com/panoplyio/ep"
 	"github.com/panoplyio/ep/eptest"
@@ -13,8 +12,6 @@ import (
 	"testing"
 	"time"
 )
-
-var _ = ep.Runners.Register("datasetSize", &datasetSize{})
 
 // Example of Scatter with just 2 nodes. The datasets are scattered in
 // round-robin to the two nodes such that each node receives half of the
@@ -122,7 +119,7 @@ func TestScatter_and_Gather(t *testing.T) {
 	require.Equal(t, "[[hello world foo bar] [:5552 :5552 :5551 :5551]]", fmt.Sprintf("%v", data))
 }
 
-func TestPartition_AndGather(t *testing.T) {
+func TestPartition_and_Gather(t *testing.T) {
 	rand.Seed(time.Now().UTC().UnixNano())
 	maxPort := 7000
 	minPort := 6000
@@ -155,7 +152,7 @@ func TestPartition_AndGather(t *testing.T) {
 	require.ElementsMatch(t, secondColumn, res.At(1))
 }
 
-func TestPartition_UsesProvidedColumn(t *testing.T) {
+func TestPartition_usesProvidedColumn(t *testing.T) {
 	port1 := fmt.Sprintf(":%d", 5551)
 	peer1 := eptest.NewPeer(t, port1)
 
@@ -208,7 +205,7 @@ func TestPartition_UsesProvidedColumn(t *testing.T) {
 	}
 }
 
-func TestPartition_SendsCompleteDatasets(t *testing.T) {
+func TestPartition_sendsCompleteDatasets(t *testing.T) {
 	port1 := fmt.Sprintf(":%d", 5551)
 	peer1 := eptest.NewPeer(t, port1)
 
@@ -223,7 +220,7 @@ func TestPartition_SendsCompleteDatasets(t *testing.T) {
 	secondColumn := strs{"f", "s", "f", "f", "s", "f", "f", "f", "s"}
 
 	data := ep.NewDataset(firstColumn, secondColumn)
-	runner := ep.Pipeline(ep.Partition(1), &datasetSize{}, ep.Gather())
+	runner := ep.Pipeline(ep.Partition(1), &count{}, ep.Gather())
 	runner = peer1.Distribute(runner, port1, port2)
 
 	res, err := eptest.Run(runner, data)
@@ -235,15 +232,4 @@ func TestPartition_SendsCompleteDatasets(t *testing.T) {
 
 	require.Equal(t, 2, sizes.Len())
 	require.ElementsMatch(t, expected, sizes.Strings())
-}
-
-type datasetSize struct{}
-
-func (*datasetSize) Returns() []ep.Type { return []ep.Type{str} }
-func (*datasetSize) Run(_ context.Context, inp, out chan ep.Dataset) error {
-	for data := range inp {
-		n := fmt.Sprintf("%v", data.Len())
-		out <- ep.NewDataset(strs{n})
-	}
-	return nil
 }

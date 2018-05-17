@@ -6,12 +6,21 @@ import (
 
 // Data is an abstract interface representing a set of typed values. Implement
 // it for each type of data that you need to support.
-// NOTE: all indices received as arguments should be in range [0, Len())
+// NOTES:
+// 1. all indices received as arguments should be in range [0, Len())
+// 2. besides Equal, all Data received as arguments should have same type as this
+// 3. mutable functions (MarkNull, Swap, Copy) should be called only within creation
+//    scope or at gathering point. i.e. when no other runner have access to this
+//    object. not following this rule will end up with data race
 type Data interface {
 	// Type returns the data type of the contained values
 	Type() Type
 
 	sort.Interface // data is sortable
+
+	// LessOther reports whether thisRow-th element should sort before the
+	// otherRow-th element in other data object
+	LessOther(thisRow int, other Data, otherRow int) bool
 
 	// Slice returns a new data object containing only the values from the start
 	// to end indices
@@ -20,7 +29,7 @@ type Data interface {
 	// Append takes another data object and appends it to this one.
 	// It can be assumed that the type of the input data is similar
 	// to the current one, otherwise it's safe to panic
-	Append(Data) Data
+	Append(other Data) Data
 
 	// Duplicate returns new data object containing this object t
 	// times. returned value has Len() * t rows
@@ -37,7 +46,7 @@ type Data interface {
 
 	// Equal checks if another data object refer to same underlying data
 	// as this one (shallow comparison)
-	Equal(Data) bool
+	Equal(other Data) bool
 
 	// Copy copies single row from given data at fromRow position to this data,
 	// located at toRow position.
@@ -49,14 +58,14 @@ type Data interface {
 }
 
 // Clone the contents of the provided Data. Dataset also implements the Data
-// interface is a valid input to this function.
+// interface is a valid input to this function
 func Clone(data Data) Data {
 	return data.Type().Data(0).Append(data)
 }
 
 // Cut the Data into several sub-segments at the provided cut-point indices. It's
 // effectively the same as calling Data.Slice() multiple times. Dataset also
-// implements the Data interface is a valid input to this function.
+// implements the Data interface is a valid input to this function
 func Cut(data Data, cutpoints ...int) Data {
 	res := []Data{}
 	var last int

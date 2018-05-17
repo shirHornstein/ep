@@ -12,7 +12,7 @@ import (
 
 // Tests the scattering when there's just one node - the whole thing should
 // be short-circuited to act as a pass-through
-func TestExchangeInit_closeAllConnectionsUponError(t *testing.T) {
+func TestExchange_init_closeAllConnectionsUponError(t *testing.T) {
 	port := ":5551"
 	ln, err := net.Listen("tcp", port)
 	require.NoError(t, err)
@@ -26,7 +26,7 @@ func TestExchangeInit_closeAllConnectionsUponError(t *testing.T) {
 	ctx = context.WithValue(ctx, thisNodeKey, port)
 
 	exchange := Scatter().(*exchange)
-	err = exchange.Init(ctx)
+	err = exchange.init(ctx)
 
 	require.Error(t, err)
 	require.Equal(t, "dial tcp :5552: connect: connection refused", err.Error())
@@ -45,7 +45,7 @@ func TestExchange_unique(t *testing.T) {
 	require.NotEqual(t, s2.UID, s3.UID)
 }
 
-func TestPartition_AddsMembersToHashRing(t *testing.T) {
+func TestPartition_addsMembersToHashRing(t *testing.T) {
 	port1 := ":5551"
 	ln, err := net.Listen("tcp", port1)
 	require.NoError(t, err)
@@ -74,13 +74,13 @@ func TestPartition_AddsMembersToHashRing(t *testing.T) {
 	ctx = context.WithValue(ctx, thisNodeKey, port1)
 
 	partition := Partition(0).(*exchange)
-	partition.Init(ctx)
+	partition.init(ctx)
 
 	members := partition.hashRing.Members()
 	require.ElementsMatchf(t, members, allNodes, "%s != %s", members, allNodes)
 }
 
-func TestExchange_EncodePartitionFailsWithoutDataset(t *testing.T) {
+func TestExchange_encodePartition_failsWithoutDataset(t *testing.T) {
 	port1 := ":5551"
 	ln, err := net.Listen("tcp", port1)
 	require.NoError(t, err)
@@ -108,12 +108,12 @@ func TestExchange_EncodePartitionFailsWithoutDataset(t *testing.T) {
 	ctx = context.WithValue(ctx, thisNodeKey, port1)
 
 	partition := Partition(0).(*exchange)
-	partition.Init(ctx)
+	partition.init(ctx)
 
-	require.Error(t, partition.EncodePartition([]int{42}))
+	require.Error(t, partition.encodePartition([]int{42}))
 }
 
-func TestExchange_GetPartitionEncoderIsConsistent(t *testing.T) {
+func TestExchange_getPartitionEncoder_consistent(t *testing.T) {
 	rand.Seed(time.Now().UTC().UnixNano())
 	maxPort := 7000
 	minPort := 6000
@@ -146,7 +146,7 @@ func TestExchange_GetPartitionEncoderIsConsistent(t *testing.T) {
 	ctx = context.WithValue(ctx, thisNodeKey, port1)
 
 	partition := Partition(0).(*exchange)
-	partition.Init(ctx)
+	partition.init(ctx)
 
 	hashKey := fmt.Sprintf("this-is-a-key-%d", rand.Intn(1e12))
 	enc, err := partition.getPartitionEncoder(hashKey)

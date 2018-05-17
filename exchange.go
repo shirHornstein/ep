@@ -22,20 +22,20 @@ const (
 	partition
 )
 
-// Scatter returns an exchange Runner that scatters its input uniformly to
-// all other nodes such that the received datasets are dispatched in a round-
-// robin to the nodes.
-func Scatter() Runner {
-	uid, _ := uuid.NewV4()
-	return &exchange{UID: uid.String(), Type: scatter}
-}
-
 // Gather returns an exchange Runner that gathers all of its input into a
 // single node. In all other nodes it will produce no output, but on the main
 // node it will be passthrough from all of the other nodes
 func Gather() Runner {
 	uid, _ := uuid.NewV4()
 	return &exchange{UID: uid.String(), Type: gather}
+}
+
+// Scatter returns an exchange Runner that scatters its input uniformly to
+// all other nodes such that the received datasets are dispatched in a round-
+// robin to the nodes.
+func Scatter() Runner {
+	uid, _ := uuid.NewV4()
+	return &exchange{UID: uid.String(), Type: scatter}
 }
 
 // Broadcast returns an exchange Runner that duplicates its input to all
@@ -76,7 +76,7 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 	if ex.inited {
 		// exchanged uses a predefined UID and connection listeners on all of
 		// the nodes. Running it again would conflict with the existing UID,
-		// leading to desynchronization between the nodes. Thus it's not
+		// leading to de-synchronization between the nodes. Thus it's not
 		// currently supported. TODO: reconsider this architecture? Perhaps
 		// we can distribute the exchange upon Run()?
 		return fmt.Errorf("exhcnage cannot be Run() more than once")
@@ -91,7 +91,7 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 		}
 	}()
 
-	err = ex.Init(ctx)
+	err = ex.init(ctx)
 	if err != nil {
 		return err
 	}
@@ -102,7 +102,7 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 	go func() {
 		defer close(errs)
 		for {
-			data, recErr := ex.Receive()
+			data, recErr := ex.receive()
 			if recErr == io.EOF {
 				errs <- nil
 				break
@@ -121,12 +121,12 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 	sndDone := false
 	defer func() {
 		// in case of cancellation, select below stops without sending EOF message
-		// to all peers. Therefore other peers will not close connections, hence ex.Receive
+		// to all peers. Therefore other peers will not close connections, hence ex.receive
 		// will be blocked forever. This will lead to deadlock as current exchange waits on
 		// errs channel that will not be closed
 		if !sndDone {
 			eofMsg := &errMsg{io.EOF.Error()}
-			ex.EncodeAll(eofMsg)
+			ex.encodeAll(eofMsg)
 		}
 
 		// wait for all receivers to finish
@@ -140,7 +140,7 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 				// the input is exhausted. Notify peers that we're done sending
 				// data (they will use it to stop listening to data from us).
 				eofMsg := &errMsg{io.EOF.Error()}
-				ex.EncodeAll(eofMsg)
+				ex.encodeAll(eofMsg)
 				sndDone = true
 
 				// inp is closed. If we keep iterating, it will infinitely
@@ -150,7 +150,7 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 				continue
 			}
 
-			err = ex.Send(data)
+			err = ex.send(data)
 		case err = <-errs:
 			rcvDone = true // errors (or nil) from the receive go-routine
 		case <-ctx.Done(): // context timeout or cancel
@@ -165,23 +165,24 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 	return err
 }
 
-// Send a dataset to destination nodes
-func (ex *exchange) Send(data Dataset) error {
+// send sends a dataset to destination nodes
+func (ex *exchange) send(data Dataset) error {
 	switch ex.Type {
 	case scatter:
-		return ex.EncodeNext(data)
+		return ex.encodeNext(data)
 	case partition:
-		return ex.EncodePartition(data)
+		return ex.encodePartition(data)
 	default:
-		return ex.EncodeAll(data)
+		return ex.encodeAll(data)
 	}
 }
 
-func (ex *exchange) Receive() (Dataset, error) {
-	return ex.DecodeNext()
+// receive receives a dataset from next source node
+func (ex *exchange) receive() (Dataset, error) {
+	return ex.decodeNext()
 }
 
-// Close all open connections
+// Close closes all open connections
 func (ex *exchange) Close() (err error) {
 	for _, conn := range ex.conns {
 		err1 := conn.Close()
@@ -192,9 +193,9 @@ func (ex *exchange) Close() (err error) {
 	return err
 }
 
-// Encode an object to all destination connections
+// encodeAll encodes an object to all destination connections
 // expecting e to be either dataset or EOF error
-func (ex *exchange) EncodeAll(e interface{}) (err error) {
+func (ex *exchange) encodeAll(e interface{}) (err error) {
 	req := &req{e}
 	for _, enc := range ex.encs {
 		err1 := enc.Encode(req)
@@ -205,8 +206,8 @@ func (ex *exchange) EncodeAll(e interface{}) (err error) {
 	return err
 }
 
-// Encode an object to the next destination connection in a round robin
-func (ex *exchange) EncodeNext(e interface{}) error {
+// encodeNext encodes an object to the next destination connection in a round robin
+func (ex *exchange) encodeNext(e interface{}) error {
 	if len(ex.encs) == 0 {
 		return io.ErrClosedPipe
 	}
@@ -216,11 +217,11 @@ func (ex *exchange) EncodeNext(e interface{}) error {
 	return ex.encs[ex.encsNext].Encode(req)
 }
 
-// Encode an object to a destination connection selected by partitioning
-func (ex *exchange) EncodePartition(e interface{}) error {
+// encodePartition encodes an object to a destination connection selected by partitioning
+func (ex *exchange) encodePartition(e interface{}) error {
 	data, ok := e.(Dataset)
 	if !ok {
-		return fmt.Errorf("EncodePartition called without a dataset")
+		return fmt.Errorf("encodePartition called without a dataset")
 	}
 
 	// dataByEncoder holds datasets grouped by encoders that were assigned these
@@ -275,8 +276,8 @@ func (ex *exchange) getPartitionEncoder(key string) (encoder, error) {
 	return enc, nil
 }
 
-// Decode an object from the next source connection in a round robin
-func (ex *exchange) DecodeNext() (Dataset, error) {
+// decodeNext decodes an object from the next source connection in a round robin
+func (ex *exchange) decodeNext() (Dataset, error) {
 	if len(ex.decs) == 0 {
 		return nil, io.EOF
 	}
@@ -289,7 +290,7 @@ func (ex *exchange) DecodeNext() (Dataset, error) {
 		if err == io.EOF {
 			// remove the current decoder and try again
 			ex.decs = append(ex.decs[:i], ex.decs[i+1:]...)
-			return ex.DecodeNext()
+			return ex.decodeNext()
 		}
 		return nil, err
 	}
@@ -298,8 +299,8 @@ func (ex *exchange) DecodeNext() (Dataset, error) {
 	return req.Payload.(Dataset), nil
 }
 
-// initialize the connections, encoders & decoders
-func (ex *exchange) Init(ctx context.Context) (err error) {
+// init initializes the connections, encoders & decoders
+func (ex *exchange) init(ctx context.Context) (err error) {
 	// hashRing handles partitioning between nodes
 	ex.hashRing = consistent.New()
 

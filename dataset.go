@@ -79,6 +79,11 @@ func (set dataset) Split(secondWidth int) (Dataset, Dataset) {
 	return set[:firstWidth], set[firstWidth:]
 }
 
+// see Data.Type
+func (set dataset) Type() Type {
+	return &datasetType{}
+}
+
 // see sort.Interface.
 // Len of the dataset (number of rows). Assumed that all columns are of equal
 // length, and thus only checks the first
@@ -114,9 +119,19 @@ func (set dataset) Swap(i, j int) {
 	}
 }
 
-// see Data.Type
-func (set dataset) Type() Type {
-	return &datasetType{}
+// see Data.LessOther.
+// By default sorts by last column ascending
+func (set dataset) LessOther(thisRow int, other Data, otherRow int) bool {
+	// if no data - don't trigger any change
+	if set == nil || len(set) == 0 || other == nil {
+		return false
+	}
+	data := other.(dataset)
+	if len(set) != len(data) {
+		panic("Unable to compare mismatching number of columns")
+	}
+	otherColumn := data.At(len(data) - 1)
+	return set.At(len(set)-1).LessOther(thisRow, otherColumn, otherRow)
 }
 
 // see Data.Slice. Returns a dataset
@@ -130,13 +145,13 @@ func (set dataset) Slice(start, end int) Data {
 
 // Append a data (assumed by interface spec to be a Dataset)
 func (set dataset) Append(other Data) Data {
-	data := other.(dataset)
 	if set == nil {
-		return data
-	} else if data == nil {
+		return other
+	}
+	if other == nil {
 		return set
 	}
-
+	data := other.(dataset)
 	if len(set) != len(data) {
 		panic("Unable to append mismatching number of columns")
 	}
