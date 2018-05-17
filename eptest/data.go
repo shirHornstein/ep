@@ -134,9 +134,9 @@ func VerifyDataNullsHandling(t *testing.T, data ep.Data, expectedNullString stri
 	})
 
 	t.Run("TestData_LessOther_withNulls", func(t *testing.T) {
-		isLess := data.LessOther(data, 0, nullIdx)
+		isLess := data.LessOther(data, nullIdx, 0)
 		require.True(t, isLess)
-		isLess = data.LessOther(data, nullIdx, 0)
+		isLess = data.LessOther(data, 0, nullIdx)
 		require.False(t, isLess)
 		isLess = data.LessOther(data, nullIdx, nullIdx)
 		require.False(t, isLess)
