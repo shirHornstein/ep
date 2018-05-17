@@ -20,7 +20,7 @@ type Data interface {
 
 	// LessOther reports whether thisRow-th element should sort before the
 	// otherRow-th element in other data object
-	LessOther(other Data, otherRow, thisRow int) bool
+	LessOther(thisRow int, other Data, otherRow int) bool
 
 	// Slice returns a new data object containing only the values from the start
 	// to end indices

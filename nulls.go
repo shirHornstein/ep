@@ -26,7 +26,7 @@ func (nulls) Type() Type                    { return Null }
 func (vs nulls) Len() int                   { return int(vs) }
 func (nulls) Less(int, int) bool            { return false }
 func (nulls) Swap(int, int)                 {}
-func (nulls) LessOther(Data, int, int) bool { return false }
+func (nulls) LessOther(int, Data, int) bool { return false }
 func (nulls) Slice(i, j int) Data           { return nulls(j - i) }
 func (vs nulls) Append(data Data) Data      { return vs + data.(nulls) }
 func (vs nulls) Duplicate(t int) Data       { return vs * nulls(t) }

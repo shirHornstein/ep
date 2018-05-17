@@ -32,7 +32,7 @@ func VerifyDataInterfaceInvariant(t *testing.T, data ep.Data) {
 	})
 
 	t.Run("TestData_LessOther_invariant", func(t *testing.T) {
-		data.LessOther(data, 0, oldLen/2)
+		data.LessOther(oldLen/2, data, 0)
 		require.Equal(t, oldLen, data.Len())
 		require.Equal(t, dataString, fmt.Sprintf("%+v", data))
 	})
@@ -134,11 +134,11 @@ func VerifyDataNullsHandling(t *testing.T, data ep.Data, expectedNullString stri
 	})
 
 	t.Run("TestData_LessOther_withNulls", func(t *testing.T) {
-		isLess := data.LessOther(data, nullIdx, 0)
+		isLess := data.LessOther(0, data, nullIdx)
 		require.True(t, isLess)
-		isLess = data.LessOther(data, 0, nullIdx)
+		isLess = data.LessOther(nullIdx, data, 0)
 		require.False(t, isLess)
-		isLess = data.LessOther(data, nullIdx, nullIdx)
+		isLess = data.LessOther(nullIdx, data, nullIdx)
 		require.False(t, isLess)
 	})
 
