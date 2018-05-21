@@ -8,10 +8,18 @@ import (
 
 var _ = registerGob(&merger{})
 
+// Merge returns an exchange Runner that gathers all of its input into a
+// single node, ordered by given sorting columns. It assumes input from
+// each peer is already sorted by these columns. In all other nodes it
+// will produce no output, but on the main node it will be passthrough
+// from all of the other nodes
 func Merge(sortingCols []SortingCol) Runner {
 	uid, _ := uuid.NewV4()
 
-	return &merger{Gather: &exchange{UID: uid.String(), Type: gatherMerge}, SortingCols: sortingCols}
+	return &merger{
+		Gather:      &exchange{UID: uid.String(), Type: gatherMerge},
+		SortingCols: sortingCols,
+	}
 }
 
 type merger struct {
@@ -143,6 +151,7 @@ func (r *merger) pickNext(batches []Dataset) int {
 	return next
 }
 
+// TODO support desc order for each sorting col
 // compare next rows in i-th and next-th batches. Uses pre-defined sorting columns
 func (r *merger) isFirstLess(batches []Dataset, i, j int) bool {
 	batchI, batchJ := batches[i], batches[j]
