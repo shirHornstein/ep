@@ -48,7 +48,7 @@ func (r *merger) Run(origCtx context.Context, inp, out chan Dataset) (err error)
 		// if this node is not a receiver - mark gather that no data is required
 		r.Gather.next <- -1
 		// no need to drain gatherOut, as no data should be written by non-receiver node
-		return nil
+		return
 	}
 
 	// init pre-allocated res with corresponding types
