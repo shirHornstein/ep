@@ -22,7 +22,7 @@ func (strs) Type() ep.Type         { return str }
 func (vs strs) Len() int           { return len(vs) }
 func (vs strs) Less(i, j int) bool { return vs[i] < vs[j] }
 func (vs strs) Swap(i, j int)      { vs[i], vs[j] = vs[j], vs[i] }
-func (vs strs) LessOther(other ep.Data, otherRow, thisRow int) bool {
+func (vs strs) LessOther(thisRow int, other ep.Data, otherRow int) bool {
 	data := other.(strs)
 	return vs[thisRow] < data[otherRow]
 }

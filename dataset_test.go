@@ -37,17 +37,17 @@ func TestDataset_LessOther(t *testing.T) {
 	var d1 ep.Data = strs([]string{"hello", "world", "foo", "bar", "bar", "a", "z"})
 	var d2 ep.Data = strs([]string{"a", "b", "c", "d", "e", "f", "g"})
 	dataset := ep.NewDataset(d2, d1)
-	other := ep.NewDataset(d2)
+	other := ep.NewDataset(d2, d2)
 
-	isLess := dataset.LessOther(other, 0, 4)
+	isLess := dataset.LessOther(4, other, 0)
 	require.False(t, isLess)
 
-	isLess = dataset.LessOther(other, 2, 5)
+	isLess = dataset.LessOther(5, other, 2)
 	require.True(t, isLess)
 
 	// equal items should return false in both direction
-	isLess = dataset.LessOther(other, 0, 5)
+	isLess = dataset.LessOther(5, other, 0)
 	require.False(t, isLess)
-	isLessOpposite := other.LessOther(dataset, 5, 0)
+	isLessOpposite := other.LessOther(0, dataset, 5)
 	require.False(t, isLessOpposite)
 }
