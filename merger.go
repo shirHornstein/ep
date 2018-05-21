@@ -152,12 +152,12 @@ func (r *merger) isFirstLess(batches []Dataset, i, j int) bool {
 	for idx := 0; idx < len(r.SortingCols) && !stop; idx++ {
 		col := r.SortingCols[idx]
 		colI, colJ := batchI.At(col.Index), batchJ.At(col.Index)
-		iLessThanJ = colI.LessOther(colJ, nextJ, nextI)
+		iLessThanJ = colI.LessOther(nextI, colJ, nextJ)
 		// iLessThanJ will be false also for equal values.
 		// if colI.LessOther(colJ) and colJ.LessOther(colI) are both false, values
 		// are equal. Therefore leave stop as false and keep checking next sorting
 		// columns. otherwise - values are different, and loop should stop
-		stop = iLessThanJ || colJ.LessOther(colI, nextI, nextJ)
+		stop = iLessThanJ || colJ.LessOther(nextJ, colI, nextI)
 	}
 	return iLessThanJ
 }

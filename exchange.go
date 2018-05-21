@@ -15,7 +15,7 @@ var _ = registerGob(&exchange{}, &req{}, &errMsg{})
 type exchangeType int
 
 const (
-	exType      exchangeType = iota
+	exType exchangeType = iota
 	gather
 	scatter
 	broadcast

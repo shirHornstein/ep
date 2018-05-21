@@ -19,7 +19,7 @@ func TestScatter_and_GatherMerger(t *testing.T) {
 		require.NoError(t, peer.Close())
 	}()
 
-	runner := ep.Pipeline(ep.Scatter(), &nodeAddr{}, ep.Merge([]ep.SortingCol{{0, false}}))
+	runner := ep.Pipeline(ep.Scatter(), &nodeAddr{}, ep.Merge([]ep.SortingCol{{Index: 0, Desc: false}}))
 	runner = dist.Distribute(runner, port1, port2)
 
 	data1 := ep.NewDataset(strs{"hello", "world", "what"})
