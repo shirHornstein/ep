@@ -2,7 +2,6 @@ package ep
 
 import (
 	"context"
-	"github.com/satori/go.uuid"
 	"sync"
 )
 
@@ -14,10 +13,8 @@ var _ = registerGob(&merger{})
 // will produce no output, but on the main node it will be passthrough
 // from all of the other nodes
 func Merge(sortingCols []SortingCol) Runner {
-	uid, _ := uuid.NewV4()
-
 	return &merger{
-		Gather:      &exchange{UID: uid.String(), Type: gatherMerge},
+		Gather:      newSelectiveGather(),
 		SortingCols: sortingCols,
 	}
 }

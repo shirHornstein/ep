@@ -17,10 +17,10 @@ type exchangeType int
 const (
 	exType exchangeType = iota
 	gather
+	selectiveGather
 	scatter
 	broadcast
 	partition
-	gatherMerge
 )
 
 // Gather returns an exchange Runner that gathers all of its input into a
@@ -29,6 +29,15 @@ const (
 func Gather() Runner {
 	uid, _ := uuid.NewV4()
 	return &exchange{UID: uid.String(), Type: gather}
+}
+
+// selectiveGather returns an exchange Runner that allow user to select peer to
+// fetch data from.
+// Similar to gather, in all other nodes it will produce no output, but on the
+// main node it will be passthrough from all of the other nodes
+func newSelectiveGather() *exchange {
+	uid, _ := uuid.NewV4()
+	return &exchange{UID: uid.String(), Type: selectiveGather}
 }
 
 // Scatter returns an exchange Runner that scatters its input uniformly to
@@ -73,7 +82,12 @@ type exchange struct {
 	encsByKey    map[string]encoder     // encoders mapped by key (node address)
 	partitionCol int                    // column index to use for partitioning
 
-	// gatherMerge specific variables
+	// selectiveGather specific variables
+	// channel to communicate with selectiveGather user. Writing integer i to
+	// the channel is the trigger to read data from i-th peer. As always, data
+	// itself, or nil if no more data to read, will be transmitted on output
+	// channel. It's caller responsibility to write -1 when exchange is done
+	// receiving data.
 	next chan int
 }
 
@@ -175,7 +189,7 @@ func (ex *exchange) send(data Dataset) error {
 
 // receive receives a dataset from next source node
 func (ex *exchange) receive(out chan Dataset) error {
-	if ex.Type == gatherMerge {
+	if ex.Type == selectiveGather {
 		return ex.receiveMerge(out)
 	}
 
@@ -363,7 +377,7 @@ func (ex *exchange) init(ctx context.Context) (err error) {
 	masterNode := ctx.Value(masterNodeKey).(string)
 
 	targetNodes := allNodes
-	if ex.Type == gather || ex.Type == gatherMerge {
+	if ex.Type == gather || ex.Type == selectiveGather {
 		targetNodes = []string{masterNode}
 	}
 
@@ -426,7 +440,7 @@ func (ex *exchange) init(ctx context.Context) (err error) {
 		ex.conns = append(ex.conns, conn)
 		ex.decs = append(ex.decs, dbgDecoder{gob.NewDecoder(conn), msg})
 	}
-	if ex.Type == gatherMerge {
+	if ex.Type == selectiveGather {
 		ex.next = make(chan int)
 	}
 	return nil
