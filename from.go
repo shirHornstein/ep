@@ -40,7 +40,7 @@ func (r *from) Returns() []Type {
 }
 
 func (r *from) Run(ctx context.Context, inp, out chan Dataset) error {
-	for _ = range inp {
+	for range inp {
 	} // drain the input
 
 	datasets := r.distribute(ctx)
