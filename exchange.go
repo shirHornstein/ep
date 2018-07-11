@@ -309,17 +309,18 @@ func (ex *exchange) init(ctx context.Context) (err error) {
 	// By using a map we can find an encoder for every address
 	ex.encsByKey = make(map[string]encoder)
 
+	allNodes, _ := ctx.Value(allNodesKey).([]string)
+	thisNode, _ := ctx.Value(thisNodeKey).(string)
+	masterNode, _ := ctx.Value(masterNodeKey).(string)
 	dist, _ := ctx.Value(distributerKey).(interface {
 		Connect(addr, uid string) (net.Conn, error)
 	})
 
 	if dist == nil {
-		return fmt.Errorf("exhcnage started without a distributer")
+		// no distributer was defined - so it's only running locally. We can
+		// short-circuit the whole thing
+		allNodes = []string{""}
 	}
-
-	allNodes := ctx.Value(allNodesKey).([]string)
-	thisNode := ctx.Value(thisNodeKey).(string)
-	masterNode := ctx.Value(masterNodeKey).(string)
 
 	targetNodes := allNodes
 	if ex.Type == gather {
