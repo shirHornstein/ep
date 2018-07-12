@@ -7,12 +7,11 @@ import (
 var _ = registerGob(&from{})
 
 // From creates a new runner from the provided Data (and, by extension,
-// Datasets) provided. The data types must be equal. The first argument, n,
-// determines how many times to output the provided datasets (for benchmarks, for
-// example).
+// Datasets). The data types must be equal. The first argument, n, determines how
+// many times to output the provided datasets (for benchmarks, for example).
 //
 // NOTE that when distributed, From would split the datasets across the nodes
-// in a round-robin fashion.
+// in a round-robin fashion so no scattering is necessary.
 func From(n int, data ...Data) Runner {
 	// turn input data into datasets
 	datasets := make([]Dataset, len(data))
