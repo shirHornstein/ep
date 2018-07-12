@@ -6,16 +6,25 @@ import (
 
 var _ = registerGob(&from{})
 
-// From returns a runner that ignores all of its input and just returns the
-// provided datasets as output. The data types of all datasets must be equal.
-// Mostly useful for testing, benchmarks, constants, etc.
-//
-// The first argument, n, determines how many times to output the provided
-// datasets. This is used in benchmarks where we want a very large output.
+// From creates a new runner from the provided Data (and, by extension,
+// Datasets) provided. The data types must be equal. The first argument, n,
+// determines how many times to output the provided datasets (for benchmarks, for
+// example).
 //
 // NOTE that when distributed, From would split the datasets across the nodes
 // in a round-robin fashion.
-func From(n int, datasets ...Dataset) Runner {
+func From(n int, data ...Data) Runner {
+	// turn input data into datasets
+	datasets := make([]Dataset, len(data))
+	for i, d := range data {
+		ds, ok := d.(Dataset)
+		if ok {
+			datasets[i] = ds
+		} else {
+			datasets[i] = NewDataset(d)
+		}
+	}
+
 	return &from{n, datasets}
 }
 
