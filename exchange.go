@@ -190,14 +190,15 @@ func (ex *exchange) send(data Dataset) error {
 // receive receives a dataset from next source node
 func (ex *exchange) receive(out chan Dataset) error {
 	if ex.Type == selectiveGather {
-		return ex.receiveMerge(out)
+		return ex.receiveSelective(out)
 	}
 
 	for {
 		data, recErr := ex.decodeNext()
 		if recErr == io.EOF {
 			return nil
-		} else if recErr != nil {
+		}
+		if recErr != nil {
 			return recErr
 		}
 		out <- data
@@ -227,13 +228,13 @@ func (ex *exchange) decodeNext() (Dataset, error) {
 	return req.Payload.(Dataset), nil
 }
 
-func (ex *exchange) receiveMerge(out chan Dataset) error {
-	// first, mark that init was completed to allow merger to start
+func (ex *exchange) receiveSelective(out chan Dataset) error {
+	// first, mark that init was completed to allow caller to start
 	// requesting data
 	out <- nil
 
 	for {
-		data, err := ex.decodeNextToMerge()
+		data, err := ex.decodeNextToSelective()
 		if err == io.EOF {
 			return nil
 		} else if err != nil {
@@ -243,7 +244,7 @@ func (ex *exchange) receiveMerge(out chan Dataset) error {
 	}
 }
 
-func (ex *exchange) decodeNextToMerge() (Dataset, error) {
+func (ex *exchange) decodeNextToSelective() (Dataset, error) {
 	i := <-ex.next
 	if i == -1 {
 		return nil, io.EOF

@@ -26,7 +26,7 @@ type merger struct {
 	peersNextIdx []int
 }
 
-const batchSize = 2 // TODO take average?
+const batchSize = 1000
 
 func (*merger) Returns() []Type { return []Type{Wildcard} }
 func (r *merger) Run(origCtx context.Context, inp, out chan Dataset) (err error) {
@@ -48,8 +48,14 @@ func (r *merger) Run(origCtx context.Context, inp, out chan Dataset) (err error)
 	}()
 
 	batches := r.receiveFirstBatches(gatherOut)
-	numOfSources := len(batches)
-	if numOfSources == 0 {
+	var example Dataset
+	for _, batch := range batches {
+		if batch != nil && batch.Width() > 0 {
+			example = batch
+			break
+		}
+	}
+	if example == nil {
 		// if this node is not a receiver - mark gather that no data is required
 		r.Gather.next <- -1
 		// no need to drain gatherOut, as no data should be written by non-receiver node
@@ -57,7 +63,7 @@ func (r *merger) Run(origCtx context.Context, inp, out chan Dataset) (err error)
 	}
 
 	// init pre-allocated res with corresponding types
-	res := r.allocateResBatch(batches[0]) // TODO if 0 is empty/nil???
+	res := r.allocateResBatch(example)
 	resNextIdx := 0
 
 	for {
@@ -148,22 +154,23 @@ func (r *merger) pickNext(batches []Dataset) int {
 	return next
 }
 
-// TODO support desc order for each sorting col
 // compare next rows in i-th and next-th batches. Uses pre-defined sorting columns
 func (r *merger) isFirstLess(batches []Dataset, i, j int) bool {
 	batchI, batchJ := batches[i], batches[j]
 	nextI, nextJ := r.peersNextIdx[i], r.peersNextIdx[j]
 
-	var iLessThanJ, stop bool
-	for idx := 0; idx < len(r.SortingCols) && !stop; idx++ {
-		col := r.SortingCols[idx]
+	var iLessThanJ bool
+	for _, col := range r.SortingCols {
 		colI, colJ := batchI.At(col.Index), batchJ.At(col.Index)
-		iLessThanJ = colI.LessOther(nextI, colJ, nextJ)
+
+		iLessThanJ = colI.LessOther(nextI, colJ, nextJ) != col.Desc
 		// iLessThanJ will be false also for equal values.
 		// if colI.LessOther(colJ) and colJ.LessOther(colI) are both false, values
 		// are equal. Therefore leave stop as false and keep checking next sorting
 		// columns. otherwise - values are different, and loop should stop
-		stop = iLessThanJ || colJ.LessOther(nextJ, colI, nextI)
+		if iLessThanJ || colJ.LessOther(nextJ, colI, nextI) != col.Desc {
+			break
+		}
 	}
 	return iLessThanJ
 }
