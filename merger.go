@@ -65,6 +65,7 @@ func (r *merger) Run(origCtx context.Context, inp, out chan Dataset) (err error)
 	// init pre-allocated res with corresponding types
 	res := r.allocateResBatch(example)
 	resNextIdx := 0
+	example = nil // no need to keep holding example after initialization
 
 	for {
 		select {
