@@ -73,16 +73,6 @@ type exchange struct {
 
 func (ex *exchange) Returns() []Type { return []Type{Wildcard} }
 func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) {
-	if ex.inited {
-		// exchanged uses a predefined UID and connection listeners on all of
-		// the nodes. Running it again would conflict with the existing UID,
-		// leading to de-synchronization between the nodes. Thus it's not
-		// currently supported. TODO: reconsider this architecture? Perhaps
-		// we can distribute the exchange upon Run()?
-		return fmt.Errorf("exhcnage cannot be Run() more than once")
-	}
-
-	ex.inited = true
 	defer func() {
 		closeErr := ex.Close()
 		// prefer real existing error over close error
@@ -301,6 +291,7 @@ func (ex *exchange) decodeNext() (Dataset, error) {
 
 // init initializes the connections, encoders & decoders
 func (ex *exchange) init(ctx context.Context) (err error) {
+
 	// hashRing handles partitioning between nodes
 	ex.hashRing = consistent.New()
 
@@ -320,8 +311,16 @@ func (ex *exchange) init(ctx context.Context) (err error) {
 		// no distributer was defined - so it's only running locally. We can
 		// short-circuit the whole thing
 		allNodes = []string{""}
+	} else if ex.inited {
+		// exchanged uses a predefined UID and connection listeners on all of
+		// the nodes. Running it again would conflict with the existing UID,
+		// leading to de-synchronization between the nodes. Thus it's not
+		// currently supported. TODO: reconsider this architecture? Perhaps
+		// we can distribute the exchange upon Run()?
+		return fmt.Errorf("exhcnage cannot be Run() more than once")
 	}
 
+	ex.inited = true
 	targetNodes := allNodes
 	if ex.Type == gather {
 		targetNodes = []string{masterNode}
