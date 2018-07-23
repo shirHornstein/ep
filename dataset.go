@@ -102,13 +102,21 @@ func (set dataset) Len() int {
 }
 
 // see sort.Interface.
-// By default sorts by last column ascending. Consider use Sort(dataset,..) instead
+// By default sorts by columns appearance, ascending.
+// NOTE: Unsafe for use with recurring columns. Consider use Sort(dataset,..) instead
 func (set dataset) Less(i, j int) bool {
-	// if no data - don't trigger any change
-	if set == nil || len(set) == 0 {
-		return false
+	var iLessThanJ bool
+	for _, col := range set {
+		iLessThanJ = col.Less(i, j)
+		// iLessThanJ will be false also for equal values.
+		// if Less(l, j) and Less(j, i) are both false, values are equal. Therefore
+		// keep checking next sorting columns.
+		// otherwise - values are different, and loop should stop
+		if iLessThanJ || col.Less(j, i) {
+			break
+		}
 	}
-	return set.At(len(set)-1).Less(i, j)
+	return iLessThanJ
 }
 
 // see sort.Interface.

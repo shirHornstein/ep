@@ -14,12 +14,12 @@ func TestDataInterface(t *testing.T) {
 	eptest.VerifyDataInterfaceInvariant(t, dataset)
 }
 
-func TestDataset_Sort_byLastColAscending(t *testing.T) {
+func TestDataset_Sort_byColsAscending(t *testing.T) {
 	var d1 ep.Data = strs([]string{"hello", "world", "foo", "bar", "bar", "a", "z"})
 	var d2 ep.Data = strs([]string{"1", "2", "4", "0", "3", "1", "1"})
 	var d3 ep.Data = strs([]string{"a", "b", "c", "d", "e", "f", "g"})
 
-	dataset := ep.NewDataset(d1, d3, d2)
+	dataset := ep.NewDataset(d2, d3, d1)
 
 	sort.Sort(dataset)
 
@@ -27,10 +27,10 @@ func TestDataset_Sort_byLastColAscending(t *testing.T) {
 	require.Equal(t, 3, dataset.Width())
 
 	// by default, sorting done by last column, ascending
-	require.Equal(t, "[0 1 1 1 2 3 4]", fmt.Sprintf("%+v", dataset.At(2)))
+	require.Equal(t, "[0 1 1 1 2 3 4]", fmt.Sprintf("%+v", dataset.At(0)))
 	// verify other columns were updated as well
-	require.Equal(t, "[bar hello a z world bar foo]", fmt.Sprintf("%+v", dataset.At(0)))
 	require.Equal(t, "[d a f g b e c]", fmt.Sprintf("%+v", dataset.At(1)))
+	require.Equal(t, "[bar hello a z world bar foo]", fmt.Sprintf("%+v", dataset.At(2)))
 }
 
 func TestDataset_LessOther(t *testing.T) {

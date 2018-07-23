@@ -60,16 +60,15 @@ type conditionalSortDataset struct {
 
 // see sort.Interface. Uses pre-defined sorting columns
 func (set *conditionalSortDataset) Less(i, j int) bool {
-	var iLessThanJ, stop bool
-	for idx := 0; idx < len(set.sortingInterfaces) && !stop; idx++ {
-		currCol := set.sortingInterfaces[idx]
-		if currCol != nil {
-			iLessThanJ = currCol.Less(i, j)
-			// iLessThanJ will be false also for equal values.
-			// if Less(l, j) and Less(j, i) are both false, values are equal. Therefore leave
-			// stop as false and keep checking next sorting columns.
-			// otherwise - values are different, and loop should stop
-			stop = iLessThanJ || currCol.Less(j, i)
+	var iLessThanJ bool
+	for _, col := range set.sortingInterfaces {
+		iLessThanJ = col.Less(i, j)
+		// iLessThanJ will be false also for equal values.
+		// if Less(l, j) and Less(j, i) are both false, values are equal. Therefore
+		// keep checking next sorting columns.
+		// otherwise - values are different, and loop should stop
+		if iLessThanJ || col.Less(j, i) {
+			break
 		}
 	}
 	return iLessThanJ
