@@ -17,7 +17,7 @@ func (*recordType) DataEmpty(n int) Data { return &Records{dataset{}} }
 // Records implements Dataset to store a list of record values,
 // each record composed of typed items
 type Records struct {
-	D dataset
+	D dataset // must be public for being gob-able
 }
 
 // NewRecords creates a new Records object that holds record values
