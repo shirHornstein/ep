@@ -57,12 +57,6 @@ type Data interface {
 	Strings() []string
 }
 
-// Clone the contents of the provided Data. Dataset also implements the Data
-// interface is a valid input to this function
-func Clone(data Data) Data {
-	return data.Type().Data(0).Append(data)
-}
-
 // Cut the Data into several sub-segments at the provided cut-point indices. It's
 // effectively the same as calling Data.Slice() multiple times. Dataset also
 // implements the Data interface is a valid input to this function
