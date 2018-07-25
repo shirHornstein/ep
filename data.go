@@ -9,9 +9,9 @@ import (
 // NOTES:
 // 1. all indices received as arguments should be in range [0, Len())
 // 2. besides Equal, all Data received as arguments should have same type as this
-// 3. mutable functions (MarkNull, Swap, Copy) should be called only within creation
-//    scope or at gathering point. i.e. when no other runner have access to this
-//    object. not following this rule will end up with data race
+// 3. mutable functions (MarkNull, Swap, Copy, Append) should be called only within
+//    creation scope or at gathering point. i.e. when no other runner have access
+//    to this object. not following this rule will end up with data race
 type Data interface {
 	// Type returns the data type of the contained values
 	Type() Type
