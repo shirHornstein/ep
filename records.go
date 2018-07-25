@@ -79,7 +79,7 @@ func (vs *Records) Slice(start, end int) Data {
 func (vs *Records) Append(other Data) Data {
 	d := other.(*Records)
 	if vs.Width() != d.D.Width() {
-		panic("Unable to append records with different length")
+		panic("Unable to append records with different width")
 	}
 	res := make(dataset, vs.Width())
 	for i, col := range vs.D {
