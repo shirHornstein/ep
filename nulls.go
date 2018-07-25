@@ -56,3 +56,7 @@ func (variadicNulls) Len() int                 { return -1 }
 func (vs variadicNulls) Append(data Data) Data { return vs }
 func (variadicNulls) Strings() []string        { return []string{} }
 func (vs variadicNulls) Nulls() []bool         { return []bool{} }
+func (variadicNulls) Equal(data Data) bool {
+	_, ok := data.(variadicNulls)
+	return ok
+}
