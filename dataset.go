@@ -128,7 +128,7 @@ func (set dataset) Swap(i, j int) {
 }
 
 // see Data.LessOther.
-// By default sorts by last column ascending
+// By default sorts by columns appearance, ascending
 func (set dataset) LessOther(thisRow int, other Data, otherRow int) bool {
 	// if no data - don't trigger any change
 	if set == nil || len(set) == 0 || other == nil {
@@ -138,8 +138,18 @@ func (set dataset) LessOther(thisRow int, other Data, otherRow int) bool {
 	if len(set) != len(data) {
 		panic("Unable to compare mismatching number of columns")
 	}
-	otherColumn := data.At(len(data) - 1)
-	return set.At(len(set)-1).LessOther(thisRow, otherColumn, otherRow)
+	var iLessThanJ bool
+	for i, col := range set {
+		iLessThanJ = col.LessOther(thisRow, data.At(i), otherRow)
+		// iLessThanJ will be false also for equal values.
+		// if Less(l, j) and Less(j, i) are both false, values are equal. Therefore
+		// keep checking next sorting columns.
+		// otherwise - values are different, and loop should stop
+		if iLessThanJ || col.LessOther(otherRow, data.At(i), thisRow) {
+			break
+		}
+	}
+	return iLessThanJ
 }
 
 // see Data.Slice. Returns a dataset

@@ -55,6 +55,8 @@ func (vs *Records) Len() int {
 
 // Less implements sort.Interface and Data
 func (vs *Records) Less(i, j int) bool {
+	// valid records don't contain recurring columns, so it's safe to use
+	// dataset.Sort rather than ep.Sort
 	return vs.D.Less(i, j)
 }
 
@@ -64,10 +66,9 @@ func (vs *Records) Swap(i, j int) {
 }
 
 // LessOther implements Data
-// By default sorts by first column ascending
 func (vs *Records) LessOther(thisRow int, other Data, otherRow int) bool {
 	data := other.(*Records)
-	return vs.At(0).LessOther(thisRow, data.At(0), otherRow)
+	return vs.D.LessOther(thisRow, data.D, otherRow)
 }
 
 // Slice implements Data
@@ -77,15 +78,9 @@ func (vs *Records) Slice(start, end int) Data {
 
 // Append implements Data
 func (vs *Records) Append(other Data) Data {
-	d := other.(*Records)
-	if vs.Width() != d.D.Width() {
-		panic("Unable to append records with different width")
-	}
-	res := make(dataset, vs.Width())
-	for i, col := range vs.D {
-		res[i] = col.Append(d.D.At(i))
-	}
-	return &Records{res}
+	data := other.(*Records)
+	appended := vs.D.Append(data.D).(dataset)
+	return &Records{appended}
 }
 
 // Duplicate implements Data

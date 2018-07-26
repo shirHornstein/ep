@@ -49,15 +49,15 @@ func TestDataset_Sort_byColsAscending(t *testing.T) {
 }
 
 func TestDataset_LessOther(t *testing.T) {
-	var d1 ep.Data = strs([]string{"hello", "world", "foo", "bar", "bar", "a", "z"})
-	var d2 ep.Data = strs([]string{"a", "b", "c", "d", "e", "f", "g"})
-	dataset := ep.NewDataset(d2, d1)
-	other := ep.NewDataset(d2, d2)
+	var d1 ep.Data = strs([]string{"a", "b", "c", "d", "e", "a", "g"})
+	var d2 ep.Data = strs([]string{"a", "world", "foo", "bar", "bar", "a", "z"})
+	dataset := ep.NewDataset(d1, d1)
+	other := ep.NewDataset(d1, d2)
 
-	isLess := dataset.LessOther(4, other, 0)
+	isLess := dataset.LessOther(4, other, 0) // e > a
 	require.False(t, isLess)
 
-	isLess = dataset.LessOther(5, other, 2)
+	isLess = dataset.LessOther(2, other, 2) // c < foo
 	require.True(t, isLess)
 
 	// equal items should return false in both direction
