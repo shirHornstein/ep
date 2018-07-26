@@ -103,13 +103,13 @@ func (set dataset) Len() int {
 
 // see sort.Interface.
 // By default sorts by columns appearance, ascending.
-// NOTE: Unsafe for use with recurring columns. Consider use Sort(dataset,..) instead
+// NOTE: Unsafe for use with recurring columns. Consider use Sort(dataset, sortingCols) instead
 func (set dataset) Less(i, j int) bool {
 	var iLessThanJ bool
 	for _, col := range set {
 		iLessThanJ = col.Less(i, j)
 		// iLessThanJ will be false also for equal values.
-		// if Less(l, j) and Less(j, i) are both false, values are equal. Therefore
+		// if Less(i, j) and Less(j, i) are both false, values are equal. Therefore
 		// keep checking next sorting columns.
 		// otherwise - values are different, and loop should stop
 		if iLessThanJ || col.Less(j, i) {
@@ -120,7 +120,7 @@ func (set dataset) Less(i, j int) bool {
 }
 
 // see sort.Interface.
-// NOTE: Unsafe for use with recurring columns. Consider use Sort(dataset,..) instead
+// NOTE: Unsafe for use with recurring columns. Consider use Sort(dataset, sortingCols) instead
 func (set dataset) Swap(i, j int) {
 	for _, col := range set {
 		col.Swap(i, j)
@@ -142,7 +142,7 @@ func (set dataset) LessOther(thisRow int, other Data, otherRow int) bool {
 	for i, col := range set {
 		iLessThanJ = col.LessOther(thisRow, data.At(i), otherRow)
 		// iLessThanJ will be false also for equal values.
-		// if Less(l, j) and Less(j, i) are both false, values are equal. Therefore
+		// if Less(i, j) and Less(j, i) are both false, values are equal. Therefore
 		// keep checking next sorting columns.
 		// otherwise - values are different, and loop should stop
 		if iLessThanJ || col.LessOther(otherRow, data.At(i), thisRow) {
