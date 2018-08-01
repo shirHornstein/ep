@@ -24,17 +24,20 @@ func ExampleDataset_Duplicate() {
 	// [hello world]
 }
 
-func TestDataInterface(t *testing.T) {
-	dataset := ep.NewDataset(ep.Null.Data(10), str.Data(10))
-	eptest.VerifyDataInterfaceInvariant(t, dataset)
+func TestDatasetInvariant(t *testing.T) {
+	d1 := strs([]string{"1", "2", "4", "0", "3", "1", "1"})
+	d2 := strs([]string{"a", "b", "c", "", "e", "f", "g"})
+	d3 := ep.Null.Data(7)
+
+	eptest.VerifyDataInterfaceInvariant(t, ep.NewDataset(d1, d2, d3))
 }
 
-func TestDataset_Sort_byColsAscending(t *testing.T) {
-	var d1 ep.Data = strs([]string{"hello", "world", "foo", "bar", "bar", "a", "z"})
-	var d2 ep.Data = strs([]string{"1", "2", "4", "0", "3", "1", "1"})
-	var d3 ep.Data = strs([]string{"a", "b", "c", "d", "e", "f", "g"})
+func TestDataset_sort(t *testing.T) {
+	d1 := strs([]string{"1", "2", "1", "0", "3", "1", "1"})
+	d2 := strs([]string{"a", "b", "a", "", "e", "z", "g"})
+	d3 := strs([]string{"a", "b", "a2", "", "e", "z", "g"})
 
-	dataset := ep.NewDataset(d2, d3, d1)
+	dataset := ep.NewDataset(d1, d2, d3)
 
 	sort.Sort(dataset)
 
@@ -42,15 +45,27 @@ func TestDataset_Sort_byColsAscending(t *testing.T) {
 	require.Equal(t, 3, dataset.Width())
 
 	// by default, sorting done by last column, ascending
-	require.Equal(t, "[0 1 1 1 2 3 4]", fmt.Sprintf("%+v", dataset.At(0)))
+	require.Equal(t, "[0 1 1 1 1 2 3]", fmt.Sprintf("%+v", dataset.At(0)))
 	// verify other columns were updated as well
-	require.Equal(t, "[d a f g b e c]", fmt.Sprintf("%+v", dataset.At(1)))
-	require.Equal(t, "[bar hello a z world bar foo]", fmt.Sprintf("%+v", dataset.At(2)))
+	require.Equal(t, "[ a a g z b e]", fmt.Sprintf("%+v", dataset.At(1)))
+	require.Equal(t, "[ a a2 g z b e]", fmt.Sprintf("%+v", dataset.At(2)))
+}
+
+func TestDataset_sortDescending(t *testing.T) {
+	expected := []string{"(3,e,e)", "(2,b,b)", "(1,z,z)", "(1,g,g)", "(1,a,a2)", "(1,a,a)", "(0,,)"}
+	d1 := strs([]string{"1", "2", "1", "0", "3", "1", "1"})
+	d2 := strs([]string{"a", "b", "a", "", "e", "z", "g"})
+	d3 := strs([]string{"a", "b", "a2", "", "e", "z", "g"})
+
+	dataset := ep.NewDataset(d1, d2, d3)
+
+	sort.Sort(sort.Reverse(dataset))
+	require.EqualValues(t, expected, dataset.Strings())
 }
 
 func TestDataset_LessOther(t *testing.T) {
-	var d1 ep.Data = strs([]string{"a", "b", "c", "c", "e", "a", "g"})
-	var d2 ep.Data = strs([]string{"a", "world", "bar", "foo", "bar", "a", "z"})
+	d1 := strs([]string{"a", "b", "c", "c", "e", "a", "g"})
+	d2 := strs([]string{"a", "world", "bar", "foo", "bar", "a", "z"})
 	dataset := ep.NewDataset(d1, d1)
 	other := ep.NewDataset(d1, d2)
 
@@ -65,4 +80,13 @@ func TestDataset_LessOther(t *testing.T) {
 	require.False(t, isLess)
 	isLessOpposite := other.LessOther(0, dataset, 5)
 	require.False(t, isLessOpposite)
+}
+
+func TestDataset_Strings(t *testing.T) {
+	expected := []string{"(1,a)", "(2,b)", "(4,c)", "(0,)", "(3,e)", "(1,f)", "(1,g)"}
+	d1 := strs([]string{"1", "2", "4", "0", "3", "1", "1"})
+	d2 := strs([]string{"a", "b", "c", "", "e", "f", "g"})
+
+	dataset := ep.NewDataset(d1, d2)
+	require.EqualValues(t, expected, dataset.Strings())
 }

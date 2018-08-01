@@ -2,18 +2,12 @@ package ep
 
 import (
 	"fmt"
-	"strings"
 )
 
-var _ = registerGob(NewDataset(), &datasetType{})
+var _ = registerGob(dataset{})
+var _ = Types.Register("record", Record)
+
 var errMismatch = fmt.Errorf("mismatched number of rows")
-
-type datasetType struct{}
-
-func (sett *datasetType) Name() string         { return "Dataset" }
-func (sett *datasetType) String() string       { return sett.Name() }
-func (sett *datasetType) Data(n int) Data      { return make(dataset, n) }
-func (sett *datasetType) DataEmpty(n int) Data { return make(dataset, 0, n) }
 
 // Dataset is a composite Data interface, containing several internal Data
 // objects. It's a Data in itself, but allows traversing and manipulating the
@@ -35,6 +29,16 @@ type Dataset interface {
 	// the given secondWidth argument
 	Split(secondWidth int) (Dataset, Dataset)
 }
+
+// Record data type, implements Type
+var Record = &recordType{}
+
+type recordType struct{}
+
+func (sett *recordType) String() string     { return sett.Name() }
+func (sett *recordType) Name() string       { return "record" }
+func (sett *recordType) Data(int) Data      { return dataset{} }
+func (sett *recordType) DataEmpty(int) Data { return dataset{} }
 
 type dataset []Data
 
@@ -81,7 +85,7 @@ func (set dataset) Split(secondWidth int) (Dataset, Dataset) {
 
 // see Data.Type
 func (set dataset) Type() Type {
-	return &datasetType{}
+	return &recordType{}
 }
 
 // see sort.Interface.
@@ -196,22 +200,44 @@ func (set dataset) Duplicate(t int) Data {
 
 // see Data.IsNull
 func (set dataset) IsNull(i int) bool {
-	panic("runtime error: not nullable")
+	// i-th row considered to be null iff it contains only nulls
+	for _, d := range set {
+		if !d.IsNull(i) {
+			return false
+		}
+	}
+	return true
 }
 
 // see Data.MarkNull
 func (set dataset) MarkNull(i int) {
-	panic("runtime error: not nullable")
+	for _, d := range set {
+		d.MarkNull(i)
+	}
 }
 
 // see Data.Nulls
 func (set dataset) Nulls() []bool {
-	panic("runtime error: not nullable")
+	res := make([]bool, set.Len())
+	for i := range res {
+		res[i] = set.IsNull(i)
+	}
+	return res
 }
 
 // see Data.Equal
 func (set dataset) Equal(other Data) bool {
-	panic("runtime error: not comparable")
+	data, ok := other.(dataset)
+	if !ok {
+		return false
+	}
+
+	for i, d := range set {
+		if !d.Equal(data.At(i)) {
+			return false
+		}
+	}
+	return true
 }
 
 // see Data.Copy
@@ -224,9 +250,18 @@ func (set dataset) Copy(from Data, fromRow, toRow int) {
 
 // see Data.Strings
 func (set dataset) Strings() []string {
-	var res []string
+	if set.Len() <= 0 {
+		return []string{}
+	}
+	res := make([]string, set.Len())
 	for _, col := range set {
-		res = append(res, "["+strings.Join(col.Strings(), " ")+"]")
+		strs := col.Strings()
+		for i, s := range strs {
+			res[i] += s + ","
+		}
+	}
+	for i, s := range res {
+		res[i] = "(" + s[:len(s)-1] + ")"
 	}
 	return res
 }
