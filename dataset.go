@@ -145,7 +145,7 @@ func (set dataset) LessOther(thisRow int, other Data, otherRow int) bool {
 		// if Less(i, j) and Less(j, i) are both false, values are equal. Therefore
 		// keep checking next sorting columns.
 		// otherwise - values are different, and loop should stop
-		if iLessThanJ || col.LessOther(otherRow, data.At(i), thisRow) {
+		if iLessThanJ || data.At(i).LessOther(otherRow, col, thisRow) {
 			break
 		}
 	}

@@ -5,8 +5,6 @@ package ep
 var Record = &recordType{}
 var _ = Types.Register("record", Record)
 
-const emptyRecordStr = "()"
-
 type recordType struct{}
 
 func (t *recordType) String() string     { return t.Name() }
@@ -138,14 +136,10 @@ func (vs *Records) Copy(from Data, fromRow, toRow int) {
 
 // Strings implements Data
 func (vs *Records) Strings() []string {
-	res := make([]string, vs.Len())
-	if vs.Width() == 0 {
-		for i := range res {
-			res[i] = emptyRecordStr
-		}
-		return res
+	if vs.Len() == 0 {
+		return []string{}
 	}
-
+	res := make([]string, vs.Len())
 	for _, col := range vs.D {
 		strs := col.Strings()
 		for i, s := range strs {
