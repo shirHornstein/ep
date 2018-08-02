@@ -5,7 +5,7 @@ import (
 )
 
 var _ = registerGob(dataset{})
-var _ = Types.Register("record", Record)
+var _ = Types.register("record", &datasetType{})
 
 var errMismatch = fmt.Errorf("mismatched number of rows")
 
@@ -30,15 +30,14 @@ type Dataset interface {
 	Split(secondWidth int) (Dataset, Dataset)
 }
 
-// Record data type, implements Type
-var Record = &recordType{}
+type datasetType struct{}
 
-type recordType struct{}
-
-func (sett *recordType) String() string     { return sett.Name() }
-func (sett *recordType) Name() string       { return "record" }
-func (sett *recordType) Data(int) Data      { return dataset{} }
-func (sett *recordType) DataEmpty(int) Data { return dataset{} }
+func (sett *datasetType) String() string  { return sett.Name() }
+func (sett *datasetType) Name() string    { return "record" }
+func (sett *datasetType) Data(n int) Data { return sett.DataEmpty(n) }
+func (sett *datasetType) DataEmpty(int) Data {
+	panic("runtime error: please use NewDataset function")
+}
 
 type dataset []Data
 
@@ -85,7 +84,7 @@ func (set dataset) Split(secondWidth int) (Dataset, Dataset) {
 
 // see Data.Type
 func (set dataset) Type() Type {
-	return &recordType{}
+	return &datasetType{}
 }
 
 // see sort.Interface.
