@@ -63,24 +63,46 @@ func TestDataset_sortDescending(t *testing.T) {
 	require.EqualValues(t, expected, dataset.Strings())
 }
 
-func TestDataset_LessOther(t *testing.T) {
-	d1 := strs([]string{"a", "b", "c", "c", "e", "a", "g"})
-	d2 := strs([]string{"a", "world", "bar", "a", "bar", "a", "z"})
+func TestDataset_LessOther_breakOnFirstColumn(t *testing.T) {
+	d1 := strs([]string{"b", "c"})
+	d2 := strs([]string{"b", "a"})
 	dataset := ep.NewDataset(d1, d1)
-	other := ep.NewDataset(d1, d2)
+	other := ep.NewDataset(d2, d1)
 
-	isLess := dataset.LessOther(4, other, 0) // e > a
+	isLess := dataset.LessOther(0, other, 1) // b < a?
 	require.False(t, isLess)
-	isLess = other.LessOther(0, dataset, 4) // a < e (same as above)
+	// same comparison, other direction
+	isLess = other.LessOther(1, dataset, 0) // a < b?
 	require.True(t, isLess)
+}
 
-	isLess = dataset.LessOther(2, other, 3) // c > a
+func TestDataset_LessOther_breakOnSecondColumn(t *testing.T) {
+	d1 := strs([]string{"c", "a"})
+	d2 := strs([]string{"a", "x"})
+	dataset := ep.NewDataset(d1, d1)
+	other := ep.NewDataset(d2, d1)
+
+	// dataset row 1: (a,a)
+	// other row 0: (a,c)
+	// first column equal, compare second column
+	isLess := dataset.LessOther(1, other, 0) // (a,a) < (a,c)?
+	require.True(t, isLess)
+	// same comparison, other direction
+	isLess = other.LessOther(0, dataset, 1) // (a,c) < (a,a)?
 	require.False(t, isLess)
+}
+
+func TestDataset_LessOther_equalRows(t *testing.T) {
+	d1 := strs([]string{"a", "a"})
+	d2 := strs([]string{"a", "x"})
+	dataset := ep.NewDataset(d1, d1)
+	other := ep.NewDataset(d2, d1)
 
 	// equal items should return false in both direction
-	isLess = dataset.LessOther(5, other, 0)
+	isLess := dataset.LessOther(1, other, 0) // (a,a) < (a,a)?
 	require.False(t, isLess)
-	isLessOpposite := other.LessOther(0, dataset, 5)
+	// same comparison, other direction
+	isLessOpposite := other.LessOther(0, dataset, 1) // (a,a) < (a,a)?
 	require.False(t, isLessOpposite)
 }
 
