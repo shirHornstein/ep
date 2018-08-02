@@ -71,7 +71,7 @@ func TestDataset_LessOther(t *testing.T) {
 
 	isLess := dataset.LessOther(4, other, 0) // e > a
 	require.False(t, isLess)
-	isLess = other.LessOther(0, dataset, 4) // e > a
+	isLess = other.LessOther(0, dataset, 4) // a < e (same as above)
 	require.True(t, isLess)
 
 	isLess = dataset.LessOther(2, other, 3) // c > a
