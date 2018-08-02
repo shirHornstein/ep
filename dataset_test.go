@@ -65,15 +65,17 @@ func TestDataset_sortDescending(t *testing.T) {
 
 func TestDataset_LessOther(t *testing.T) {
 	d1 := strs([]string{"a", "b", "c", "c", "e", "a", "g"})
-	d2 := strs([]string{"a", "world", "bar", "foo", "bar", "a", "z"})
+	d2 := strs([]string{"a", "world", "bar", "a", "bar", "a", "z"})
 	dataset := ep.NewDataset(d1, d1)
 	other := ep.NewDataset(d1, d2)
 
 	isLess := dataset.LessOther(4, other, 0) // e > a
 	require.False(t, isLess)
-
-	isLess = dataset.LessOther(2, other, 3) // bar < foo
+	isLess = other.LessOther(0, dataset, 4) // e > a
 	require.True(t, isLess)
+
+	isLess = dataset.LessOther(2, other, 3) // c < a
+	require.False(t, isLess)
 
 	// equal items should return false in both direction
 	isLess = dataset.LessOther(5, other, 0)
