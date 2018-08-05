@@ -202,7 +202,9 @@ func (set dataset) IsNull(i int) bool {
 
 // see Data.MarkNull
 func (set dataset) MarkNull(i int) {
-	panic("runtime error: not nullable")
+	for _, d := range set {
+		d.MarkNull(i)
+	}
 }
 
 // see Data.Nulls
