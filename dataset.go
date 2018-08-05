@@ -47,11 +47,11 @@ func NewDataset(data ...Data) Dataset {
 // NewDatasetLike creates a new Data object at the provided size that has the
 // same types as the provided dataset.
 func NewDatasetLike(data Dataset, size int) Dataset {
-	types := make([]Type, data.Width())
-	for i := range types {
-		types[i] = data.At(i).Type()
+	res := make([]Data, data.Width())
+	for i := range res {
+		res[i] = data.At(i).Type().Data(size)
 	}
-	return NewDatasetTypes(types, size)
+	return NewDataset(res...)
 }
 
 // NewDatasetTypes creates a new Data object at the provided size and types
