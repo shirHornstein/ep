@@ -9,6 +9,21 @@ import (
 	"testing"
 )
 
+func ExampleDataset_Duplicate() {
+	dataset1 := ep.NewDataset(strs([]string{"hello", "world"}))
+	dataset2 := dataset1.Duplicate(1).(ep.Dataset)
+	d2 := dataset2.At(0).(strs)
+	d2[0] = "foo"
+	d2[1] = "bar"
+
+	fmt.Println(dataset2.At(0)) // copy was modified
+	fmt.Println(dataset1.At(0)) // original left intact
+
+	// Output:
+	// [foo bar]
+	// [hello world]
+}
+
 func TestDataInterface(t *testing.T) {
 	dataset := ep.NewDataset(ep.Null.Data(10), str.Data(10))
 	eptest.VerifyDataInterfaceInvariant(t, dataset)
