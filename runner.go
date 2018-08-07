@@ -116,7 +116,7 @@ func (r *pick) Run(_ context.Context, inp, out chan Dataset) error {
 	for data := range inp {
 		var result Dataset
 		if len(r.Indices) == 0 {
-			result = NewDataset(Null.Data(data.Len()))
+			result = NewDataset(null.Data(data.Len()))
 		} else {
 			res := make([]Data, len(r.Indices))
 			for i, idx := range r.Indices {

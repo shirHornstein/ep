@@ -55,9 +55,9 @@ func (rs union) ReturnsErr() ([]Type, error) {
 		for i, t := range have {
 
 			// choose the first column type that isn't a null
-			if Null.Is(types[i]) {
+			if null.Is(types[i]) {
 				types[i] = have[i]
-			} else if !Null.Is(t) && t.Name() != types[i].Name() {
+			} else if !null.Is(t) && t.Name() != types[i].Name() {
 				return nil, fmt.Errorf("type mismatch %s and %s", types, have)
 			}
 		}

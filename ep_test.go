@@ -138,11 +138,6 @@ type upper struct{}
 func (*upper) Returns() []ep.Type { return []ep.Type{ep.SetAlias(str, "upper")} }
 func (*upper) Run(_ context.Context, inp, out chan ep.Dataset) error {
 	for data := range inp {
-		if data.At(0).Type() == ep.Null {
-			out <- data
-			continue
-		}
-
 		res := make(strs, data.Len())
 		for i, v := range data.At(0).(strs) {
 			res[i] = strings.ToUpper(v)
@@ -161,11 +156,6 @@ func (*question) Returns() []ep.Type { return []ep.Type{ep.SetAlias(str, "questi
 func (q *question) Run(_ context.Context, inp, out chan ep.Dataset) error {
 	q.called = true
 	for data := range inp {
-		if data.At(0).Type() == ep.Null {
-			out <- data
-			continue
-		}
-
 		res := make(strs, data.Len())
 		for i, v := range data.At(0).(strs) {
 			res[i] = "is " + v + "?"

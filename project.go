@@ -206,12 +206,12 @@ func (rs project) useDummySingleton() {
 var dummyRunnerSingleton = &dummyRunner{}
 
 // variadicNullBatch is used for replacing unused columns
-var variadicNullBatch = NewDataset(Null.Data(-1))
+var variadicNullBatch = NewDataset(null.Data(-1))
 
 type dummyRunner struct{}
 
 func (*dummyRunner) Args() []Type    { return []Type{Wildcard} }
-func (*dummyRunner) Returns() []Type { return []Type{Null} }
+func (*dummyRunner) Returns() []Type { return []Type{null} }
 func (*dummyRunner) Run(_ context.Context, inp, out chan Dataset) error {
 	return nil
 }

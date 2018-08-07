@@ -32,7 +32,7 @@ func TestProject_errorInFirstRunner(t *testing.T) {
 	err := fmt.Errorf("something bad happened")
 	infinity := &infinityRunner{}
 	runner := ep.Project(NewErrRunner(err), infinity)
-	data := ep.NewDataset(ep.Null.Data(1))
+	data := ep.NewDataset(str.Data(1))
 	data, err = eptest.Run(runner, data)
 
 	require.Equal(t, 0, data.Width())
@@ -46,7 +46,7 @@ func TestProject_errorInSecondRunner(t *testing.T) {
 	infinityRunner1 := &infinityRunner{}
 	infinityRunner2 := &infinityRunner{}
 	runner := ep.Project(infinityRunner1, NewErrRunner(err), infinityRunner2)
-	data := ep.NewDataset(ep.Null.Data(1))
+	data := ep.NewDataset(str.Data(1))
 	data, err = eptest.Run(runner, data)
 
 	require.Equal(t, 0, data.Width())
@@ -61,7 +61,7 @@ func TestProject_errorInThirdRunner(t *testing.T) {
 	infinityRunner1 := &infinityRunner{}
 	infinityRunner2 := &infinityRunner{}
 	runner := ep.Project(infinityRunner1, infinityRunner2, NewErrRunner(err))
-	data := ep.NewDataset(ep.Null.Data(1))
+	data := ep.NewDataset(str.Data(1))
 	data, err = eptest.Run(runner, data)
 
 	require.Equal(t, 0, data.Width())
@@ -80,7 +80,7 @@ func TestProject_errorInPipeline(t *testing.T) {
 		ep.Pipeline(infinityRunner1, infinityRunner2),
 		ep.Pipeline(infinityRunner3, NewErrRunner(err)),
 	)
-	data := ep.NewDataset(ep.Null.Data(1))
+	data := ep.NewDataset(str.Data(1))
 	data, err = eptest.Run(runner, data)
 
 	require.Equal(t, 0, data.Width())
@@ -103,7 +103,7 @@ func TestProject_errorWithExchange(t *testing.T) {
 	}()
 
 	infinityRunner := &infinityRunner{}
-	mightErrored := &dataRunner{ep.NewDataset(ep.Null.Data(1)), port2}
+	mightErrored := &dataRunner{ep.NewDataset(str.Data(1)), port2}
 	runner := ep.Pipeline(
 		infinityRunner,
 		ep.Scatter(),
@@ -112,7 +112,7 @@ func TestProject_errorWithExchange(t *testing.T) {
 	)
 	runner = dist.Distribute(runner, port, port2)
 
-	data := ep.NewDataset(ep.Null.Data(1))
+	data := ep.NewDataset(str.Data(1))
 	data, err := eptest.Run(runner, data, data, data, data)
 
 	require.Error(t, err)
@@ -129,7 +129,7 @@ func TestProject_nested_errorInFirstRunner(t *testing.T) {
 		ep.Project(infinityRunner3, NewErrRunner(err)),
 		ep.Project(infinityRunner1, infinityRunner2),
 	)
-	data := ep.NewDataset(ep.Null.Data(1))
+	data := ep.NewDataset(str.Data(1))
 	data, err = eptest.Run(runner, data)
 
 	require.Equal(t, 0, data.Width())
@@ -149,7 +149,7 @@ func TestProject_nested_errorInSecondRunner(t *testing.T) {
 		ep.Project(infinityRunner1, infinityRunner2),
 		ep.Project(infinityRunner3, NewErrRunner(err)),
 	)
-	data := ep.NewDataset(ep.Null.Data(1))
+	data := ep.NewDataset(str.Data(1))
 	data, err = eptest.Run(runner, data)
 
 	require.Equal(t, 0, data.Width())

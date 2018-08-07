@@ -1,10 +1,6 @@
 package ep
 
-// Null is a Type representing NULL values. Use Null.Data(n) to create Data
-// instances of `n` nulls
-var Null = &nullType{}
-
-var _ = Types.Register("NULL", Null)
+var null = &nullType{}
 
 type nullType struct{}
 
@@ -22,7 +18,7 @@ func (*nullType) Is(t Type) bool {
 }
 
 type nulls int                              // number of nulls in the set
-func (nulls) Type() Type                    { return Null }
+func (nulls) Type() Type                    { return null }
 func (vs nulls) Len() int                   { return int(vs) }
 func (nulls) Less(int, int) bool            { return false }
 func (nulls) Swap(int, int)                 {}

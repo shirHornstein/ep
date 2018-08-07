@@ -25,7 +25,7 @@ func ExampleDataset_Duplicate() {
 }
 
 func TestDataInterface(t *testing.T) {
-	dataset := ep.NewDataset(ep.Null.Data(10), str.Data(10))
+	dataset := ep.NewDataset(str2.Data(10), str.Data(10))
 	eptest.VerifyDataInterfaceInvariant(t, dataset)
 }
 
