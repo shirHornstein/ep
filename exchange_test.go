@@ -241,20 +241,20 @@ func TestExchange_undistributed(t *testing.T) {
 	data, err := eptest.Run(ep.Scatter(), data)
 	require.NoError(t, err)
 	require.NotNil(t, data)
-	require.Equal(t, []string{"[hello world]"}, data.Strings())
+	require.Equal(t, []string{"(hello)", "(world)"}, data.Strings())
 
 	data, err = eptest.Run(ep.Broadcast(), data)
 	require.NoError(t, err)
 	require.NotNil(t, data)
-	require.Equal(t, []string{"[hello world]"}, data.Strings())
+	require.Equal(t, []string{"(hello)", "(world)"}, data.Strings())
 
 	data, err = eptest.Run(ep.Gather(), data)
 	require.NoError(t, err)
 	require.NotNil(t, data)
-	require.Equal(t, []string{"[hello world]"}, data.Strings())
+	require.Equal(t, []string{"(hello)", "(world)"}, data.Strings())
 
 	data, err = eptest.Run(ep.Partition(0), data)
 	require.NoError(t, err)
 	require.NotNil(t, data)
-	require.Equal(t, []string{"[hello world]"}, data.Strings())
+	require.Equal(t, []string{"(hello)", "(world)"}, data.Strings())
 }
