@@ -310,7 +310,7 @@ func (ex *exchange) init(ctx context.Context) (err error) {
 	if dist == nil {
 		// no distributer was defined - so it's only running locally. We can
 		// short-circuit the whole thing
-		allNodes = []string{""}
+		allNodes = []string{thisNode}
 	} else if ex.inited {
 		// exchanged uses a predefined UID and connection listeners on all of
 		// the nodes. Running it again would conflict with the existing UID,
