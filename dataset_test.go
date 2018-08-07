@@ -32,6 +32,20 @@ func TestDatasetInvariant(t *testing.T) {
 	eptest.VerifyDataInterfaceInvariant(t, ep.NewDataset(d1, d2, d3))
 }
 
+func TestDatasetInvariant_variadicNulls(t *testing.T) {
+	d1 := strs([]string{"1", "2", "4", "0", "3", "1", "1"})
+	d2 := ep.Null.Data(-1)
+	d3 := strs([]string{"a", "b", "c", "", "e", "f", "g"})
+
+	eptest.VerifyDataInterfaceInvariant(t, ep.NewDataset(d1, d2, d3))
+}
+
+func TestDatasetInvariant_onlyVariadicNulls(t *testing.T) {
+	d := ep.Null.Data(-1)
+
+	eptest.VerifyDataInterfaceInvariant(t, ep.NewDataset(d, d, d))
+}
+
 func TestDataset_sort(t *testing.T) {
 	d1 := strs([]string{"1", "2", "1", "0", "3", "1", "1"})
 	d2 := strs([]string{"a", "b", "a", "", "e", "z", "g"})

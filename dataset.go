@@ -4,8 +4,8 @@ import (
 	"fmt"
 )
 
-var _ = registerGob(dataset{})
-var _ = Types.register("record", &datasetType{})
+var _ = registerGob(Record, NewDataset())
+var _ = Types.register("record", Record)
 
 var errMismatch = fmt.Errorf("mismatched number of rows")
 
@@ -30,6 +30,9 @@ type Dataset interface {
 	Split(secondWidth int) (Dataset, Dataset)
 }
 
+// Record is exposed data type similar to postgres' record, implements Type
+var Record = &datasetType{}
+
 type datasetType struct{}
 
 func (sett *datasetType) String() string  { return sett.Name() }
@@ -48,7 +51,7 @@ func NewDataset(data ...Data) Dataset {
 }
 
 // NewDatasetLike creates a new Data object at the provided size that has the
-// same types as the provided dataset.
+// same types as the provided dataset
 func NewDatasetLike(data Dataset, size int) Dataset {
 	res := make([]Data, data.Width())
 	for i := range res {
