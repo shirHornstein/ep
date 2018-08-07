@@ -93,6 +93,10 @@ type typesReg map[interface{}][]Type
 // using the same key.
 func (reg typesReg) Register(k interface{}, t Type) typesReg {
 	registerGob(t, t.Data(0))
+	return reg.register(k, t)
+}
+
+func (reg typesReg) register(k interface{}, t Type) typesReg {
 	k = registryKey(k)
 	reg[k] = append(reg[k], t)
 	return reg

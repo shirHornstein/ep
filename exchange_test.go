@@ -34,7 +34,7 @@ func ExampleScatter() {
 	fmt.Println(data.Strings(), err) // no gather - only one batch should return
 
 	// Output:
-	// [[foo bar]] <nil>
+	// [(foo) (bar)] <nil>
 }
 
 func TestExchange_dialingError(t *testing.T) {
