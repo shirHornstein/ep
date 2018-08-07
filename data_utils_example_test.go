@@ -7,9 +7,13 @@ import (
 
 func ExampleCut() {
 	var d ep.Data = strs([]string{"hello", "world", "foo", "bar"})
-	data := ep.Cut(d, 1, 3)
-	fmt.Println(data.Strings())
+	datasets := ep.Cut(d, 1, 3)
+	for _, data := range datasets {
+		fmt.Println(data.Strings())
+	}
 
 	// Output:
-	// [[hello] [world foo] [bar]]
+	// [hello]
+	// [world foo]
+	// [bar]
 }

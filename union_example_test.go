@@ -13,5 +13,5 @@ func ExampleUnion() {
 	fmt.Println(data.Strings(), err)
 
 	// Output:
-	// [[HELLO WORLD is hello? is world?]] <nil>
+	// [(HELLO) (WORLD) (is hello?) (is world?)] <nil>
 }
