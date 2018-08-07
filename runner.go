@@ -115,11 +115,15 @@ func (r *pick) Returns() []Type {
 func (r *pick) Run(_ context.Context, inp, out chan Dataset) error {
 	for data := range inp {
 		var result Dataset
-		res := make([]Data, len(r.Indices))
-		for i, idx := range r.Indices {
-			res[i] = data.At(idx)
+		if len(r.Indices) == 0 {
+			result = NewDataset(null.Data(data.Len()))
+		} else {
+			res := make([]Data, len(r.Indices))
+			for i, idx := range r.Indices {
+				res[i] = data.At(idx)
+			}
+			result = NewDataset(res...)
 		}
-		result = NewDataset(res...)
 		out <- result
 	}
 	return nil
