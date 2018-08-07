@@ -145,8 +145,8 @@ func (set dataset) Slice(start, end int) Data {
 
 // Append a data (assumed by interface spec to be a Dataset)
 func (set dataset) Append(other Data) Data {
-	if set == nil {
-		return other
+	if set == nil || len(set) == 0 {
+		return other.Duplicate(1) // never affect other
 	}
 	if other == nil {
 		return set
