@@ -13,7 +13,7 @@ func ExampleRunner() {
 	fmt.Println(data.Strings(), err)
 
 	// Output:
-	// [[HELLO WORLD]] <nil>
+	// [(HELLO) (WORLD)] <nil>
 }
 
 func ExampleFilterRunner_Filter() {
@@ -25,5 +25,5 @@ func ExampleFilterRunner_Filter() {
 	fmt.Println(res.Strings(), err)
 
 	// Output:
-	// [[] [HELLO WORLD] []] <nil>
+	// [(HELLO) (WORLD)] <nil>
 }

@@ -2,18 +2,12 @@ package ep
 
 import (
 	"fmt"
-	"strings"
 )
 
-var _ = registerGob(NewDataset(), &datasetType{})
+var _ = registerGob(Record, NewDataset())
+var _ = Types.register("record", Record)
+
 var errMismatch = fmt.Errorf("mismatched number of rows")
-
-type datasetType struct{}
-
-func (sett *datasetType) Name() string         { return "Dataset" }
-func (sett *datasetType) String() string       { return sett.Name() }
-func (sett *datasetType) Data(n int) Data      { return make(dataset, n) }
-func (sett *datasetType) DataEmpty(n int) Data { return make(dataset, 0, n) }
 
 // Dataset is a composite Data interface, containing several internal Data
 // objects. It's a Data in itself, but allows traversing and manipulating the
@@ -36,12 +30,43 @@ type Dataset interface {
 	Split(secondWidth int) (Dataset, Dataset)
 }
 
+// Record is exposed data type similar to postgres' record, implements Type
+var Record = &datasetType{}
+
+type datasetType struct{}
+
+func (sett *datasetType) String() string  { return sett.Name() }
+func (sett *datasetType) Name() string    { return "record" }
+func (sett *datasetType) Data(n int) Data { return sett.DataEmpty(n) }
+func (sett *datasetType) DataEmpty(int) Data {
+	panic("runtime error: please use NewDataset function")
+}
+
 type dataset []Data
 
 // NewDataset creates a new Data object that's a horizontal composition of the
 // provided Data objects
 func NewDataset(data ...Data) Dataset {
 	return dataset(data)
+}
+
+// NewDatasetLike creates a new Data object at the provided size that has the
+// same types as the provided dataset
+func NewDatasetLike(data Dataset, size int) Dataset {
+	res := make([]Data, data.Width())
+	for i := range res {
+		res[i] = data.At(i).Type().Data(size)
+	}
+	return NewDataset(res...)
+}
+
+// NewDatasetTypes creates a new Data object at the provided size and types
+func NewDatasetTypes(types []Type, size int) Dataset {
+	data := make([]Data, len(types))
+	for i, t := range types {
+		data[i] = t.Data(size)
+	}
+	return NewDataset(data...)
 }
 
 // Width of the dataset (number of columns)
@@ -102,17 +127,25 @@ func (set dataset) Len() int {
 }
 
 // see sort.Interface.
-// By default sorts by last column ascending. Consider use Sort(dataset,..) instead
+// By default sorts by columns appearance, ascending.
+// NOTE: Unsafe for use with recurring columns. Consider use Sort(dataset, sortingCols) instead
 func (set dataset) Less(i, j int) bool {
-	// if no data - don't trigger any change
-	if set == nil || len(set) == 0 {
-		return false
+	var iLessThanJ bool
+	for _, col := range set {
+		iLessThanJ = col.Less(i, j)
+		// iLessThanJ will be false also for equal values.
+		// if Less(i, j) and Less(j, i) are both false, values are equal. Therefore
+		// keep checking next sorting columns.
+		// otherwise - values are different, and loop should stop
+		if iLessThanJ || col.Less(j, i) {
+			break
+		}
 	}
-	return set.At(len(set)-1).Less(i, j)
+	return iLessThanJ
 }
 
 // see sort.Interface.
-// NOTE: Unsafe for use with recurring columns. Consider use Sort(dataset,..) instead
+// NOTE: Unsafe for use with recurring columns. Consider use Sort(dataset, sortingCols) instead
 func (set dataset) Swap(i, j int) {
 	for _, col := range set {
 		col.Swap(i, j)
@@ -120,7 +153,7 @@ func (set dataset) Swap(i, j int) {
 }
 
 // see Data.LessOther.
-// By default sorts by last column ascending
+// By default sorts by columns appearance, ascending
 func (set dataset) LessOther(thisRow int, other Data, otherRow int) bool {
 	// if no data - don't trigger any change
 	if set == nil || len(set) == 0 || other == nil {
@@ -130,8 +163,18 @@ func (set dataset) LessOther(thisRow int, other Data, otherRow int) bool {
 	if len(set) != len(data) {
 		panic("Unable to compare mismatching number of columns")
 	}
-	otherColumn := data.At(len(data) - 1)
-	return set.At(len(set)-1).LessOther(thisRow, otherColumn, otherRow)
+	var iLessThanJ bool
+	for i, col := range set {
+		iLessThanJ = col.LessOther(thisRow, data.At(i), otherRow)
+		// iLessThanJ will be false also for equal values.
+		// if Less(i, j) and Less(j, i) are both false, values are equal. Therefore
+		// keep checking next sorting columns.
+		// otherwise - values are different, and loop should stop
+		if iLessThanJ || data.At(i).LessOther(otherRow, col, thisRow) {
+			break
+		}
+	}
+	return iLessThanJ
 }
 
 // see Data.Slice. Returns a dataset
@@ -145,8 +188,8 @@ func (set dataset) Slice(start, end int) Data {
 
 // Append a data (assumed by interface spec to be a Dataset)
 func (set dataset) Append(other Data) Data {
-	if set == nil {
-		return other
+	if set == nil || len(set) == 0 {
+		return other.Duplicate(1) // never affect other
 	}
 	if other == nil {
 		return set
@@ -178,22 +221,44 @@ func (set dataset) Duplicate(t int) Data {
 
 // see Data.IsNull
 func (set dataset) IsNull(i int) bool {
-	panic("runtime error: not nullable")
+	// i-th row considered to be null iff it contains only nulls
+	for _, d := range set {
+		if !d.IsNull(i) {
+			return false
+		}
+	}
+	return true
 }
 
 // see Data.MarkNull
 func (set dataset) MarkNull(i int) {
-	panic("runtime error: not nullable")
+	for _, d := range set {
+		d.MarkNull(i)
+	}
 }
 
 // see Data.Nulls
 func (set dataset) Nulls() []bool {
-	panic("runtime error: not nullable")
+	res := make([]bool, set.Len())
+	for i := range res {
+		res[i] = set.IsNull(i)
+	}
+	return res
 }
 
 // see Data.Equal
 func (set dataset) Equal(other Data) bool {
-	panic("runtime error: not comparable")
+	data, ok := other.(dataset)
+	if !ok {
+		return false
+	}
+
+	for i, d := range set {
+		if !d.Equal(data.At(i)) {
+			return false
+		}
+	}
+	return true
 }
 
 // see Data.Copy
@@ -206,9 +271,18 @@ func (set dataset) Copy(from Data, fromRow, toRow int) {
 
 // see Data.Strings
 func (set dataset) Strings() []string {
-	var res []string
+	if set.Len() <= 0 {
+		return []string{}
+	}
+	res := make([]string, set.Len())
 	for _, col := range set {
-		res = append(res, "["+strings.Join(col.Strings(), " ")+"]")
+		strs := col.Strings()
+		for i, s := range strs {
+			res[i] += s + ","
+		}
+	}
+	for i, s := range res {
+		res[i] = "(" + s[:len(s)-1] + ")"
 	}
 	return res
 }

@@ -9,17 +9,49 @@ import (
 	"testing"
 )
 
-func TestDataInterface(t *testing.T) {
-	dataset := ep.NewDataset(ep.Null.Data(10), str.Data(10))
-	eptest.VerifyDataInterfaceInvariant(t, dataset)
+func ExampleDataset_Duplicate() {
+	dataset1 := ep.NewDataset(strs([]string{"hello", "world"}))
+	dataset2 := dataset1.Duplicate(1).(ep.Dataset)
+	d2 := dataset2.At(0).(strs)
+	d2[0] = "foo"
+	d2[1] = "bar"
+
+	fmt.Println(dataset2.At(0)) // copy was modified
+	fmt.Println(dataset1.At(0)) // original left intact
+
+	// Output:
+	// [foo bar]
+	// [hello world]
 }
 
-func TestDataset_Sort_byLastColAscending(t *testing.T) {
-	var d1 ep.Data = strs([]string{"hello", "world", "foo", "bar", "bar", "a", "z"})
-	var d2 ep.Data = strs([]string{"1", "2", "4", "0", "3", "1", "1"})
-	var d3 ep.Data = strs([]string{"a", "b", "c", "d", "e", "f", "g"})
+func TestDatasetInvariant(t *testing.T) {
+	d1 := strs([]string{"1", "2", "4", "0", "3", "1", "1"})
+	d2 := strs([]string{"a", "b", "c", "", "e", "f", "g"})
+	d3 := ep.Null.Data(7)
 
-	dataset := ep.NewDataset(d1, d3, d2)
+	eptest.VerifyDataInterfaceInvariant(t, ep.NewDataset(d1, d2, d3))
+}
+
+func TestDatasetInvariant_variadicNulls(t *testing.T) {
+	d1 := strs([]string{"1", "2", "4", "0", "3", "1", "1"})
+	d2 := ep.Null.Data(-1)
+	d3 := strs([]string{"a", "b", "c", "", "e", "f", "g"})
+
+	eptest.VerifyDataInterfaceInvariant(t, ep.NewDataset(d1, d2, d3))
+}
+
+func TestDatasetInvariant_onlyVariadicNulls(t *testing.T) {
+	d := ep.Null.Data(-1)
+
+	eptest.VerifyDataInterfaceInvariant(t, ep.NewDataset(d, d, d))
+}
+
+func TestDataset_sort(t *testing.T) {
+	d1 := strs([]string{"1", "2", "1", "0", "3", "1", "1"})
+	d2 := strs([]string{"a", "b", "a", "", "e", "z", "g"})
+	d3 := strs([]string{"a", "b", "a2", "", "e", "z", "g"})
+
+	dataset := ep.NewDataset(d1, d2, d3)
 
 	sort.Sort(dataset)
 
@@ -27,27 +59,72 @@ func TestDataset_Sort_byLastColAscending(t *testing.T) {
 	require.Equal(t, 3, dataset.Width())
 
 	// by default, sorting done by last column, ascending
-	require.Equal(t, "[0 1 1 1 2 3 4]", fmt.Sprintf("%+v", dataset.At(2)))
+	require.Equal(t, "[0 1 1 1 1 2 3]", fmt.Sprintf("%+v", dataset.At(0)))
 	// verify other columns were updated as well
-	require.Equal(t, "[bar hello a z world bar foo]", fmt.Sprintf("%+v", dataset.At(0)))
-	require.Equal(t, "[d a f g b e c]", fmt.Sprintf("%+v", dataset.At(1)))
+	require.Equal(t, "[ a a g z b e]", fmt.Sprintf("%+v", dataset.At(1)))
+	require.Equal(t, "[ a a2 g z b e]", fmt.Sprintf("%+v", dataset.At(2)))
 }
 
-func TestDataset_LessOther(t *testing.T) {
-	var d1 ep.Data = strs([]string{"hello", "world", "foo", "bar", "bar", "a", "z"})
-	var d2 ep.Data = strs([]string{"a", "b", "c", "d", "e", "f", "g"})
-	dataset := ep.NewDataset(d2, d1)
-	other := ep.NewDataset(d2, d2)
+func TestDataset_sortDescending(t *testing.T) {
+	expected := []string{"(3,e,e)", "(2,b,b)", "(1,z,z)", "(1,g,g)", "(1,a,a2)", "(1,a,a)", "(0,,)"}
+	d1 := strs([]string{"1", "2", "1", "0", "3", "1", "1"})
+	d2 := strs([]string{"a", "b", "a", "", "e", "z", "g"})
+	d3 := strs([]string{"a", "b", "a2", "", "e", "z", "g"})
 
-	isLess := dataset.LessOther(4, other, 0)
+	dataset := ep.NewDataset(d1, d2, d3)
+
+	sort.Sort(sort.Reverse(dataset))
+	require.EqualValues(t, expected, dataset.Strings())
+}
+
+func TestDataset_LessOther_breakOnFirstColumn(t *testing.T) {
+	d1 := strs([]string{"b", "c"})
+	d2 := strs([]string{"b", "a"})
+	dataset := ep.NewDataset(d1, d1)
+	other := ep.NewDataset(d2, d1)
+
+	isLess := dataset.LessOther(0, other, 1) // b < a?
 	require.False(t, isLess)
-
-	isLess = dataset.LessOther(5, other, 2)
+	// same comparison, other direction
+	isLess = other.LessOther(1, dataset, 0) // a < b?
 	require.True(t, isLess)
+}
+
+func TestDataset_LessOther_breakOnSecondColumn(t *testing.T) {
+	d1 := strs([]string{"c", "a"})
+	d2 := strs([]string{"a", "x"})
+	dataset := ep.NewDataset(d1, d1)
+	other := ep.NewDataset(d2, d1)
+
+	// dataset row 1: (a,a)
+	// other row 0: (a,c)
+	// first column equal, compare second column
+	isLess := dataset.LessOther(1, other, 0) // (a,a) < (a,c)?
+	require.True(t, isLess)
+	// same comparison, other direction
+	isLess = other.LessOther(0, dataset, 1) // (a,c) < (a,a)?
+	require.False(t, isLess)
+}
+
+func TestDataset_LessOther_equalRows(t *testing.T) {
+	d1 := strs([]string{"a", "a"})
+	d2 := strs([]string{"a", "x"})
+	dataset := ep.NewDataset(d1, d1)
+	other := ep.NewDataset(d2, d1)
 
 	// equal items should return false in both direction
-	isLess = dataset.LessOther(5, other, 0)
+	isLess := dataset.LessOther(1, other, 0) // (a,a) < (a,a)?
 	require.False(t, isLess)
-	isLessOpposite := other.LessOther(0, dataset, 5)
+	// same comparison, other direction
+	isLessOpposite := other.LessOther(0, dataset, 1) // (a,a) < (a,a)?
 	require.False(t, isLessOpposite)
+}
+
+func TestDataset_Strings(t *testing.T) {
+	expected := []string{"(1,a)", "(2,b)", "(4,c)", "(0,)", "(3,e)", "(1,f)", "(1,g)"}
+	d1 := strs([]string{"1", "2", "4", "0", "3", "1", "1"})
+	d2 := strs([]string{"a", "b", "c", "", "e", "f", "g"})
+
+	dataset := ep.NewDataset(d1, d2)
+	require.EqualValues(t, expected, dataset.Strings())
 }

@@ -9,9 +9,9 @@ import (
 // NOTES:
 // 1. all indices received as arguments should be in range [0, Len())
 // 2. besides Equal, all Data received as arguments should have same type as this
-// 3. mutable functions (MarkNull, Swap, Copy) should be called only within creation
-//    scope or at gathering point. i.e. when no other runner have access to this
-//    object. not following this rule will end up with data race
+// 3. mutable functions (MarkNull, Swap, Copy, Append) should be called only within
+//    creation scope or at gathering point. i.e. when no other runner have access
+//    to this object. not following this rule will end up with data race
 type Data interface {
 	// Type returns the data type of the contained values
 	Type() Type
@@ -57,16 +57,9 @@ type Data interface {
 	Strings() []string
 }
 
-// Clone the contents of the provided Data. Dataset also implements the Data
-// interface is a valid input to this function
-func Clone(data Data) Data {
-	return data.Type().Data(0).Append(data)
-}
-
 // Cut the Data into several sub-segments at the provided cut-point indices. It's
-// effectively the same as calling Data.Slice() multiple times. Dataset also
-// implements the Data interface is a valid input to this function
-func Cut(data Data, cutpoints ...int) Data {
+// effectively the same as calling Data.Slice() multiple times
+func Cut(data Data, cutpoints ...int) []Data {
 	res := []Data{}
 	var last int
 	for _, i := range cutpoints {
@@ -78,5 +71,5 @@ func Cut(data Data, cutpoints ...int) Data {
 		res = append(res, data.Slice(last, data.Len()))
 	}
 
-	return NewDataset(res...)
+	return res
 }
