@@ -44,6 +44,25 @@ func NewDataset(data ...Data) Dataset {
 	return dataset(data)
 }
 
+// NewDatasetLike creates a new Data object at the provided size that has the
+// same types as the provided dataset.
+func NewDatasetLike(data Dataset, size int) Dataset {
+	res := make([]Data, data.Width())
+	for i := range res {
+		res[i] = data.At(i).Type().Data(size)
+	}
+	return NewDataset(res...)
+}
+
+// NewDatasetTypes creates a new Data object at the provided size and types
+func NewDatasetTypes(types []Type, size int) Dataset {
+	data := make([]Data, len(types))
+	for i, t := range types {
+		data[i] = t.Data(size)
+	}
+	return NewDataset(data...)
+}
+
 // Width of the dataset (number of columns)
 func (set dataset) Width() int {
 	return len(set)
@@ -183,7 +202,9 @@ func (set dataset) IsNull(i int) bool {
 
 // see Data.MarkNull
 func (set dataset) MarkNull(i int) {
-	panic("runtime error: not nullable")
+	for _, d := range set {
+		d.MarkNull(i)
+	}
 }
 
 // see Data.Nulls
