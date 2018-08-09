@@ -95,11 +95,12 @@ func (rs project) Run(origCtx context.Context, inp, out chan Dataset) (err error
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
-			errs[idx] = rs[idx].Run(ctx, inps[idx], outs[idx])
+			e := rs[idx].Run(ctx, inps[idx], outs[idx])
+			errs[idx] = e
 			close(outs[idx])
 			// in case of error - drain inps[idx] to allow project keep
 			// duplicating data
-			if errs[idx] != nil {
+			if e != nil {
 				cancel()
 			}
 			go func() {
@@ -166,6 +167,9 @@ func (rs project) Run(origCtx context.Context, inp, out chan Dataset) (err error
 				// init allOpen according to first out channel of non dummy runner
 				allOpen = open
 			} else if allOpen != open { // verify all still open or all closed
+				if origCtx.Err() == context.Canceled { // in case of cancellation outside the project: allOpen == true & open==false
+					return nil
+				}
 				return errProjectState
 			}
 

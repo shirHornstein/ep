@@ -81,7 +81,13 @@ func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 		go func(i int, inp, middle chan Dataset) {
 			defer wg.Done()
 			defer close(middle)
-			errs[i] = rs[i].Run(ctx, inp, middle)
+			e := rs[i].Run(ctx, inp, middle)
+
+			errs[i] = e
+			if e != nil {
+				cancel()
+			}
+
 		}(i, inp, middle)
 
 		// input to the next channel is the output from the current one.

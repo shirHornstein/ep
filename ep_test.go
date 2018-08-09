@@ -63,15 +63,17 @@ func (r *infinityRunner) Run(ctx context.Context, inp, out chan ep.Dataset) erro
 		r.isRunningLock.Unlock()
 	}()
 
-	// infinitely produce data, until canceled
+	go func() {
+		for range inp {
+		} // drain input, infinityRunner doesn't depend in input
+	}()
+
+	// infinitely ignore input & produce data, until canceled
 	for { // TODO infinity
 		select {
 		case <-ctx.Done():
 			return nil
-		case _, ok := <-inp:
-			if !ok {
-				return nil
-			}
+		default:
 			out <- ep.NewDataset(strs{"data"})
 		}
 	}
