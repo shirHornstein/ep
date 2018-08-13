@@ -93,16 +93,6 @@ type exchange struct {
 
 func (ex *exchange) Returns() []Type { return []Type{Wildcard} }
 func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) {
-	if ex.inited {
-		// exchanged uses a predefined UID and connection listeners on all of
-		// the nodes. Running it again would conflict with the existing UID,
-		// leading to de-synchronization between the nodes. Thus it's not
-		// currently supported. TODO: reconsider this architecture? Perhaps
-		// we can distribute the exchange upon Run()?
-		return fmt.Errorf("exhcnage cannot be Run() more than once")
-	}
-
-	ex.inited = true
 	defer func() {
 		closeErr := ex.Close()
 		// prefer real existing error over close error
@@ -357,6 +347,7 @@ func (ex *exchange) getPartitionEncoder(key string) (encoder, error) {
 
 // init initializes the connections, encoders & decoders
 func (ex *exchange) init(ctx context.Context) (err error) {
+
 	// hashRing handles partitioning between nodes
 	ex.hashRing = consistent.New()
 
@@ -365,18 +356,27 @@ func (ex *exchange) init(ctx context.Context) (err error) {
 	// By using a map we can find an encoder for every address
 	ex.encsByKey = make(map[string]encoder)
 
+	allNodes, _ := ctx.Value(allNodesKey).([]string)
+	thisNode, _ := ctx.Value(thisNodeKey).(string)
+	masterNode, _ := ctx.Value(masterNodeKey).(string)
 	dist, _ := ctx.Value(distributerKey).(interface {
 		Connect(addr, uid string) (net.Conn, error)
 	})
 
 	if dist == nil {
-		return fmt.Errorf("exhcnage started without a distributer")
+		// no distributer was defined - so it's only running locally. We can
+		// short-circuit the whole thing
+		allNodes = []string{thisNode}
+	} else if ex.inited {
+		// exchanged uses a predefined UID and connection listeners on all of
+		// the nodes. Running it again would conflict with the existing UID,
+		// leading to de-synchronization between the nodes. Thus it's not
+		// currently supported. TODO: reconsider this architecture? Perhaps
+		// we can distribute the exchange upon Run()?
+		return fmt.Errorf("exhcnage cannot be Run() more than once")
 	}
 
-	allNodes := ctx.Value(allNodesKey).([]string)
-	thisNode := ctx.Value(thisNodeKey).(string)
-	masterNode := ctx.Value(masterNodeKey).(string)
-
+	ex.inited = true
 	targetNodes := allNodes
 	if ex.Type == gather || ex.Type == selectiveGather {
 		targetNodes = []string{masterNode}

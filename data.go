@@ -58,9 +58,8 @@ type Data interface {
 }
 
 // Cut the Data into several sub-segments at the provided cut-point indices. It's
-// effectively the same as calling Data.Slice() multiple times. Dataset also
-// implements the Data interface is a valid input to this function
-func Cut(data Data, cutpoints ...int) Data {
+// effectively the same as calling Data.Slice() multiple times
+func Cut(data Data, cutpoints ...int) []Data {
 	res := []Data{}
 	var last int
 	for _, i := range cutpoints {
@@ -72,5 +71,5 @@ func Cut(data Data, cutpoints ...int) Data {
 		res = append(res, data.Slice(last, data.Len()))
 	}
 
-	return NewDataset(res...)
+	return res
 }

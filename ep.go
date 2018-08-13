@@ -129,3 +129,15 @@ func NodeAddress(ctx context.Context) string {
 	thisAddress, _ := ctx.Value(thisNodeKey).(string)
 	return thisAddress
 }
+
+// MasterNodeAddress returns the address of the master node in the context
+func MasterNodeAddress(ctx context.Context) (addr string) {
+	addr, _ = ctx.Value(masterNodeKey).(string)
+	return
+}
+
+// AllNodeAddresses returns the addresses of all of the nodes in the context
+func AllNodeAddresses(ctx context.Context) (res []string) {
+	res, _ = ctx.Value(allNodesKey).([]string)
+	return
+}

@@ -34,7 +34,7 @@ func ExampleScatter() {
 	fmt.Println(data.Strings(), err) // no gather - only one batch should return
 
 	// Output:
-	// [[foo bar]] <nil>
+	// [(foo) (bar)] <nil>
 }
 
 func TestExchange_dialingError(t *testing.T) {
@@ -232,4 +232,29 @@ func TestPartition_sendsCompleteDatasets(t *testing.T) {
 
 	require.Equal(t, 2, sizes.Len())
 	require.ElementsMatch(t, expected, sizes.Strings())
+}
+
+// test that exchange runners act as passthrough when executed without a
+// distributer
+func TestExchange_undistributed(t *testing.T) {
+	data := ep.NewDataset(strs{"hello", "world"})
+	data, err := eptest.Run(ep.Scatter(), data)
+	require.NoError(t, err)
+	require.NotNil(t, data)
+	require.Equal(t, []string{"(hello)", "(world)"}, data.Strings())
+
+	data, err = eptest.Run(ep.Broadcast(), data)
+	require.NoError(t, err)
+	require.NotNil(t, data)
+	require.Equal(t, []string{"(hello)", "(world)"}, data.Strings())
+
+	data, err = eptest.Run(ep.Gather(), data)
+	require.NoError(t, err)
+	require.NotNil(t, data)
+	require.Equal(t, []string{"(hello)", "(world)"}, data.Strings())
+
+	data, err = eptest.Run(ep.Partition(0), data)
+	require.NoError(t, err)
+	require.NotNil(t, data)
+	require.Equal(t, []string{"(hello)", "(world)"}, data.Strings())
 }

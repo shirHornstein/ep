@@ -13,10 +13,11 @@ type SortingCol struct {
 
 // Sort sorts given dataset by given sorting conditions
 func Sort(data Dataset, sortingCols []SortingCol) {
-	// if no data or no pre-defined sorting columns - don't change anything
+	// if no data - don't change anything
 	if data == nil || data.Width() == 0 {
 		return
 	}
+	// if no pre-defined sorting columns - use default sorting
 	if len(sortingCols) == 0 {
 		sort.Sort(data)
 		return
@@ -62,15 +63,13 @@ type conditionalSortDataset struct {
 func (set *conditionalSortDataset) Less(i, j int) bool {
 	var iLessThanJ bool
 	for _, col := range set.sortingInterfaces {
-		if col != nil {
-			iLessThanJ = col.Less(i, j)
-			// iLessThanJ will be false also for equal values.
-			// if Less(l, j) and Less(j, i) are both false, values are equal. Therefore leave
-			// stop as false and keep checking next sorting columns.
-			// otherwise - values are different, and loop should stop
-			if iLessThanJ || col.Less(j, i) {
-				break
-			}
+		iLessThanJ = col.Less(i, j)
+		// iLessThanJ will be false also for equal values.
+		// if Less(i, j) and Less(j, i) are both false, values are equal. Therefore
+		// keep checking next sorting columns.
+		// otherwise - values are different, and loop should stop
+		if iLessThanJ || col.Less(j, i) {
+			break
 		}
 	}
 	return iLessThanJ

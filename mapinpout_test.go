@@ -15,5 +15,5 @@ func ExampleMapInpToOut() {
 	fmt.Println(data.Strings(), err)
 
 	// Output:
-	// [[XY XY ABC ABC ABC] [X Y A B C]] <nil>
+	// [(XY,X) (XY,Y) (ABC,A) (ABC,B) (ABC,C)] <nil>
 }
