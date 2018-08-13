@@ -311,12 +311,17 @@ func (ex *exchange) init(ctx context.Context) (err error) {
 		// no distributer was defined - so it's only running locally. We can
 		// short-circuit the whole thing
 		allNodes = []string{thisNode}
-	} else if ex.inited {
+	}
+
+	if ex.inited {
 		// exchanged uses a predefined UID and connection listeners on all of
 		// the nodes. Running it again would conflict with the existing UID,
 		// leading to de-synchronization between the nodes. Thus it's not
 		// currently supported. TODO: reconsider this architecture? Perhaps
 		// we can distribute the exchange upon Run()?
+		// NOTE that while it's possible to run exchange multiple times locally,
+		// it's disabled here to guanratee that runners behave locally as they
+		// do distributed.
 		return fmt.Errorf("exhcnage cannot be Run() more than once")
 	}
 
