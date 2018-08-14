@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestMerger_Run(t *testing.T) {
+func TestMergeGather(t *testing.T) {
 	port1 := ":5551"
 	dist := eptest.NewPeer(t, port1)
 
@@ -20,7 +20,7 @@ func TestMerger_Run(t *testing.T) {
 	}()
 
 	runMergeSort := func(t *testing.T, sortingCols []ep.SortingCol, expected string, datasets ...ep.Dataset) {
-		runner := ep.Pipeline(ep.Scatter(), &nodeAddr{}, ep.Merge(sortingCols))
+		runner := ep.Pipeline(ep.Scatter(), &nodeAddr{}, ep.MergeGather(sortingCols))
 		runner = dist.Distribute(runner, port1, port2)
 		data, err := eptest.Run(runner, datasets...)
 		require.NoError(t, err)
@@ -33,7 +33,7 @@ func TestMerger_Run(t *testing.T) {
 	t.Run("no data", func(t *testing.T) {
 		sortingCols := []ep.SortingCol{{Index: 0, Desc: false}}
 
-		runner := ep.Pipeline(ep.Scatter(), &nodeAddr{}, ep.Merge(sortingCols))
+		runner := ep.Pipeline(ep.Scatter(), &nodeAddr{}, ep.MergeGather(sortingCols))
 		runner = dist.Distribute(runner, port1, port2)
 		data, err := eptest.Run(runner)
 		require.NoError(t, err)
@@ -71,7 +71,7 @@ func TestMerger_Run(t *testing.T) {
 	})
 }
 
-func TestMerger_Run_error(t *testing.T) {
+func TestMergeGather_error(t *testing.T) {
 	port1 := ":5551"
 	dist := eptest.NewPeer(t, port1)
 
@@ -84,7 +84,7 @@ func TestMerger_Run_error(t *testing.T) {
 
 	runMergeSort := func(t *testing.T, sortingCols []ep.SortingCol, datasets ...ep.Dataset) {
 		var runner ep.Runner = &dataRunner{Dataset: ep.NewDataset(strs{"str"}), ThrowOnData: "failed"}
-		runner = ep.Pipeline(runner, ep.Scatter(), &nodeAddr{}, ep.Merge(sortingCols))
+		runner = ep.Pipeline(runner, ep.Scatter(), &nodeAddr{}, ep.MergeGather(sortingCols))
 		runner = dist.Distribute(runner, port1, port2)
 		_, err := eptest.Run(runner, datasets...)
 		require.Error(t, err)

@@ -17,7 +17,7 @@ type exchangeType int
 const (
 	exType exchangeType = iota
 	gather
-	selectiveGather
+	sortGather
 	scatter
 	broadcast
 	partition
@@ -25,19 +25,10 @@ const (
 
 // Gather returns an exchange Runner that gathers all of its input into a
 // single node. In all other nodes it will produce no output, but on the main
-// node it will be passthrough from all of the other nodes
+// node it will be passthrough from all other nodes
 func Gather() Runner {
 	uid, _ := uuid.NewV4()
 	return &exchange{UID: uid.String(), Type: gather}
-}
-
-// selectiveGather returns an exchange Runner that allow user to select peer to
-// fetch data from.
-// Similar to gather, in all other nodes it will produce no output, but on the
-// main node it will be passthrough from all of the other nodes
-func newSelectiveGather() *exchange {
-	uid, _ := uuid.NewV4()
-	return &exchange{UID: uid.String(), Type: selectiveGather}
 }
 
 // Scatter returns an exchange Runner that scatters its input uniformly to
@@ -82,13 +73,11 @@ type exchange struct {
 	encsByKey    map[string]encoder     // encoders mapped by key (node address)
 	partitionCol int                    // column index to use for partitioning
 
-	// selectiveGather specific variables
-	// channel to communicate with selectiveGather user. Writing integer i to
-	// the channel is the trigger to read data from i-th peer. As always, data
-	// itself, or nil if no more data to read, will be transmitted on output
-	// channel. It's caller responsibility to write -1 when exchange is done
-	// receiving data.
-	next chan int
+	// sortGather specific variables
+	SortingCols    []SortingCol // columns to sort by
+	batches        []Dataset    // unmerged batch from each peer
+	batchesNextIdx []int        // next index to visit for each batch per peer
+	nextPeer       int          // next peer to read from
 }
 
 func (ex *exchange) Returns() []Type { return []Type{Wildcard} }
@@ -111,7 +100,18 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 	errs := make(chan error)
 	go func() {
 		defer close(errs)
-		errs <- ex.receive(out)
+		for {
+			data, recErr := ex.receive()
+			if recErr == io.EOF {
+				errs <- nil
+				break
+			}
+			if recErr != nil {
+				errs <- recErr
+				return
+			}
+			out <- data
+		}
 	}()
 
 	// send the local data to the peers, until completion or error. Also listen
@@ -178,20 +178,17 @@ func (ex *exchange) send(data Dataset) error {
 }
 
 // receive receives a dataset from next source node
-func (ex *exchange) receive(out chan Dataset) error {
-	if ex.Type == selectiveGather {
-		return ex.receiveSelective(out)
+func (ex *exchange) receive() (Dataset, error) {
+	// if this node is not a receiver - no data to receive
+	if len(ex.decs) == 0 {
+		return nil, io.EOF
 	}
 
-	for {
-		data, recErr := ex.decodeNext()
-		if recErr == io.EOF {
-			return nil
-		}
-		if recErr != nil {
-			return recErr
-		}
-		out <- data
+	switch ex.Type {
+	case sortGather:
+		return ex.decodeNextSort()
+	default:
+		return ex.decodeNext()
 	}
 }
 
@@ -203,49 +200,22 @@ func (ex *exchange) decodeNext() (Dataset, error) {
 
 	i := (ex.decsNext + 1) % len(ex.decs)
 
-	req := &req{}
-	err := ex.decs[i].Decode(req)
-	if err != nil {
-		if err == io.EOF {
-			// remove the current decoder and try again
-			ex.decs = append(ex.decs[:i], ex.decs[i+1:]...)
-			return ex.decodeNext()
-		}
-		return nil, err
+	data, err := ex.decodeFrom(i)
+	if err == io.EOF {
+		// remove the current decoder and try again
+		ex.decs = append(ex.decs[:i], ex.decs[i+1:]...)
+		return ex.receive()
 	}
 
 	ex.decsNext = i
-	return req.Payload.(Dataset), nil
+	return data, err
 }
 
-func (ex *exchange) receiveSelective(out chan Dataset) error {
-	// first, mark that init was completed to allow caller to start
-	// requesting data
-	out <- nil
-
-	for {
-		data, err := ex.decodeNextToSelective()
-		if err == io.EOF {
-			return nil
-		} else if err != nil {
-			return err
-		}
-		out <- data
-	}
-}
-
-func (ex *exchange) decodeNextToSelective() (Dataset, error) {
-	i := <-ex.next
-	if i == -1 {
-		return nil, io.EOF
-	}
-
+// decodeFrom decodes an object from the i-th source connection
+func (ex *exchange) decodeFrom(i int) (Dataset, error) {
 	req := &req{}
 	err := ex.decs[i].Decode(req)
 	if err != nil {
-		if err == io.EOF {
-			err = nil
-		}
 		return nil, err
 	}
 	return req.Payload.(Dataset), nil
@@ -347,7 +317,6 @@ func (ex *exchange) getPartitionEncoder(key string) (encoder, error) {
 
 // init initializes the connections, encoders & decoders
 func (ex *exchange) init(ctx context.Context) (err error) {
-
 	// hashRing handles partitioning between nodes
 	ex.hashRing = consistent.New()
 
@@ -378,7 +347,7 @@ func (ex *exchange) init(ctx context.Context) (err error) {
 
 	ex.inited = true
 	targetNodes := allNodes
-	if ex.Type == gather || ex.Type == selectiveGather {
+	if ex.Type == gather || ex.Type == sortGather {
 		targetNodes = []string{masterNode}
 	}
 
@@ -440,9 +409,6 @@ func (ex *exchange) init(ctx context.Context) (err error) {
 
 		ex.conns = append(ex.conns, conn)
 		ex.decs = append(ex.decs, dbgDecoder{gob.NewDecoder(conn), msg})
-	}
-	if ex.Type == selectiveGather {
-		ex.next = make(chan int)
 	}
 	return nil
 }
