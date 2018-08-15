@@ -10,8 +10,7 @@ const batchSize = 1000
 // SortGather returns an exchange Runner that gathers all of its input into a
 // single node, ordered by given sorting columns. It assumes input from each
 // peer is already sorted by these columns. Similar to Gather, on the main node
-// it will passthrough data from all other nodes, and will produce no output on
-// peers
+// it will gather data from all other nodes, and will produce no output on peers
 func SortGather(sortingCols []SortingCol) Runner {
 	uid, _ := uuid.NewV4()
 	return &exchange{
@@ -32,7 +31,7 @@ func (ex *exchange) decodeNextSort() (Dataset, error) {
 		}
 	}
 
-	i := ex.pickNext()
+	i := ex.pickSample()
 	if i == -1 { // no more data to read
 		return nil, io.EOF
 	}
@@ -41,10 +40,21 @@ func (ex *exchange) decodeNextSort() (Dataset, error) {
 	res := NewDatasetLike(ex.batches[i], batchSize)
 	resNextIdx := 0
 
-	// perform distributed merge sort by examine all next rows in each batch and pick
-	// the first one in the defined order, then pick the next one and so on. during
-	// that scan, consume more and more batches from peers until done
+	// produce a single sorted dataset using Merge-Sort algorithm, assuming we have one
+	// sorted batch from each peer by repeating the following:
+	// 1. compare all next rows from each batch to find next one according SortingCols
+	// 2. add that row to result set
+	//    2.1. if entire batch was copied, fetch next batch from that peer
+	// 4. stop when enough data was sorted into result set or no more batches to consume
 	for {
+		i = ex.pickNext()
+		if i == -1 { // no more data to read
+			if resNextIdx > 0 {
+				return res.Slice(0, resNextIdx).(Dataset), nil
+			}
+			return nil, io.EOF
+		}
+
 		res.Copy(ex.batches[i], ex.batchesNextIdx[i], resNextIdx)
 
 		// update exchange internal state before returning results
@@ -62,15 +72,6 @@ func (ex *exchange) decodeNextSort() (Dataset, error) {
 		if resNextIdx == batchSize {
 			return res, nil
 		}
-
-		// prepare to next iteration
-		i = ex.pickNext()
-		if i == -1 { // no more data to read
-			if resNextIdx > 0 {
-				return res.Slice(0, resNextIdx).(Dataset), nil
-			}
-			return nil, io.EOF
-		}
 	}
 }
 
@@ -86,6 +87,15 @@ func (ex *exchange) gatherFirstBatches() ([]Dataset, error) {
 		}
 	}
 	return batches, nil
+}
+
+func (ex *exchange) pickSample() int {
+	for i, idx := range ex.batchesNextIdx {
+		if idx > -1 {
+			return i
+		}
+	}
+	return -1
 }
 
 func (ex *exchange) pickNext() int {
