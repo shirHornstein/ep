@@ -7,12 +7,12 @@ import (
 
 const batchSize = 1000
 
-// MergeGather returns an exchange Runner that gathers all of its input into a
-// single node, ordered by given sorting columns. It assumes input from
-// each peer is already sorted by these columns. In all other nodes it
-// will produce no output, but on the main node it will be passthrough
-// from all other nodes
-func MergeGather(sortingCols []SortingCol) Runner {
+// SortGather returns an exchange Runner that gathers all of its input into a
+// single node, ordered by given sorting columns. It assumes input from each
+// peer is already sorted by these columns. Similar to Gather, on the main node
+// it will passthrough data from all other nodes, and will produce no output on
+// peers
+func SortGather(sortingCols []SortingCol) Runner {
 	uid, _ := uuid.NewV4()
 	return &exchange{
 		UID:         uid.String(),

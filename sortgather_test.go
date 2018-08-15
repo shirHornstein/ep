@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestMergeGather(t *testing.T) {
+func TestSortGather(t *testing.T) {
 	port1 := ":5551"
 	dist := eptest.NewPeer(t, port1)
 
@@ -19,8 +19,8 @@ func TestMergeGather(t *testing.T) {
 		require.NoError(t, peer.Close())
 	}()
 
-	runMergeSort := func(t *testing.T, sortingCols []ep.SortingCol, expected string, datasets ...ep.Dataset) {
-		runner := ep.Pipeline(ep.Scatter(), &nodeAddr{}, ep.MergeGather(sortingCols))
+	runSortGather := func(t *testing.T, sortingCols []ep.SortingCol, expected string, datasets ...ep.Dataset) {
+		runner := ep.Pipeline(ep.Scatter(), &nodeAddr{}, ep.SortGather(sortingCols))
 		runner = dist.Distribute(runner, port1, port2)
 		data, err := eptest.Run(runner, datasets...)
 		require.NoError(t, err)
@@ -33,7 +33,7 @@ func TestMergeGather(t *testing.T) {
 	t.Run("no data", func(t *testing.T) {
 		sortingCols := []ep.SortingCol{{Index: 0, Desc: false}}
 
-		runner := ep.Pipeline(ep.Scatter(), &nodeAddr{}, ep.MergeGather(sortingCols))
+		runner := ep.Pipeline(ep.Scatter(), &nodeAddr{}, ep.SortGather(sortingCols))
 		runner = dist.Distribute(runner, port1, port2)
 		data, err := eptest.Run(runner)
 		require.NoError(t, err)
@@ -47,7 +47,7 @@ func TestMergeGather(t *testing.T) {
 		data3 := ep.NewDataset(strs{"yes", "z"})
 		expected := "[[bar foo hello j world what yes yes z] [:5551 :5551 :5552 :5551 :5552 :5552 :5551 :5552 :5552]]"
 
-		runMergeSort(t, sortingCols, expected, data1, data2, data3)
+		runSortGather(t, sortingCols, expected, data1, data2, data3)
 	})
 
 	t.Run("desc", func(t *testing.T) {
@@ -57,7 +57,7 @@ func TestMergeGather(t *testing.T) {
 		data3 := ep.NewDataset(strs{"what", "world", "hello"})
 		expected := "[[z yes yes what world j hello foo bar] [:5552 :5552 :5551 :5552 :5552 :5551 :5552 :5551 :5551]]"
 
-		runMergeSort(t, sortingCols, expected, data1, data2, data3)
+		runSortGather(t, sortingCols, expected, data1, data2, data3)
 	})
 
 	t.Run("multiple columns", func(t *testing.T) {
@@ -67,11 +67,11 @@ func TestMergeGather(t *testing.T) {
 		data3 := ep.NewDataset(strs{"yes", "z"})
 		expected := "[[bar foo foo j world what yes yes z] [:5551 :5552 :5551 :5551 :5552 :5552 :5552 :5551 :5552]]"
 
-		runMergeSort(t, sortingCols, expected, data1, data2, data3)
+		runSortGather(t, sortingCols, expected, data1, data2, data3)
 	})
 }
 
-func TestMergeGather_error(t *testing.T) {
+func TestSortGather_error(t *testing.T) {
 	port1 := ":5551"
 	dist := eptest.NewPeer(t, port1)
 
@@ -82,21 +82,21 @@ func TestMergeGather_error(t *testing.T) {
 		require.NoError(t, peer.Close())
 	}()
 
-	runMergeSort := func(t *testing.T, sortingCols []ep.SortingCol, datasets ...ep.Dataset) {
+	runSortGather := func(t *testing.T, sortingCols []ep.SortingCol, datasets ...ep.Dataset) {
 		var runner ep.Runner = &dataRunner{Dataset: ep.NewDataset(strs{"str"}), ThrowOnData: "failed"}
-		runner = ep.Pipeline(runner, ep.Scatter(), &nodeAddr{}, ep.MergeGather(sortingCols))
+		runner = ep.Pipeline(runner, ep.Scatter(), &nodeAddr{}, ep.SortGather(sortingCols))
 		runner = dist.Distribute(runner, port1, port2)
 		_, err := eptest.Run(runner, datasets...)
 		require.Error(t, err)
 		require.Equal(t, "error failed", err.Error())
 	}
 
-	t.Run("error from merger node", func(t *testing.T) {
+	t.Run("error from distributer node", func(t *testing.T) {
 		sortingCols := []ep.SortingCol{{Index: 0, Desc: true}}
 		data2 := ep.NewDataset(strs{"failed"})
 		data1 := ep.NewDataset(strs{"z", "yes"})
 
-		runMergeSort(t, sortingCols, data1, data2)
+		runSortGather(t, sortingCols, data1, data2)
 	})
 
 	t.Run("error from peer", func(t *testing.T) {
@@ -105,6 +105,6 @@ func TestMergeGather_error(t *testing.T) {
 		data2 := ep.NewDataset(strs{"failed"})
 		data3 := ep.NewDataset(strs{"foo"})
 
-		runMergeSort(t, sortingCols, data1, data2, data3)
+		runSortGather(t, sortingCols, data1, data2, data3)
 	})
 }

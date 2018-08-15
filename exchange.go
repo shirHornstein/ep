@@ -15,8 +15,7 @@ var _ = registerGob(&exchange{}, &req{}, &errMsg{})
 type exchangeType int
 
 const (
-	exType exchangeType = iota
-	gather
+	gather exchangeType = iota
 	sortGather
 	scatter
 	broadcast
@@ -24,8 +23,8 @@ const (
 )
 
 // Gather returns an exchange Runner that gathers all of its input into a
-// single node. In all other nodes it will produce no output, but on the main
-// node it will be passthrough from all other nodes
+// single node. On the main node it will passthrough data from all other
+// nodes, and will produce no output on peers
 func Gather() Runner {
 	uid, _ := uuid.NewV4()
 	return &exchange{UID: uid.String(), Type: gather}
@@ -33,15 +32,15 @@ func Gather() Runner {
 
 // Scatter returns an exchange Runner that scatters its input uniformly to
 // all other nodes such that the received datasets are dispatched in a round-
-// robin to the nodes.
+// robin to the nodes
 func Scatter() Runner {
 	uid, _ := uuid.NewV4()
 	return &exchange{UID: uid.String(), Type: scatter}
 }
 
 // Broadcast returns an exchange Runner that duplicates its input to all
-// other nodes. The output will be effectively a union of all of the inputs from
-// all nodes (order not guaranteed)
+// other nodes. The output will be effectively a union of all inputs from
+// all nodes. Order not guaranteed
 func Broadcast() Runner {
 	uid, _ := uuid.NewV4()
 	return &exchange{UID: uid.String(), Type: broadcast}
@@ -49,8 +48,7 @@ func Broadcast() Runner {
 
 // Partition returns an exchange Runner that routes the data between nodes using
 // consistent hashing algorithm. The provided column of an incoming dataset
-// will be used to find an appropriate endpoint for this data.
-// The output will not necessarily be in the same order as the input.
+// will be used to find an appropriate endpoint for this data. Order not guaranteed
 func Partition(column int) Runner {
 	uid, _ := uuid.NewV4()
 	return &exchange{UID: uid.String(), Type: partition, partitionCol: column}
@@ -75,7 +73,7 @@ type exchange struct {
 
 	// sortGather specific variables
 	SortingCols    []SortingCol // columns to sort by
-	batches        []Dataset    // unmerged batch from each peer
+	batches        []Dataset    // current batch from each peer
 	batchesNextIdx []int        // next index to visit for each batch per peer
 	nextPeer       int          // next peer to read from
 }
@@ -179,7 +177,7 @@ func (ex *exchange) send(data Dataset) error {
 
 // receive receives a dataset from next source node
 func (ex *exchange) receive() (Dataset, error) {
-	// if this node is not a receiver - no data to receive
+	// if this node is not a receiver or done, return immediately
 	if len(ex.decs) == 0 {
 		return nil, io.EOF
 	}
