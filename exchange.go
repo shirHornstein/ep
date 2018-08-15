@@ -15,16 +15,16 @@ var _ = registerGob(&exchange{}, &req{}, &errMsg{})
 type exchangeType int
 
 const (
-	exType exchangeType = iota
-	gather
+	gather exchangeType = iota
+	sortGather
 	scatter
 	broadcast
 	partition
 )
 
 // Gather returns an exchange Runner that gathers all of its input into a
-// single node. In all other nodes it will produce no output, but on the main
-// node it will be passthrough from all of the other nodes
+// single node. On the main node it will passthrough data from all other
+// nodes, and will produce no output on peers
 func Gather() Runner {
 	uid, _ := uuid.NewV4()
 	return &exchange{UID: uid.String(), Type: gather}
@@ -32,15 +32,15 @@ func Gather() Runner {
 
 // Scatter returns an exchange Runner that scatters its input uniformly to
 // all other nodes such that the received datasets are dispatched in a round-
-// robin to the nodes.
+// robin to the nodes
 func Scatter() Runner {
 	uid, _ := uuid.NewV4()
 	return &exchange{UID: uid.String(), Type: scatter}
 }
 
 // Broadcast returns an exchange Runner that duplicates its input to all
-// other nodes. The output will be effectively a union of all of the inputs from
-// all nodes (order not guaranteed)
+// other nodes. The output will be effectively a union of all inputs from
+// all nodes. Order not guaranteed
 func Broadcast() Runner {
 	uid, _ := uuid.NewV4()
 	return &exchange{UID: uid.String(), Type: broadcast}
@@ -48,8 +48,7 @@ func Broadcast() Runner {
 
 // Partition returns an exchange Runner that routes the data between nodes using
 // consistent hashing algorithm. The provided column of an incoming dataset
-// will be used to find an appropriate endpoint for this data.
-// The output will not necessarily be in the same order as the input.
+// will be used to find an appropriate endpoint for this data. Order not guaranteed
 func Partition(column int) Runner {
 	uid, _ := uuid.NewV4()
 	return &exchange{UID: uid.String(), Type: partition, partitionCol: column}
@@ -60,15 +59,23 @@ type exchange struct {
 	UID  string
 	Type exchangeType
 
-	encs         []encoder              // encoders to all destination connections
-	decs         []decoder              // decoders from all source connections
-	conns        []io.Closer            // all open connections (used for closing)
-	encsNext     int                    // Encoders Round Robin next index
-	decsNext     int                    // Decoders Round Robin next index
+	inited   bool        // was this runner initialized
+	encs     []encoder   // encoders to all destination connections
+	decs     []decoder   // decoders from all source connections
+	conns    []io.Closer // all open connections (used for closing)
+	encsNext int         // Encoders Round Robin next index
+	decsNext int         // Decoders Round Robin next index
+
+	// partition specific variables
 	hashRing     *consistent.Consistent // hash ring for consistent hashing
 	encsByKey    map[string]encoder     // encoders mapped by key (node address)
 	partitionCol int                    // column index to use for partitioning
-	inited       bool                   // was this runner initialized
+
+	// sortGather specific variables
+	SortingCols    []SortingCol // columns to sort by
+	batches        []Dataset    // current batch from each peer
+	batchesNextIdx []int        // next index to visit for each batch per peer
+	nextPeer       int          // next peer to read from
 }
 
 func (ex *exchange) Returns() []Type { return []Type{Wildcard} }
@@ -96,7 +103,8 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 			if recErr == io.EOF {
 				errs <- nil
 				break
-			} else if recErr != nil {
+			}
+			if recErr != nil {
 				errs <- recErr
 				return
 			}
@@ -169,7 +177,46 @@ func (ex *exchange) send(data Dataset) error {
 
 // receive receives a dataset from next source node
 func (ex *exchange) receive() (Dataset, error) {
-	return ex.decodeNext()
+	// if this node is not a receiver or done, return immediately
+	if len(ex.decs) == 0 {
+		return nil, io.EOF
+	}
+
+	switch ex.Type {
+	case sortGather:
+		return ex.decodeNextSort()
+	default:
+		return ex.decodeNext()
+	}
+}
+
+// decodeNext decodes an object from the next source connection in a round robin
+func (ex *exchange) decodeNext() (Dataset, error) {
+	if len(ex.decs) == 0 {
+		return nil, io.EOF
+	}
+
+	i := (ex.decsNext + 1) % len(ex.decs)
+
+	data, err := ex.decodeFrom(i)
+	if err == io.EOF {
+		// remove the current decoder and try again
+		ex.decs = append(ex.decs[:i], ex.decs[i+1:]...)
+		return ex.receive()
+	}
+
+	ex.decsNext = i
+	return data, err
+}
+
+// decodeFrom decodes an object from the i-th source connection
+func (ex *exchange) decodeFrom(i int) (Dataset, error) {
+	req := &req{}
+	err := ex.decs[i].Decode(req)
+	if err != nil {
+		return nil, err
+	}
+	return req.Payload.(Dataset), nil
 }
 
 // Close closes all open connections
@@ -266,32 +313,8 @@ func (ex *exchange) getPartitionEncoder(key string) (encoder, error) {
 	return enc, nil
 }
 
-// decodeNext decodes an object from the next source connection in a round robin
-func (ex *exchange) decodeNext() (Dataset, error) {
-	if len(ex.decs) == 0 {
-		return nil, io.EOF
-	}
-
-	i := (ex.decsNext + 1) % len(ex.decs)
-
-	req := &req{}
-	err := ex.decs[i].Decode(req)
-	if err != nil {
-		if err == io.EOF {
-			// remove the current decoder and try again
-			ex.decs = append(ex.decs[:i], ex.decs[i+1:]...)
-			return ex.decodeNext()
-		}
-		return nil, err
-	}
-
-	ex.decsNext = i
-	return req.Payload.(Dataset), nil
-}
-
 // init initializes the connections, encoders & decoders
 func (ex *exchange) init(ctx context.Context) (err error) {
-
 	// hashRing handles partitioning between nodes
 	ex.hashRing = consistent.New()
 
@@ -322,7 +345,7 @@ func (ex *exchange) init(ctx context.Context) (err error) {
 
 	ex.inited = true
 	targetNodes := allNodes
-	if ex.Type == gather {
+	if ex.Type == gather || ex.Type == sortGather {
 		targetNodes = []string{masterNode}
 	}
 
@@ -385,7 +408,6 @@ func (ex *exchange) init(ctx context.Context) (err error) {
 		ex.conns = append(ex.conns, conn)
 		ex.decs = append(ex.decs, dbgDecoder{gob.NewDecoder(conn), msg})
 	}
-
 	return nil
 }
 

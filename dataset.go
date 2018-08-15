@@ -51,11 +51,11 @@ func NewDataset(data ...Data) Dataset {
 }
 
 // NewDatasetLike creates a new Data object at the provided size that has the
-// same types as the provided dataset
-func NewDatasetLike(data Dataset, size int) Dataset {
-	res := make([]Data, data.Width())
+// same types as the provided sample dataset
+func NewDatasetLike(sample Dataset, size int) Dataset {
+	res := make([]Data, sample.Width())
 	for i := range res {
-		res[i] = data.At(i).Type().Data(size)
+		res[i] = sample.At(i).Type().Data(size)
 	}
 	return NewDataset(res...)
 }
@@ -186,7 +186,7 @@ func (set dataset) Slice(start, end int) Data {
 	return res
 }
 
-// Append a data (assumed by interface spec to be a Dataset)
+// see Data.Append (assumed by interface spec to be a Dataset)
 func (set dataset) Append(other Data) Data {
 	if set == nil || len(set) == 0 {
 		return other.Duplicate(1) // never affect other
