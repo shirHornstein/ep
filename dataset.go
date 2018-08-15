@@ -69,9 +69,10 @@ func NewDatasetLike(sample Dataset, size int) Dataset {
 func NewDatasetTypes(types []Type, size int) Dataset {
 	res := make([]Data, len(types))
 	for i, t := range types {
-		if t.Name() != Record.Name() {
-			res[i] = t.Data(size)
+		if t.Name() == Record.Name() {
+			panic("NewDatasetTypes invalid call - only concrete types are allowed")
 		}
+		res[i] = t.Data(size)
 	}
 	return NewDataset(res...)
 }
