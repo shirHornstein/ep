@@ -10,8 +10,6 @@ import (
 	"time"
 )
 
-// Tests the scattering when there's just one node - the whole thing should
-// be short-circuited to act as a pass-through
 func TestExchange_init_closeAllConnectionsUponError(t *testing.T) {
 	port := ":5551"
 	ln, err := net.Listen("tcp", port)
@@ -36,8 +34,7 @@ func TestExchange_init_closeAllConnectionsUponError(t *testing.T) {
 	require.NoError(t, dist.Close())
 }
 
-// UID should be unique per generated exchange function
-func TestExchange_unique(t *testing.T) {
+func TestExchange_uniqueUIDPerExchanger(t *testing.T) {
 	s1 := Scatter().(*exchange)
 	s2 := Scatter().(*exchange)
 	s3 := Gather().(*exchange)

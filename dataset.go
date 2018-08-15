@@ -51,22 +51,30 @@ func NewDataset(data ...Data) Dataset {
 }
 
 // NewDatasetLike creates a new Data object at the provided size that has the
-// same types as the provided dataset
-func NewDatasetLike(data Dataset, size int) Dataset {
-	res := make([]Data, data.Width())
+// same types as the provided sample dataset
+func NewDatasetLike(sample Dataset, size int) Dataset {
+	res := make([]Data, sample.Width())
 	for i := range res {
-		res[i] = data.At(i).Type().Data(size)
+		col := sample.At(i)
+		if col.Type().Name() == Record.Name() {
+			res[i] = NewDatasetLike(col.(Dataset), size)
+		} else {
+			res[i] = col.Type().Data(size)
+		}
 	}
 	return NewDataset(res...)
 }
 
 // NewDatasetTypes creates a new Data object at the provided size and types
 func NewDatasetTypes(types []Type, size int) Dataset {
-	data := make([]Data, len(types))
+	res := make([]Data, len(types))
 	for i, t := range types {
-		data[i] = t.Data(size)
+		if t.Name() == Record.Name() {
+			panic("NewDatasetTypes invalid call - only concrete types are allowed")
+		}
+		res[i] = t.Data(size)
 	}
-	return NewDataset(data...)
+	return NewDataset(res...)
 }
 
 // Width of the dataset (number of columns)
@@ -186,7 +194,7 @@ func (set dataset) Slice(start, end int) Data {
 	return res
 }
 
-// Append a data (assumed by interface spec to be a Dataset)
+// see Data.Append (assumed by interface spec to be a Dataset)
 func (set dataset) Append(other Data) Data {
 	if set == nil || len(set) == 0 {
 		return other.Duplicate(1) // never affect other

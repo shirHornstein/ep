@@ -24,6 +24,34 @@ func ExampleDataset_Duplicate() {
 	// [hello world]
 }
 
+func TestNewDatasetLike(t *testing.T) {
+	recordsColumn := ep.NewDataset(ep.Null.Data(2))
+	data := ep.NewDataset(strs([]string{"hello", "world"}), ep.Null.Data(2), recordsColumn)
+	data2 := ep.NewDatasetLike(data, 10)
+
+	require.Equal(t, 3, data2.Width())
+	require.Equal(t, 10, data2.Len())
+	require.Equal(t, str, data2.At(0).Type())
+	require.Equal(t, ep.Null, data2.At(1).Type())
+	require.Equal(t, "(,,())", data2.Strings()[0])
+}
+
+func TestNewDatasetTypes(t *testing.T) {
+	data := ep.NewDatasetTypes([]ep.Type{str, ep.Null}, 10)
+
+	require.Equal(t, 2, data.Width())
+	require.Equal(t, 10, data.Len())
+	require.Equal(t, str, data.At(0).Type())
+	require.Equal(t, ep.Null, data.At(1).Type())
+	require.Equal(t, "(,)", data.Strings()[0])
+}
+
+func TestNewDatasetTypes_panicWithRecords(t *testing.T) {
+	require.Panics(t, func() {
+		ep.NewDatasetTypes([]ep.Type{str, ep.Record, ep.Null}, 10)
+	})
+}
+
 func TestDatasetInvariant(t *testing.T) {
 	d1 := strs([]string{"1", "2", "4", "0", "3", "1", "1"})
 	d2 := strs([]string{"a", "b", "c", "", "e", "f", "g"})
