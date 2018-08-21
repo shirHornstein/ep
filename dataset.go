@@ -53,7 +53,11 @@ func NewDataset(data ...Data) Dataset {
 // NewDatasetLike creates a new Data object at the provided size that has the
 // same types as the provided sample dataset
 func NewDatasetLike(sample Dataset, size int) Dataset {
-	res := make([]Data, sample.Width())
+	width := 0
+	if sample != nil {
+		width = sample.Width()
+	}
+	res := make([]Data, width)
 	for i := range res {
 		col := sample.At(i)
 		if col.Type().Name() == Record.Name() {
@@ -79,6 +83,9 @@ func NewDatasetTypes(types []Type, size int) Dataset {
 
 // Width of the dataset (number of columns)
 func (set dataset) Width() int {
+	if set == nil {
+		return 0
+	}
 	return len(set)
 }
 
