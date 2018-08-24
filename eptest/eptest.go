@@ -3,7 +3,9 @@ package eptest
 
 import (
 	"context"
+	"fmt"
 	"github.com/panoplyio/ep"
+	"net"
 )
 
 // Run is helper function for tests, that runs given runner with given
@@ -34,4 +36,26 @@ func RunWithContext(ctx context.Context, r ep.Runner, datasets ...ep.Dataset) (r
 		res = res.Append(data).(ep.Dataset)
 	}
 	return res, err
+}
+
+// RunDist is like Run, but first distributes the runner to n nodes
+func RunDist(n int, r ep.Runner, datasets ...ep.Dataset) (ep.Dataset, error) {
+	var dist ep.Distributer
+	var addrs []string
+	for i := 0; i < n; i++ {
+		addr := fmt.Sprintf(":%04d", 5550+i) // 5551, 5552, 5553, ...
+		addrs = append(addrs, addr)
+
+		ln, err := net.Listen("tcp", addr)
+		if err != nil {
+			return nil, err
+		}
+
+		dist = ep.NewDistributer(addr, ln)
+		defer dist.Close()
+	}
+
+	r = ep.Pipeline(r, ep.Gather())
+	r = dist.Distribute(r, addrs...)
+	return Run(r, datasets...)
 }
