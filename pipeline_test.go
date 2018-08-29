@@ -16,7 +16,7 @@ func ExamplePipeline() {
 	fmt.Println(data.Strings(), err)
 
 	// Output:
-	// [[is HELLO? is WORLD?]] <nil>
+	// [(is HELLO?) (is WORLD?)] <nil>
 
 }
 
@@ -27,7 +27,7 @@ func ExamplePipeline_reverse() {
 	fmt.Println(data.Strings(), err)
 
 	// Output:
-	// [[IS HELLO? IS WORLD?]] <nil>
+	// [(IS HELLO?) (IS WORLD?)] <nil>
 }
 
 // test that upon an error, the producing (infinity) runners are canceled.
