@@ -150,3 +150,37 @@ func (err *errUnregistered) UnregisteredArg() interface{} { return err.Arg }
 func (err *errUnregistered) Error() string {
 	return fmt.Sprintf("Unregistered %s", reflect.TypeOf(err.Arg))
 }
+
+// PlanListItems plan list of items and returns them as array
+func PlanListItems(ctx context.Context, args interface{}) ([]Runner, error) {
+	list := args.([]interface{})
+	// list can contain nil values (e.g. unary operators like ~,-,! will have one
+	// nil operand). filter nil values as there is no need to plan them
+	for i := 0; i < len(list); i++ {
+		if list[i] == nil {
+			list = append(list[:i], list[i+1:]...)
+			i--
+		}
+	}
+
+	if len(list) == 0 {
+		return []Runner{Pick()}, nil // pick nothing
+	}
+
+	runners := make([]Runner, 0)
+	for _, n := range list {
+		r, err := Plan(ctx, n)
+		if err != nil {
+			break
+		}
+
+		if p, ok := r.(project); ok {
+			runners = append(runners, p...)
+			continue
+		}
+
+		runners = append(runners, r)
+	}
+
+	return runners, nil
+}
