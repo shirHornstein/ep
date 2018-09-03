@@ -4,7 +4,7 @@ import (
 	"database/sql/driver"
 )
 
-// Result implements driver.Result with provided lastID and rowsAffected values.
+// Result implements driver.Result with provided lastID and rowsAffected values
 func Result(lastID, rowsAffected int64) driver.Result {
 	return &result{lastID, rowsAffected}
 }
