@@ -20,6 +20,37 @@ func Plan(ctx context.Context, k interface{}) (Runner, error) {
 	return PlanWithArgs(ctx, k, nil)
 }
 
+// PlanListItems plans list of items and returns an array of their runners
+func PlanListItems(ctx context.Context, list []interface{}) ([]Runner, error) {
+	// list can contain nil values (e.g. unary operators like ~,-,! will have one
+	// nil operand). filter nil values as there is no need to plan them
+	for i := 0; i < len(list); i++ {
+		if list[i] == nil {
+			list = append(list[:i], list[i+1:]...)
+			i--
+		}
+	}
+
+	if len(list) == 0 {
+		return []Runner{Pick()}, nil // pick nothing
+	}
+
+	runners := make([]Runner, 0, len(list))
+	for _, n := range list {
+		r, err := Plan(ctx, n)
+		if err != nil {
+			break
+		}
+
+		if p, ok := r.(project); ok {
+			runners = append(runners, p...)
+		} else {
+			runners = append(runners, r)
+		}
+	}
+	return runners, nil
+}
+
 // PlanWithArgs is similar to Plan, except that it first filters the runners to
 // only keep RunnerArgs instances that have the args provided.
 func PlanWithArgs(ctx context.Context, k interface{}, args []Type) (Runner, error) {
@@ -149,38 +180,4 @@ type errUnregistered struct{ Arg interface{} }
 func (err *errUnregistered) UnregisteredArg() interface{} { return err.Arg }
 func (err *errUnregistered) Error() string {
 	return fmt.Sprintf("Unregistered %s", reflect.TypeOf(err.Arg))
-}
-
-// PlanListItems plan list of items and returns them as array
-func PlanListItems(ctx context.Context, args interface{}) ([]Runner, error) {
-	list := args.([]interface{})
-	// list can contain nil values (e.g. unary operators like ~,-,! will have one
-	// nil operand). filter nil values as there is no need to plan them
-	for i := 0; i < len(list); i++ {
-		if list[i] == nil {
-			list = append(list[:i], list[i+1:]...)
-			i--
-		}
-	}
-
-	if len(list) == 0 {
-		return []Runner{Pick()}, nil // pick nothing
-	}
-
-	runners := make([]Runner, 0)
-	for _, n := range list {
-		r, err := Plan(ctx, n)
-		if err != nil {
-			break
-		}
-
-		if p, ok := r.(project); ok {
-			runners = append(runners, p...)
-			continue
-		}
-
-		runners = append(runners, r)
-	}
-
-	return runners, nil
 }
