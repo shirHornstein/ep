@@ -20,26 +20,26 @@ func Plan(ctx context.Context, k interface{}) (Runner, error) {
 	return PlanWithArgs(ctx, k, nil)
 }
 
-// PlanListItems plans list of items and returns an array of their runners
-func PlanListItems(ctx context.Context, list []interface{}) ([]Runner, error) {
-	// list can contain nil values (e.g. unary operators like ~,-,! will have one
+// PlanList plans list of items and returns an array of their runners
+func PlanList(ctx context.Context, items []interface{}) ([]Runner, error) {
+	// items can contain nil values (e.g. unary operators like ~,-,! will have one
 	// nil operand). filter nil values as there is no need to plan them
-	for i := 0; i < len(list); i++ {
-		if list[i] == nil {
-			list = append(list[:i], list[i+1:]...)
+	for i := 0; i < len(items); i++ {
+		if items[i] == nil {
+			items = append(items[:i], items[i+1:]...)
 			i--
 		}
 	}
 
-	if len(list) == 0 {
+	if len(items) == 0 {
 		return []Runner{Pick()}, nil // pick nothing
 	}
 
-	runners := make([]Runner, 0, len(list))
-	for _, n := range list {
+	runners := make([]Runner, 0, len(items))
+	for _, n := range items {
 		r, err := Plan(ctx, n)
 		if err != nil {
-			break
+			return nil, err
 		}
 
 		if p, ok := r.(project); ok {
