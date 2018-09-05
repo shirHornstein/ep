@@ -33,7 +33,7 @@ func TestNewDatasetLike(t *testing.T) {
 	require.Equal(t, 10, data2.Len())
 	require.Equal(t, str, data2.At(0).Type())
 	require.Equal(t, integer, data2.At(1).Type())
-	require.Equal(t, "(,,())", data2.Strings()[0])
+	require.Equal(t, "(,0,(0))", data2.Strings()[0])
 	require.Equal(t, ep.Record, data2.At(2).Type())
 }
 
