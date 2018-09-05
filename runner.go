@@ -69,6 +69,15 @@ type RunnerPlan interface {
 	Plan(ctx context.Context, arg interface{}) (Runner, error)
 }
 
+// RunnerExec is a Runner that also supports command execution.
+type RunnerExec interface {
+	Runner // it's a Runner
+
+	// Exec executes a command and returns last inserted id, a number of rows
+	// affected by this command, and an error.
+	Exec(context.Context) (lastID int64, rowsAffected int64, err error)
+}
+
 // FilterRunner is a Runner that also exposes the ability to choose which
 // results to return, and which are irrelevant and can be replaced with dummy
 // placeholder
