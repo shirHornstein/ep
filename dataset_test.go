@@ -37,18 +37,18 @@ func TestNewDatasetLike(t *testing.T) {
 }
 
 func TestNewDatasetTypes(t *testing.T) {
-	data := ep.NewDatasetTypes([]ep.Type{str, str2}, 10)
+	data := ep.NewDatasetTypes([]ep.Type{str, integer}, 10)
 
 	require.Equal(t, 2, data.Width())
 	require.Equal(t, 10, data.Len())
 	require.Equal(t, str, data.At(0).Type())
-	require.Equal(t, str2, data.At(1).Type())
-	require.Equal(t, "(,)", data.Strings()[0])
+	require.Equal(t, integer, data.At(1).Type())
+	require.Equal(t, "(,0)", data.Strings()[0])
 }
 
 func TestNewDatasetTypes_panicWithRecords(t *testing.T) {
 	require.Panics(t, func() {
-		ep.NewDatasetTypes([]ep.Type{str, ep.Record, str2}, 10)
+		ep.NewDatasetTypes([]ep.Type{str, ep.Record, integer}, 10)
 	})
 }
 
