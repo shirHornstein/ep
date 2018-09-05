@@ -25,15 +25,16 @@ func ExampleDataset_Duplicate() {
 }
 
 func TestNewDatasetLike(t *testing.T) {
-	recordsColumn := ep.NewDataset(str.Data(2))
-	data := ep.NewDataset(strs([]string{"hello", "world"}), str.Data(2), recordsColumn)
+	recordsColumn := ep.NewDataset(integer.Data(2))
+	data := ep.NewDataset(strs([]string{"hello", "world"}), integer.Data(2), recordsColumn)
 	data2 := ep.NewDatasetLike(data, 10)
 
 	require.Equal(t, 3, data2.Width())
 	require.Equal(t, 10, data2.Len())
 	require.Equal(t, str, data2.At(0).Type())
-	require.Equal(t, str, data2.At(1).Type())
+	require.Equal(t, integer, data2.At(1).Type())
 	require.Equal(t, "(,,())", data2.Strings()[0])
+	require.Equal(t, ep.Record, data2.At(2).Type())
 }
 
 func TestNewDatasetTypes(t *testing.T) {
@@ -55,7 +56,7 @@ func TestNewDatasetTypes_panicWithRecords(t *testing.T) {
 func TestDatasetInvariant(t *testing.T) {
 	d1 := strs([]string{"1", "2", "4", "0", "3", "1", "1"})
 	d2 := strs([]string{"a", "b", "c", "", "e", "f", "g"})
-	d3 := str.Data(7)
+	d3 := integer.Data(7)
 
 	eptest.VerifyDataInterfaceInvariant(t, ep.NewDataset(d1, d2, d3))
 }

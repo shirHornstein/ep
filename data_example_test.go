@@ -7,7 +7,8 @@ import (
 	"strconv"
 )
 
-var _ = ep.Types.Register("string", str).
+var _ = ep.Types.
+	Register("string", str).
 	Register("integer", integer)
 
 var str = &strType{}
@@ -95,7 +96,6 @@ func (vs integers) Strings() []string {
 		s[i] = strconv.Itoa(v)
 	}
 	return s
-
 }
 
 func ExampleData() {
@@ -104,11 +104,5 @@ func ExampleData() {
 	strs = strs.Slice(0, 2)
 	fmt.Println(strs.Strings())
 
-	var ints ep.Data = integers([]int{4, 2, 3, 1})
-	sort.Sort(ints)
-	ints = ints.Slice(0, 2)
-	fmt.Println(ints.Strings())
-
 	// Output: [bar foo]
-	// [1 2]
 }
