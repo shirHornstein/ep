@@ -1,19 +1,19 @@
 package ep
 
 var dummy = &dummyType{}
-var _ = registerGob(dummy, variadicDummies{})
+var _ = registerGob(dummy, variadicDummies(-1))
 
 type dummyType struct{}
 
 func (t *dummyType) String() string       { return t.Name() }
 func (*dummyType) Name() string           { return "dummy" }
-func (*dummyType) Data(n int) Data        { return variadicDummies{} }
-func (t *dummyType) DataEmpty(n int) Data { return variadicDummies{} }
+func (*dummyType) Data(n int) Data        { return variadicDummies(n) }
+func (t *dummyType) DataEmpty(n int) Data { return variadicDummies(n) }
 
-type variadicDummies struct{}
+type variadicDummies int
 
 func (variadicDummies) Type() Type                    { return dummy }
-func (variadicDummies) Len() int                      { return -1 }
+func (vs variadicDummies) Len() int                   { return int(vs) }
 func (variadicDummies) Less(int, int) bool            { return false }
 func (variadicDummies) Swap(int, int)                 {}
 func (variadicDummies) LessOther(int, Data, int) bool { return false }

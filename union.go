@@ -20,7 +20,7 @@ func Union(runners ...Runner) (Runner, error) {
 	}
 
 	u := union(runners)
-	_, err := u.ReturnsErr()
+	_, err := u.returnsErr()
 	if err != nil {
 		return nil, err
 	}
@@ -32,7 +32,7 @@ type union []Runner
 
 // see Runner. Assumes all runners has the same return types.
 func (rs union) Returns() []Type {
-	types, err := rs.ReturnsErr()
+	types, err := rs.returnsErr()
 	if err != nil {
 		panic("Union() should've prevented this error from panicking")
 	}
@@ -40,29 +40,21 @@ func (rs union) Returns() []Type {
 	return types
 }
 
-// determine the return types - skipping NULLS as they don't expose any
-// information about the actual data types.
-func (rs union) ReturnsErr() ([]Type, error) {
+// determine the return types by verifying all runners return same types
+func (rs union) returnsErr() ([]Type, error) {
 	types := rs[0].Returns()
 
-	// ensure that the return types are compatible
+	// ensure that all return types are compatible
 	for _, r := range rs {
 		have := r.Returns()
 		if len(have) != len(types) {
 			return nil, fmt.Errorf("mismatch number of columns: %v and %v", types, have)
 		}
 
-		for i, t := range have {
-
-			// choose the first column type that isn't a null
-			// TODO: find the Significant type as we are doing in values.
-			// In case type is text with only nulls, we should not return an error.
-			if t.Name() != types[i].Name() {
-				return nil, fmt.Errorf("type mismatch %s and %s", types, have)
-			}
+		if !AreEqualTypes(types, have) {
+			return nil, fmt.Errorf("type mismatch %s and %s", types, have)
 		}
 	}
-
 	return types, nil
 }
 

@@ -29,9 +29,7 @@
 // re-use.
 //
 // Finally - the actual Data instances are left for user-space implementation.
-// Please review the example code below. The
-// latter is a built-in type for handling null-data without the overhead of
-// interfaces or pointers.
+// Please review the example code below and all runnable examples.
 //
 // Registries
 //

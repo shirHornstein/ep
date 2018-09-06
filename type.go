@@ -23,8 +23,7 @@ func WildcardMinusTail(n int) Type {
 // can be determined ahead of time. Examples are JSON parser functions that may
 // produce different data types for each row. Some functions (CAST, COUNT, etc.)
 // may be able to support Any as input.
-//
-// you should not use Any as a return type!
+// However, no runner should return type Any, but only concrete type.
 var Any = &anyType{}
 
 var _ = registerGob(&modifierType{}, Wildcard, Any)
