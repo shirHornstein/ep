@@ -4,10 +4,15 @@ import (
 	"fmt"
 	"github.com/panoplyio/ep"
 	"sort"
+	"strconv"
 )
 
-var _ = ep.Types.Register("string", str)
+var _ = ep.Types.
+	Register("string", str).
+	Register("integer", integer)
+
 var str = &strType{}
+var integer = &integerType{}
 
 type strType struct{}
 
@@ -47,6 +52,51 @@ func (vs strs) Copy(from ep.Data, fromRow, toRow int) {
 	vs[toRow] = src[fromRow]
 }
 func (vs strs) Strings() []string { return vs }
+
+type integerType struct{}
+
+func (s *integerType) String() string        { return s.Name() }
+func (*integerType) Name() string            { return "integer" }
+func (*integerType) Data(n int) ep.Data      { return make(integers, n) }
+func (*integerType) DataEmpty(n int) ep.Data { return make(integers, 0, n) }
+
+type integers []int
+
+func (integers) Type() ep.Type         { return integer }
+func (vs integers) Len() int           { return len(vs) }
+func (vs integers) Less(i, j int) bool { return vs[i] < vs[j] }
+func (vs integers) Swap(i, j int)      { vs[i], vs[j] = vs[j], vs[i] }
+func (vs integers) LessOther(thisRow int, other ep.Data, otherRow int) bool {
+	data := other.(integers)
+	return vs[thisRow] < data[otherRow]
+}
+func (vs integers) Slice(s, e int) ep.Data       { return vs[s:e] }
+func (vs integers) Append(other ep.Data) ep.Data { return append(vs, other.(integers)...) }
+func (vs integers) Duplicate(t int) ep.Data {
+	ans := make(integers, 0, vs.Len()*t)
+	for i := 0; i < t; i++ {
+		ans = append(ans, vs...)
+	}
+	return ans
+}
+func (vs integers) IsNull(i int) bool { return false }
+func (vs integers) MarkNull(i int)    {}
+func (vs integers) Nulls() []bool     { return make([]bool, vs.Len()) }
+func (vs integers) Equal(other ep.Data) bool {
+	// for efficiency - avoid reflection and check address of underlying arrays
+	return fmt.Sprintf("%p", vs) == fmt.Sprintf("%p", other)
+}
+func (vs integers) Copy(from ep.Data, fromRow, toRow int) {
+	src := from.(integers)
+	vs[toRow] = src[fromRow]
+}
+func (vs integers) Strings() []string {
+	s := make([]string, vs.Len())
+	for i, v := range vs {
+		s[i] = strconv.Itoa(v)
+	}
+	return s
+}
 
 func ExampleData() {
 	var strs ep.Data = strs([]string{"hello", "world", "foo", "bar"})

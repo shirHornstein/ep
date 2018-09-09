@@ -25,53 +25,40 @@ func ExampleDataset_Duplicate() {
 }
 
 func TestNewDatasetLike(t *testing.T) {
-	recordsColumn := ep.NewDataset(ep.Null.Data(2))
-	data := ep.NewDataset(strs([]string{"hello", "world"}), ep.Null.Data(2), recordsColumn)
+	recordsColumn := ep.NewDataset(integer.Data(2))
+	data := ep.NewDataset(strs([]string{"hello", "world"}), integer.Data(2), recordsColumn)
 	data2 := ep.NewDatasetLike(data, 10)
 
 	require.Equal(t, 3, data2.Width())
 	require.Equal(t, 10, data2.Len())
 	require.Equal(t, str, data2.At(0).Type())
-	require.Equal(t, ep.Null, data2.At(1).Type())
-	require.Equal(t, "(,,())", data2.Strings()[0])
+	require.Equal(t, integer, data2.At(1).Type())
+	require.Equal(t, "(,0,(0))", data2.Strings()[0])
+	require.Equal(t, ep.Record, data2.At(2).Type())
 }
 
 func TestNewDatasetTypes(t *testing.T) {
-	data := ep.NewDatasetTypes([]ep.Type{str, ep.Null}, 10)
+	data := ep.NewDatasetTypes([]ep.Type{str, integer}, 10)
 
 	require.Equal(t, 2, data.Width())
 	require.Equal(t, 10, data.Len())
 	require.Equal(t, str, data.At(0).Type())
-	require.Equal(t, ep.Null, data.At(1).Type())
-	require.Equal(t, "(,)", data.Strings()[0])
+	require.Equal(t, integer, data.At(1).Type())
+	require.Equal(t, "(,0)", data.Strings()[0])
 }
 
 func TestNewDatasetTypes_panicWithRecords(t *testing.T) {
 	require.Panics(t, func() {
-		ep.NewDatasetTypes([]ep.Type{str, ep.Record, ep.Null}, 10)
+		ep.NewDatasetTypes([]ep.Type{str, ep.Record, integer}, 10)
 	})
 }
 
 func TestDatasetInvariant(t *testing.T) {
 	d1 := strs([]string{"1", "2", "4", "0", "3", "1", "1"})
 	d2 := strs([]string{"a", "b", "c", "", "e", "f", "g"})
-	d3 := ep.Null.Data(7)
+	d3 := integer.Data(7)
 
 	eptest.VerifyDataInterfaceInvariant(t, ep.NewDataset(d1, d2, d3))
-}
-
-func TestDatasetInvariant_variadicNulls(t *testing.T) {
-	d1 := strs([]string{"1", "2", "4", "0", "3", "1", "1"})
-	d2 := ep.Null.Data(-1)
-	d3 := strs([]string{"a", "b", "c", "", "e", "f", "g"})
-
-	eptest.VerifyDataInterfaceInvariant(t, ep.NewDataset(d1, d2, d3))
-}
-
-func TestDatasetInvariant_onlyVariadicNulls(t *testing.T) {
-	d := ep.Null.Data(-1)
-
-	eptest.VerifyDataInterfaceInvariant(t, ep.NewDataset(d, d, d))
 }
 
 func TestDataset_sort(t *testing.T) {

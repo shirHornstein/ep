@@ -160,7 +160,7 @@ func (rs project) Run(origCtx context.Context, inp, out chan Dataset) (err error
 
 			if rs[i] == dummyRunnerSingleton {
 				// dummy runners shouldn't affect state check
-				curr, open = variadicNullBatch, allOpen
+				curr, open = variadicDummiesBatch, allOpen
 			} else if allDummies {
 				allDummies = false
 				// init allOpen according to first out channel of non dummy runner
@@ -205,13 +205,13 @@ func (rs project) useDummySingleton() {
 // dummyRunnerSingleton is a runner that does nothing and just drain inp
 var dummyRunnerSingleton = &dummyRunner{}
 
-// variadicNullBatch is used for replacing unused columns
-var variadicNullBatch = NewDataset(Null.Data(-1))
+// variadicDummiesBatch is used for replacing unused columns
+var variadicDummiesBatch = NewDataset(dummy.Data(-1))
 
 type dummyRunner struct{}
 
 func (*dummyRunner) Args() []Type    { return []Type{Wildcard} }
-func (*dummyRunner) Returns() []Type { return []Type{Null} }
+func (*dummyRunner) Returns() []Type { return []Type{dummy} }
 func (*dummyRunner) Run(_ context.Context, inp, out chan Dataset) error {
 	return nil
 }

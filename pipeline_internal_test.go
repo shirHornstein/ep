@@ -87,7 +87,7 @@ func TestPipeline_creationSingleRunnerAfterFlat(t *testing.T) {
 // performance is not impacted by the size of the datasets (sensible, given
 // the implementation details).
 func BenchmarkPipeline(b *testing.B) {
-	data := NewDataset(Null.Data(4))
+	data := NewDataset(dummy.Data(-1))
 	inp := make(chan Dataset)
 	out := make(chan Dataset)
 	defer close(inp)
