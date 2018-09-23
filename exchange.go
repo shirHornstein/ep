@@ -4,10 +4,10 @@ import (
 	"context"
 	"encoding/gob"
 	"fmt"
+	"github.com/panoplyio/go-consistent"
 	"github.com/satori/go.uuid"
 	"io"
 	"net"
-	"stathat.com/c/consistent"
 )
 
 var _ = registerGob(&exchange{}, &req{}, &errMsg{})
