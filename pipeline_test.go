@@ -171,6 +171,28 @@ func TestPipeline_Returns_wildcardMinusTail(t *testing.T) {
 	require.Equal(t, "upper", ep.GetAlias(types[0]))
 }
 
+func TestPipeline_Args_runnerArgs(t *testing.T) {
+	// two runners are required to create an instance of pipeline
+	runner := ep.Pipeline(&runnerWithArgs{}, &runnerWithoutArgs{})
+
+	runnerArgs, ok := runner.(ep.RunnerArgs)
+	require.True(t, ok)
+
+	args := runnerArgs.Args()
+	require.Equal(t, []ep.Type{ep.Any}, args)
+}
+
+func TestPipeline_Args_noArgs(t *testing.T) {
+	// two runners are required to create an instance of pipeline
+	runner := ep.Pipeline(&runnerWithoutArgs{}, &runnerWithArgs{})
+
+	runnerArgs, ok := runner.(ep.RunnerArgs)
+	require.True(t, ok)
+
+	args := runnerArgs.Args()
+	require.Equal(t, []ep.Type{ep.Wildcard}, args)
+}
+
 type tailCutter struct {
 	CutFromTail int
 }
@@ -182,3 +204,9 @@ func (*tailCutter) Run(_ context.Context, inp, out chan ep.Dataset) error {
 	}
 	return nil
 }
+
+type runnerWithArgs struct{ ep.Runner }
+
+func (r *runnerWithArgs) Args() []ep.Type { return []ep.Type{ep.Any} }
+
+type runnerWithoutArgs struct{ ep.Runner }

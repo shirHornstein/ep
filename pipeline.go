@@ -107,6 +107,17 @@ func (rs pipeline) Returns() []Type {
 	return rs.returnsOne(len(rs) - 1) // start with the last one.
 }
 
+// Args returns the arguments expected by the first runner in this pipeline.
+// If that runner is an instance of RunnerArgs, its Args() result will be returned.
+// Otherwise, Wildcard type is returned.
+func (rs pipeline) Args() []Type {
+	runnerArgs, ok := rs[0].(RunnerArgs)
+	if ok {
+		return runnerArgs.Args()
+	}
+	return []Type{Wildcard}
+}
+
 func (rs pipeline) returnsOne(j int) []Type {
 	res := rs[j].Returns()
 	if j == 0 {
