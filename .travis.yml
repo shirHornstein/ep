@@ -9,7 +9,7 @@ go:
 
 install:
   - go get -t -v ./...
-  - go get -u github.com/golang/lint/golint
+  - go get -u golang.org/x/lint/golint
   - export PATH=$PATH:$HOME/.local/bin
 
 script:
