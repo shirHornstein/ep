@@ -46,7 +46,7 @@ func TestPipeline_creationFlatSkipPassThrough(t *testing.T) {
 	require.Equal(t, 3, len(p))
 }
 
-func TestPipeline_creationUnFlatProject(t *testing.T) {
+func TestPipeline_creationPreserveProject(t *testing.T) {
 	runner := Project(Gather(), Pipeline(Scatter(), Scatter()), Pipeline(Scatter(), Scatter()))
 	runner = Pipeline(runner, Gather())
 

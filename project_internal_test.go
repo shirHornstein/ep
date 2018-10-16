@@ -38,7 +38,7 @@ func TestProject_creationFlat(t *testing.T) {
 	require.False(t, isProject)
 }
 
-func TestProject_creationUnFlatPipeline(t *testing.T) {
+func TestProject_creationPreservePipeline(t *testing.T) {
 	runner := Pipeline(Gather(), Project(Scatter(), Scatter()), Project(Scatter(), Scatter()))
 	runner = Project(runner, Gather())
 
