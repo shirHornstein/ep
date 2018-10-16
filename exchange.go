@@ -23,7 +23,7 @@ const (
 )
 
 // Gather returns an exchange Runner that gathers all of its input into a
-// single node. On the main node it will passthrough data from all other
+// single node. On the main node it will passThrough data from all other
 // nodes, and will produce no output on peers
 func Gather() Runner {
 	uid, _ := uuid.NewV4()
@@ -87,7 +87,7 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 		// currently supported. TODO: reconsider this architecture? Perhaps
 		// we can distribute the exchange upon Run()?
 		// NOTE that while it's possible to run exchange multiple times locally,
-		// it's disabled here to guanratee that runners behave locally as they
+		// it's disabled here to guarantee that runners behave locally as they
 		// do distributed.
 		return fmt.Errorf("exhcnage cannot be Run() more than once")
 	}
@@ -155,7 +155,7 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 				sndDone = true
 
 				// inp is closed. If we keep iterating, it will infinitely
-				// resolve to (nil, true). Nill-ify it to block it on the next
+				// resolve to (nil, true). Null-ify it to block it on the next
 				// iteration.
 				inp = nil
 				continue

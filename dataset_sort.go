@@ -29,8 +29,8 @@ func Sort(data Dataset, sortingCols []SortingCol) {
 
 func newConditionalSortDataset(set dataset, sortingCols []SortingCol) *conditionalSortDataset {
 	// in case dataset contains recurring columns - find unique columns indices to
-	// avoid double Swapping during sort
-	uniqueColumns := []Data{}
+	// avoid multiple swapping during sort
+	var uniqueColumns []Data
 	for i, col := range set {
 		unique := true
 		for j := 0; j < i; j++ {

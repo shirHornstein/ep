@@ -18,7 +18,7 @@ func TestRows(t *testing.T) {
 	require.Equal(t, "upper", cols[0])
 
 	dest := make([]driver.Value, 1)
-	res := []driver.Value{}
+	var res []driver.Value
 	for {
 		err := rows.Next(dest)
 		if err == io.EOF {

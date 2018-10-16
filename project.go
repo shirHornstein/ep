@@ -19,8 +19,8 @@ func Project(runners ...Runner) Runner {
 	// pre-created project was already flatten during its creation
 	var flat project
 	for _, r := range runners {
-		p, isProj := r.(project)
-		if isProj {
+		p, isProject := r.(project)
+		if isProject {
 			flat = append(flat, p...)
 		} else {
 			flat = append(flat, r)

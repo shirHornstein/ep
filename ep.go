@@ -89,8 +89,8 @@
 // E.g:
 // 		SELECT scope.col1 AS alias FROM (..) AS scope
 //
-// In that case, internal subselect will be wrapped with Scope runner to mark all its returned
-// columns as belonged to subselect.
+// In that case, internal sub-select will be wrapped with Scope runner to mark all its returned
+// columns as belonged to sub-select.
 // See ep.Scope, ep.Alias and ep.SetAlias for more details.
 package ep
 

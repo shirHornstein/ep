@@ -59,10 +59,10 @@ type Data interface {
 
 // Cut the Data into several sub-segments at the provided cut-point indices. It's
 // effectively the same as calling Data.Slice() multiple times
-func Cut(data Data, cutpoints ...int) []Data {
-	res := []Data{}
+func Cut(data Data, cutPoints ...int) []Data {
+	var res []Data
 	var last int
-	for _, i := range cutpoints {
+	for _, i := range cutPoints {
 		res = append(res, data.Slice(last, i))
 		last = i
 	}

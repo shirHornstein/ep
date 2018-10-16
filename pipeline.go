@@ -26,11 +26,11 @@ func Pipeline(runners ...Runner) Runner {
 		}
 	}
 
-	// filter out passthrough runners as they don't affect the pipe
+	// filter out passThrough runners as they don't affect the pipe
 	filtered := flat[:0]
 	for _, r := range flat {
-		_, isPassthrough := r.(*passthrough)
-		if !isPassthrough {
+		_, isPassThrough := r.(*passThrough)
+		if !isPassThrough {
 			filtered = append(filtered, r)
 		}
 	}

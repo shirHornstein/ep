@@ -8,7 +8,7 @@ import "fmt"
 // datasets themselves, but only in API declaration.
 var Wildcard = &wildcardType{}
 
-// WildcardMinusTail returns wildcard pseduo-type as described above, with the
+// WildcardMinusTail returns wildcard pseudo-type as described above, with the
 // ability to denote subset of their input type. For example, a function returning
 // [WildcardMinusTail(1), Int] effectively returns its input without input's last
 // column followed by an int column. It should never be used in the datasets
