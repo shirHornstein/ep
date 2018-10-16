@@ -236,9 +236,9 @@ type distRunner struct {
 }
 
 func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) error {
-	errs := []error{}
+	var errs []error
 
-	decs := []*gob.Decoder{}
+	var decs []*gob.Decoder
 	isMain := r.d.addr == r.MasterAddr
 	for i := 0; i < len(r.Addrs) && isMain; i++ {
 		addr := r.Addrs[i]

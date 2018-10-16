@@ -234,7 +234,7 @@ func TestPartition_sendsCompleteDatasets(t *testing.T) {
 	require.ElementsMatch(t, expected, sizes.Strings())
 }
 
-// test that exchange runners act as passthrough when executed without a
+// test that exchange runners act as passThrough when executed without a
 // distributer
 func TestExchange_undistributed(t *testing.T) {
 	data := ep.NewDataset(strs{"hello", "world"})

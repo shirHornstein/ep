@@ -40,7 +40,7 @@ func (r *rows) Run(ctx context.Context, inp, out chan Dataset) error {
 
 // see driver.Rows
 func (r *rows) Columns() []string {
-	cols := []string{}
+	var cols []string
 	for _, t := range r.Returns() {
 		alias := GetAlias(t)
 		if alias == "" {
@@ -100,7 +100,7 @@ func (r *rows) Next(dest []driver.Value) error {
 	}
 
 	// build the batch of data
-	columnar := [][]string{}
+	var columnar [][]string
 	for i := 0; i < data.Width(); i++ {
 		columnar = append(columnar, data.At(i).Strings())
 	}

@@ -56,7 +56,8 @@ func TestDistribute_connectionError(t *testing.T) {
 }
 
 // Test that errors are transmitted across the network
-func _TestDistributeErrorFromPeer(t *testing.T) {
+func TestDistributeErrorFromPeer(t *testing.T) {
+	t.Skip("TODO")
 	port1 := ":5551"
 	dist1 := eptest.NewPeer(t, port1)
 

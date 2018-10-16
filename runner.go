@@ -4,7 +4,7 @@ import (
 	"context"
 )
 
-var _ = registerGob(&passthrough{}, &pick{})
+var _ = registerGob(&passThrough{}, &pick{})
 
 // Runner represents objects that can receive a stream of input datasets,
 // manipulate them in some way (filter, mapping, reduction, expansion, etc.) and
@@ -59,7 +59,7 @@ type RunnerArgs interface {
 
 // RunnerPlan is a Runner that also acts as a Runner constructor. This is useful
 // for cases when the Runner needs to be somehow configured, or even replaced
-// altogher based on input arguments
+// altogether based on input arguments
 type RunnerPlan interface {
 	Runner // it's a Runner
 
@@ -93,13 +93,13 @@ type FilterRunner interface {
 // PassThrough returns a runner that lets all of its input through as-is
 func PassThrough() Runner { return passThroughSingleton }
 
-var passThroughSingleton = &passthrough{}
+var passThroughSingleton = &passThrough{}
 
-type passthrough struct{}
+type passThrough struct{}
 
-func (*passthrough) Args() []Type    { return []Type{Wildcard} }
-func (*passthrough) Returns() []Type { return []Type{Wildcard} }
-func (*passthrough) Run(_ context.Context, inp, out chan Dataset) error {
+func (*passThrough) Args() []Type    { return []Type{Wildcard} }
+func (*passThrough) Returns() []Type { return []Type{Wildcard} }
+func (*passThrough) Run(_ context.Context, inp, out chan Dataset) error {
 	for data := range inp {
 		out <- data
 	}
