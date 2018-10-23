@@ -4,7 +4,7 @@ import (
 	"context"
 )
 
-var _ = registerGob(&passThrough{}, &pick{})
+var _ = registerGob(&passThrough{}, &pick{}, &typedPassThrough{})
 
 // Runner represents objects that can receive a stream of input datasets,
 // manipulate them in some way (filter, mapping, reduction, expansion, etc.) and
@@ -100,6 +100,20 @@ type passThrough struct{}
 func (*passThrough) Args() []Type    { return []Type{Wildcard} }
 func (*passThrough) Returns() []Type { return []Type{Wildcard} }
 func (*passThrough) Run(_ context.Context, inp, out chan Dataset) error {
+	for data := range inp {
+		out <- data
+	}
+	return nil
+}
+
+// TypedPassThrough returns a runner that lets all of its input through as-is
+func TypedPassThrough(ts ...Type) Runner { return &typedPassThrough{ts} }
+
+type typedPassThrough struct{ Ts []Type }
+
+func (*typedPassThrough) Args() []Type      { return []Type{Wildcard} }
+func (r *typedPassThrough) Returns() []Type { return r.Ts }
+func (*typedPassThrough) Run(_ context.Context, inp, out chan Dataset) error {
 	for data := range inp {
 		out <- data
 	}
