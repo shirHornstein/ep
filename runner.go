@@ -4,7 +4,7 @@ import (
 	"context"
 )
 
-var _ = registerGob(&passThrough{}, &pick{}, &typedPassThrough{})
+var _ = registerGob(&passThrough{}, &pick{})
 
 // Runner represents objects that can receive a stream of input datasets,
 // manipulate them in some way (filter, mapping, reduction, expansion, etc.) and
@@ -91,29 +91,27 @@ type FilterRunner interface {
 }
 
 // PassThrough returns a runner that lets all of its input through as-is
-func PassThrough() Runner { return passThroughSingleton }
+func PassThrough(types ...Type) Runner {
+	if len(types) == 0 {
+		return passThroughSingleton
+	}
+	return &passThrough{types}
+}
 
 var passThroughSingleton = &passThrough{}
 
-type passThrough struct{}
-
-func (*passThrough) Args() []Type    { return []Type{Wildcard} }
-func (*passThrough) Returns() []Type { return []Type{Wildcard} }
-func (*passThrough) Run(_ context.Context, inp, out chan Dataset) error {
-	for data := range inp {
-		out <- data
-	}
-	return nil
+type passThrough struct {
+	ReturnTypes []Type
 }
 
-// TypedPassThrough returns a runner that lets all of its input through as-is
-func TypedPassThrough(ts ...Type) Runner { return &typedPassThrough{ts} }
-
-type typedPassThrough struct{ Ts []Type }
-
-func (*typedPassThrough) Args() []Type      { return []Type{Wildcard} }
-func (r *typedPassThrough) Returns() []Type { return r.Ts }
-func (*typedPassThrough) Run(_ context.Context, inp, out chan Dataset) error {
+func (*passThrough) Args() []Type { return []Type{Wildcard} }
+func (r *passThrough) Returns() []Type {
+	if len(r.ReturnTypes) == 0 {
+		return []Type{Wildcard}
+	}
+	return r.ReturnTypes
+}
+func (*passThrough) Run(_ context.Context, inp, out chan Dataset) error {
 	for data := range inp {
 		out <- data
 	}
