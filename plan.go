@@ -91,7 +91,7 @@ type runnersReg map[interface{}][]Runner
 // Register a key-runner pair to be globally accessible via the Get() function
 // using the same key.
 func (reg runnersReg) Register(k interface{}, r Runner) runnersReg {
-	registerGob(r)
+	registerGob(k, r)
 	k = registryKey(k)
 	reg[k] = append(reg[k], r)
 	return reg
