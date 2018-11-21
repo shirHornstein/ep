@@ -36,11 +36,10 @@ var Record = &datasetType{}
 type datasetType struct{}
 
 func (sett *datasetType) String() string  { return sett.Name() }
-func (sett *datasetType) Name() string    { return "record" }
+func (*datasetType) Name() string         { return "record" }
+func (*datasetType) Size() uint           { panic("call Size on each Data") }
 func (sett *datasetType) Data(n int) Data { return sett.DataEmpty(n) }
-func (sett *datasetType) DataEmpty(int) Data {
-	panic("runtime error: please use NewDataset function")
-}
+func (*datasetType) DataEmpty(int) Data   { panic("use NewDataset function") }
 
 type dataset []Data
 

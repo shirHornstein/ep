@@ -35,6 +35,9 @@ type Type interface {
 	// Name returns the name of the type
 	Name() string
 
+	// Size returns the size of value with that type
+	Size() uint
+
 	// Data returns a new Data object of this type, containing `n` zero-values
 	Data(n int) Data
 
@@ -65,6 +68,7 @@ type wildcardType struct {
 
 func (*wildcardType) String() string             { return "*" }
 func (*wildcardType) Name() string               { return "*" }
+func (*wildcardType) Size() uint                 { panic("wildcard has no concrete type") }
 func (*wildcardType) Data(int) Data              { panic("wildcard has no concrete type") }
 func (*wildcardType) DataEmpty(int) Data         { panic("wildcard has no concrete type") }
 func (w *wildcardType) At(idx int) *wildcardType { return &wildcardType{&idx, w.CutFromTail} }
@@ -73,6 +77,7 @@ type anyType struct{}
 
 func (*anyType) String() string     { return "?" }
 func (*anyType) Name() string       { return "?" }
+func (*anyType) Size() uint         { panic("any has no concrete type") }
 func (*anyType) Data(int) Data      { panic("any has no concrete type") }
 func (*anyType) DataEmpty(int) Data { panic("any has no concrete type") }
 func isAny(t Type) bool {

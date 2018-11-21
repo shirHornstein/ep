@@ -18,6 +18,7 @@ type strType struct{}
 
 func (s *strType) String() string        { return s.Name() }
 func (*strType) Name() string            { return "string" }
+func (*strType) Size() uint              { return 8 }
 func (*strType) Data(n int) ep.Data      { return make(strs, n) }
 func (*strType) DataEmpty(n int) ep.Data { return make(strs, 0, n) }
 
@@ -57,6 +58,7 @@ type integerType struct{}
 
 func (s *integerType) String() string        { return s.Name() }
 func (*integerType) Name() string            { return "integer" }
+func (*integerType) Size() uint              { return 4 }
 func (*integerType) Data(n int) ep.Data      { return make(integers, n) }
 func (*integerType) DataEmpty(n int) ep.Data { return make(integers, 0, n) }
 
