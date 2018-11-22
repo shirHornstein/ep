@@ -7,6 +7,7 @@ type dummyType struct{}
 
 func (t *dummyType) String() string       { return t.Name() }
 func (*dummyType) Name() string           { return "dummy" }
+func (*dummyType) Size() uint             { return 0 }
 func (*dummyType) Data(n int) Data        { return variadicDummies{} }
 func (t *dummyType) DataEmpty(n int) Data { return variadicDummies{} }
 
