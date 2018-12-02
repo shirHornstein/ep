@@ -8,6 +8,7 @@ import (
 	"github.com/satori/go.uuid"
 	"io"
 	"net"
+	"strings"
 )
 
 var _ = registerGob(&exchange{}, &req{}, &errMsg{})
@@ -49,9 +50,9 @@ func Broadcast() Runner {
 // Partition returns an exchange Runner that routes the data between nodes using
 // consistent hashing algorithm. The provided column of an incoming dataset
 // will be used to find an appropriate endpoint for this data. Order not guaranteed
-func Partition(column int) Runner {
+func Partition(columns ...int) Runner {
 	uid, _ := uuid.NewV4()
-	return &exchange{UID: uid.String(), Type: partition, partitionCol: column}
+	return &exchange{UID: uid.String(), Type: partition, partitionCol: columns}
 }
 
 // exchange is a Runner that exchanges data between peer nodes
@@ -69,7 +70,7 @@ type exchange struct {
 	// partition specific variables
 	hashRing     *consistent.Consistent // hash ring for consistent hashing
 	encsByKey    map[string]encoder     // encoders mapped by key (node address)
-	partitionCol int                    // column index to use for partitioning
+	partitionCol []int                  // column indexes to use for partitioning
 
 	// sortGather specific variables
 	SortingCols    []SortingCol // columns to sort by
@@ -274,39 +275,66 @@ func (ex *exchange) encodePartition(e interface{}) error {
 		return fmt.Errorf("encodePartition called without a dataset")
 	}
 
-	// dataByEncoder holds datasets grouped by encoders that were assigned these
-	// datasets using consistent hashing algorithm. Datasets are partitioned
-	// in memory using this map, and then every dataset is sent to a
-	// corresponding node
-	dataByEncoder := make(map[encoder]Dataset)
+	ex.sortData(data)
+	stringValues := ex.getStringValues(data)
 
-	// ids are values that are used for partitioning.
-	// Based on these values the data will be spread between nodes
-	ids := data.At(ex.partitionCol).Strings()
-	for i, key := range ids {
-		enc, err := ex.getPartitionEncoder(key)
-		if err != nil {
-			return err
+	lastSeenHash := ex.getRowHash(stringValues, 0)
+	lastSlicedRow := 0
+	for row := 1; row < data.Len(); row++ {
+		hash := ex.getRowHash(stringValues, row)
+		if hash == lastSeenHash {
+			continue
 		}
 
-		d, ok := dataByEncoder[enc]
-		if !ok {
-			d = NewDataset()
-		}
+		dataToEncode := data.Slice(lastSlicedRow, row)
+		lastSeenHash = hash
+		lastSlicedRow = row
 
-		dataByEncoder[enc] = d.Append(data.Slice(i, i+1)).(Dataset)
-	}
-
-	// at this point partitioning is complete, and datasets are ready to be sent
-	for enc, data := range dataByEncoder {
-		req := &req{data}
-		err := enc.Encode(req)
+		err := ex.partitionData(dataToEncode, hash)
 		if err != nil {
 			return err
 		}
 	}
 
+	// leftover
+	if lastSlicedRow < data.Len() {
+		dataToEncode := data.Slice(lastSlicedRow, data.Len())
+		return ex.partitionData(dataToEncode, lastSeenHash)
+	}
 	return nil
+}
+
+func (ex *exchange) sortData(data Dataset) {
+	sortCols := make([]SortingCol, len(ex.partitionCol))
+	for i := 0; i < len(sortCols); i++ {
+		sortCols[i] = SortingCol{Index: ex.partitionCol[i]}
+	}
+	Sort(data, sortCols)
+}
+
+func (ex *exchange) getStringValues(data Dataset) [][]string {
+	stringValues := make([][]string, data.Width())
+	for i := 0; i < data.Width(); i++ {
+		stringValues[i] = data.At(i).Strings()
+	}
+	return stringValues
+}
+
+func (ex *exchange) getRowHash(stringValues [][]string, row int) string {
+	var sb strings.Builder
+	for _, col := range ex.partitionCol {
+		sb.WriteString(stringValues[col][row])
+	}
+	return sb.String()
+}
+
+func (ex *exchange) partitionData(data Data, hash string) error {
+	enc, err := ex.getPartitionEncoder(hash)
+	if err != nil {
+		return err
+	}
+
+	return enc.Encode(&req{data})
 }
 
 // getPartitionEncoder uses a hash ring to find a node that should handle

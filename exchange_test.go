@@ -163,7 +163,6 @@ func TestPartition_usesProvidedColumn(t *testing.T) {
 		require.NoError(t, peer2.Close())
 	}()
 
-	// to the exact opposite
 	// deliberately opposite values: column switch has to change to output
 	firstColumn := strs{"one", "two"}
 	secondColumn := strs{"two", "one"}
@@ -203,6 +202,49 @@ func TestPartition_usesProvidedColumn(t *testing.T) {
 		require.Equalf(t, firstResAt0, secondResAt0, "%s != %s", firstResAt0, secondResAt0)
 		require.Equalf(t, firstResAt1, secondResAt1, "%s != %s", firstResAt1, secondResAt1)
 	}
+}
+
+func TestPartition_usesMultipleColumns(t *testing.T) {
+	port1 := fmt.Sprintf(":%d", 5551)
+	peer1 := eptest.NewPeer(t, port1)
+
+	port2 := fmt.Sprintf(":%d", 5552)
+	peer2 := eptest.NewPeer(t, port2)
+	defer func() {
+		require.NoError(t, peer1.Close())
+		require.NoError(t, peer2.Close())
+	}()
+
+	// ---------------------------
+	// a thing | a thing
+	// a thing | a different thing
+	// ---------------------------
+	// when partitioned by only first col, both rows arrive to the same node
+	// when partitioned by both cols, rows end up on different nodes
+	firstColumn := strs{"a thing", "a thing"}
+	secondColumn := strs{"a thing", "a different thing"}
+
+	data := ep.NewDataset(firstColumn, secondColumn)
+
+	// firstRes is partitioned by two cols
+	runner := ep.Pipeline(ep.Partition(0, 1), &nodeAddr{}, ep.Gather())
+	runner = peer1.Distribute(runner, port1, port2)
+	firstRes, err := eptest.Run(runner, data)
+
+	require.NoError(t, err)
+	require.NotNil(t, firstRes)
+
+	// secondRes is partitioned by one col
+	runner = ep.Pipeline(ep.Partition(0), &nodeAddr{}, ep.Gather())
+	runner = peer1.Distribute(runner, port1, port2)
+	secondRes, err := eptest.Run(runner, data)
+
+	require.NoError(t, err)
+	require.NotNil(t, secondRes)
+
+	// partition targets for teh above input should be different
+	// when using different partition conditions
+	require.NotEqual(t, firstRes.At(2), secondRes.At(2))
 }
 
 func TestPartition_sendsCompleteDatasets(t *testing.T) {
