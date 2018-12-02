@@ -52,7 +52,7 @@ func Broadcast() Runner {
 // will be used to find an appropriate endpoint for this data. Order not guaranteed
 func Partition(columns ...int) Runner {
 	uid, _ := uuid.NewV4()
-	return &exchange{UID: uid.String(), Type: partition, partitionCol: columns}
+	return &exchange{UID: uid.String(), Type: partition, PartitionCol: columns}
 }
 
 // exchange is a Runner that exchanges data between peer nodes
@@ -68,9 +68,9 @@ type exchange struct {
 	decsNext int         // Decoders Round Robin next index
 
 	// partition specific variables
+	PartitionCol []int                  // column indexes to use for partitioning
 	hashRing     *consistent.Consistent // hash ring for consistent hashing
 	encsByKey    map[string]encoder     // encoders mapped by key (node address)
-	partitionCol []int                  // column indexes to use for partitioning
 
 	// sortGather specific variables
 	SortingCols    []SortingCol // columns to sort by
@@ -305,9 +305,9 @@ func (ex *exchange) encodePartition(e interface{}) error {
 }
 
 func (ex *exchange) sortData(data Dataset) {
-	sortCols := make([]SortingCol, len(ex.partitionCol))
+	sortCols := make([]SortingCol, len(ex.PartitionCol))
 	for i := 0; i < len(sortCols); i++ {
-		sortCols[i] = SortingCol{Index: ex.partitionCol[i]}
+		sortCols[i] = SortingCol{Index: ex.PartitionCol[i]}
 	}
 	Sort(data, sortCols)
 }
@@ -322,7 +322,7 @@ func (ex *exchange) getStringValues(data Dataset) [][]string {
 
 func (ex *exchange) getRowHash(stringValues [][]string, row int) string {
 	var sb strings.Builder
-	for _, col := range ex.partitionCol {
+	for _, col := range ex.PartitionCol {
 		sb.WriteString(stringValues[col][row])
 	}
 	return sb.String()
