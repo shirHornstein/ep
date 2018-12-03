@@ -276,7 +276,7 @@ func (ex *exchange) encodePartition(e interface{}) error {
 	}
 
 	ex.sortData(data)
-	stringValues := ex.getStringValues(data)
+	stringValues := data.ColumnStrings()
 
 	lastSeenHash := ex.getRowHash(stringValues, 0)
 	lastSlicedRow := 0
