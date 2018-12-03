@@ -52,7 +52,13 @@ func Broadcast() Runner {
 // will be used to find an appropriate endpoint for this data. Order not guaranteed
 func Partition(columns ...int) Runner {
 	uid, _ := uuid.NewV4()
-	return &exchange{UID: uid.String(), Type: partition, PartitionCols: columns}
+
+	sortCols := make([]SortingCol, len(columns))
+	for i := 0; i < len(sortCols); i++ {
+		sortCols[i] = SortingCol{Index: columns[i]}
+	}
+
+	return &exchange{UID: uid.String(), Type: partition, PartitionCols: sortCols}
 }
 
 // exchange is a Runner that exchanges data between peer nodes
@@ -68,7 +74,7 @@ type exchange struct {
 	decsNext int         // Decoders Round Robin next index
 
 	// partition specific variables
-	PartitionCols []int                  // column indexes to use for partitioning
+	PartitionCols []SortingCol           // column indexes to use for partitioning
 	hashRing      *consistent.Consistent // hash ring for consistent hashing
 	encsByKey     map[string]encoder     // encoders mapped by key (node address)
 
@@ -275,7 +281,7 @@ func (ex *exchange) encodePartition(e interface{}) error {
 		return fmt.Errorf("encodePartition called without a dataset")
 	}
 
-	ex.sortData(data)
+	Sort(data, ex.PartitionCols)
 	stringValues := data.ColumnStrings()
 
 	lastSeenHash := ex.getRowHash(stringValues, 0)
@@ -301,26 +307,10 @@ func (ex *exchange) encodePartition(e interface{}) error {
 	return ex.partitionData(dataToEncode, lastSeenHash)
 }
 
-func (ex *exchange) sortData(data Dataset) {
-	sortCols := make([]SortingCol, len(ex.PartitionCols))
-	for i := 0; i < len(sortCols); i++ {
-		sortCols[i] = SortingCol{Index: ex.PartitionCols[i]}
-	}
-	Sort(data, sortCols)
-}
-
-func (ex *exchange) getStringValues(data Dataset) [][]string {
-	stringValues := make([][]string, data.Width())
-	for i := 0; i < data.Width(); i++ {
-		stringValues[i] = data.At(i).Strings()
-	}
-	return stringValues
-}
-
 func (ex *exchange) getRowHash(stringValues [][]string, row int) string {
 	var sb strings.Builder
 	for _, col := range ex.PartitionCols {
-		sb.WriteString(stringValues[col][row])
+		sb.WriteString(stringValues[col.Index][row])
 	}
 	return sb.String()
 }
