@@ -287,21 +287,18 @@ func (ex *exchange) encodePartition(e interface{}) error {
 		}
 
 		dataToEncode := data.Slice(lastSlicedRow, row)
-		lastSeenHash = hash
-		lastSlicedRow = row
-
-		err := ex.partitionData(dataToEncode, hash)
+		err := ex.partitionData(dataToEncode, lastSeenHash)
 		if err != nil {
 			return err
 		}
+
+		lastSeenHash = hash
+		lastSlicedRow = row
 	}
 
 	// leftover
-	if lastSlicedRow < data.Len() {
-		dataToEncode := data.Slice(lastSlicedRow, data.Len())
-		return ex.partitionData(dataToEncode, lastSeenHash)
-	}
-	return nil
+	dataToEncode := data.Slice(lastSlicedRow, data.Len())
+	return ex.partitionData(dataToEncode, lastSeenHash)
 }
 
 func (ex *exchange) sortData(data Dataset) {
