@@ -28,6 +28,10 @@ type Dataset interface {
 	// Split divides dataset to two parts, where the second part width determined by
 	// the given secondWidth argument
 	Split(secondWidth int) (Dataset, Dataset)
+
+	// ColumnStrings returns the string representation of all columns in this dataset
+	// as a slice of columns, each having a slice of rows
+	ColumnStrings() [][]string
 }
 
 // Record is exposed data type similar to postgres' record, implements Type
@@ -115,6 +119,15 @@ func (set dataset) Split(secondWidth int) (Dataset, Dataset) {
 	}
 	firstWidth := set.Width() - secondWidth
 	return set[:firstWidth], set[firstWidth:]
+}
+
+// ColumnStrings returns string values of this entire dataset
+func (set dataset) ColumnStrings() [][]string {
+	stringValues := make([][]string, set.Width())
+	for i := 0; i < set.Width(); i++ {
+		stringValues[i] = set.At(i).Strings()
+	}
+	return stringValues
 }
 
 // see Data.Type
