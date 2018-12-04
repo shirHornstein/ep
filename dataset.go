@@ -29,9 +29,11 @@ type Dataset interface {
 	// the given secondWidth argument
 	Split(secondWidth int) (Dataset, Dataset)
 
-	// ColumnStrings returns the string representation of all columns in this dataset
-	// as a slice of columns, each having a slice of rows
-	ColumnStrings() [][]string
+	// ColumnStrings returns the string representation of selected columns
+	// in this dataset as a slice of columns, each having a slice of rows.
+	// If no specific columns are provided (called with no args), all columns
+	// are returned
+	ColumnStrings(cols ...int) [][]string
 }
 
 // Record is exposed data type similar to postgres' record, implements Type
@@ -121,11 +123,18 @@ func (set dataset) Split(secondWidth int) (Dataset, Dataset) {
 	return set[:firstWidth], set[firstWidth:]
 }
 
-// ColumnStrings returns string values of this entire dataset
-func (set dataset) ColumnStrings() [][]string {
-	stringValues := make([][]string, set.Width())
-	for i := 0; i < set.Width(); i++ {
-		stringValues[i] = set.At(i).Strings()
+// ColumnStrings returns string values of selected columns of this dataset
+func (set dataset) ColumnStrings(cols ...int) [][]string {
+	if len(cols) == 0 {
+		cols = make([]int, set.Width())
+		for i := 0; i < set.Width(); i++ {
+			cols[i] = i
+		}
+	}
+
+	stringValues := make([][]string, len(cols))
+	for i, col := range cols {
+		stringValues[i] = set.At(col).Strings()
 	}
 	return stringValues
 }

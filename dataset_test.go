@@ -149,5 +149,19 @@ func TestDataset_ColumnStrings(t *testing.T) {
 	d2 := strs([]string{"a", "b", "c", "", "e", "f", "g"})
 	dataset := ep.NewDataset(d1, d2)
 
-	require.EqualValues(t, [][]string{d1, d2}, dataset.ColumnStrings())
+	t.Run("AllColumns", func(t *testing.T) {
+		require.EqualValues(t, [][]string{d1, d2}, dataset.ColumnStrings())
+	})
+
+	t.Run("FirstColumn", func(t *testing.T) {
+		require.EqualValues(t, [][]string{d1}, dataset.ColumnStrings(0))
+	})
+
+	t.Run("SecondColumn", func(t *testing.T) {
+		require.EqualValues(t, [][]string{d2}, dataset.ColumnStrings(1))
+	})
+
+	t.Run("BothColumns", func(t *testing.T) {
+		require.EqualValues(t, [][]string{d1, d2}, dataset.ColumnStrings(0, 1))
+	})
 }
