@@ -233,6 +233,8 @@ func TestPartition_usesMultipleColumns(t *testing.T) {
 
 	require.NoError(t, err)
 	require.NotNil(t, firstRes)
+	require.Equal(t, 2, firstRes.Len())
+	require.Equal(t, []string{":5552", ":5551"}, firstRes.At(2).Strings())
 
 	// secondRes is partitioned by one col
 	runner = ep.Pipeline(ep.Partition(0), &nodeAddr{}, ep.Gather())
@@ -241,6 +243,8 @@ func TestPartition_usesMultipleColumns(t *testing.T) {
 
 	require.NoError(t, err)
 	require.NotNil(t, secondRes)
+	require.Equal(t, 2, secondRes.Len())
+	require.Equal(t, []string{":5552", ":5552"}, secondRes.At(2).Strings())
 
 	// partition targets for the above input should be different
 	// when using different partition conditions
