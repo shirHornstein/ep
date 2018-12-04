@@ -218,33 +218,36 @@ func TestPartition_usesMultipleColumns(t *testing.T) {
 	// ---------------------------
 	// a thing | a thing
 	// a thing | a different thing
+	// a thing | a thing
 	// ---------------------------
-	// when partitioned by only first col, both rows arrive to the same node
-	// when partitioned by both cols, rows end up on different nodes
-	firstColumn := strs{"a thing", "a thing"}
-	secondColumn := strs{"a thing", "a different thing"}
+	// when partitioned by only first col, all rows arrive to the same node
+	// when partitioned by both cols, one row ends up on a different node
+	firstColumn := strs{"a thing", "a thing", "a thing"}
+	secondColumn := strs{"a thing", "a different thing", "a thing"}
 
 	data := ep.NewDataset(firstColumn, secondColumn)
 
-	// firstRes is partitioned by two cols
+	// firstRes is partitioned by two cols (two rows have the same values)
 	runner := ep.Pipeline(ep.Partition(0, 1), &nodeAddr{}, ep.Gather())
 	runner = peer1.Distribute(runner, port1, port2)
 	firstRes, err := eptest.Run(runner, data)
 
 	require.NoError(t, err)
 	require.NotNil(t, firstRes)
-	require.Equal(t, 2, firstRes.Len())
-	require.Equal(t, []string{":5552", ":5551"}, firstRes.At(2).Strings())
+	require.Equal(t, 3, firstRes.Len())
+	// two rows end up on the same node, the third - does not
+	require.ElementsMatch(t, []string{":5551", ":5551", ":5552"}, firstRes.At(2).Strings())
 
-	// secondRes is partitioned by one col
+	// secondRes is partitioned by one col (the same for all rows)
 	runner = ep.Pipeline(ep.Partition(0), &nodeAddr{}, ep.Gather())
 	runner = peer1.Distribute(runner, port1, port2)
 	secondRes, err := eptest.Run(runner, data)
 
 	require.NoError(t, err)
 	require.NotNil(t, secondRes)
-	require.Equal(t, 2, secondRes.Len())
-	require.Equal(t, []string{":5552", ":5552"}, secondRes.At(2).Strings())
+	require.Equal(t, 3, secondRes.Len())
+	// all rows end up on the same node
+	require.ElementsMatch(t, []string{":5552", ":5552", ":5552"}, secondRes.At(2).Strings())
 
 	// partition targets for the above input should be different
 	// when using different partition conditions
