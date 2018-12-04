@@ -58,7 +58,12 @@ func Partition(columns ...int) Runner {
 		sortCols[i] = SortingCol{Index: columns[i]}
 	}
 
-	return &exchange{UID: uid.String(), Type: partition, PartitionCols: sortCols}
+	return &exchange{
+		UID:           uid.String(),
+		Type:          partition,
+		SortingCols:   sortCols,
+		PartitionCols: columns,
+	}
 }
 
 // exchange is a Runner that exchanges data between peer nodes
@@ -73,16 +78,18 @@ type exchange struct {
 	encsNext int         // Encoders Round Robin next index
 	decsNext int         // Decoders Round Robin next index
 
+	// partition and sortGather specific variables
+	SortingCols []SortingCol // columns to sort by
+
 	// partition specific variables
-	PartitionCols []SortingCol           // column indexes to use for partitioning
+	PartitionCols []int                  // column indexes to use for partitioning
 	hashRing      *consistent.Consistent // hash ring for consistent hashing
 	encsByKey     map[string]encoder     // encoders mapped by key (node address)
 
 	// sortGather specific variables
-	SortingCols    []SortingCol // columns to sort by
-	batches        []Dataset    // current batch from each peer
-	batchesNextIdx []int        // next index to visit for each batch per peer
-	nextPeer       int          // next peer to read from
+	batches        []Dataset // current batch from each peer
+	batchesNextIdx []int     // next index to visit for each batch per peer
+	nextPeer       int       // next peer to read from
 }
 
 func (ex *exchange) Returns() []Type { return []Type{Wildcard} }
@@ -282,8 +289,8 @@ func (ex *exchange) encodePartition(e interface{}) error {
 	}
 
 	// before partitioning data, sort it to generate larger batches
-	Sort(data, ex.PartitionCols)
-	stringValues := data.ColumnStrings()
+	Sort(data, ex.SortingCols)
+	stringValues := data.ColumnStrings(ex.PartitionCols...)
 
 	lastSeenHash := ex.getRowHash(stringValues, 0)
 	lastSlicedRow := 0
@@ -310,8 +317,8 @@ func (ex *exchange) encodePartition(e interface{}) error {
 
 func (ex *exchange) getRowHash(stringValues [][]string, row int) string {
 	var sb strings.Builder
-	for _, col := range ex.PartitionCols {
-		sb.WriteString(stringValues[col.Index][row])
+	for col := range ex.SortingCols {
+		sb.WriteString(stringValues[col][row])
 	}
 	return sb.String()
 }
