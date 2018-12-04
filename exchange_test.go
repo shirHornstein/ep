@@ -242,7 +242,7 @@ func TestPartition_usesMultipleColumns(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, secondRes)
 
-	// partition targets for teh above input should be different
+	// partition targets for the above input should be different
 	// when using different partition conditions
 	require.NotEqual(t, firstRes.At(2), secondRes.At(2))
 }
