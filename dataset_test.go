@@ -143,3 +143,11 @@ func TestDataset_Strings(t *testing.T) {
 	dataset := ep.NewDataset(d1, d2)
 	require.EqualValues(t, expected, dataset.Strings())
 }
+
+func TestDataset_ColumnStrings(t *testing.T) {
+	d1 := strs([]string{"1", "2", "4", "0", "3", "1", "1"})
+	d2 := strs([]string{"a", "b", "c", "", "e", "f", "g"})
+	dataset := ep.NewDataset(d1, d2)
+
+	require.EqualValues(t, [][]string{d1, d2}, dataset.ColumnStrings())
+}
