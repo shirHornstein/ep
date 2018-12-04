@@ -281,6 +281,7 @@ func (ex *exchange) encodePartition(e interface{}) error {
 		return fmt.Errorf("encodePartition called without a dataset")
 	}
 
+	// before partitioning data, sort it to generate larger batches
 	Sort(data, ex.PartitionCols)
 	stringValues := data.ColumnStrings()
 
