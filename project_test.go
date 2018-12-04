@@ -103,7 +103,7 @@ func TestProject_errorWithExchange(t *testing.T) {
 	}()
 
 	infinityRunner := &infinityRunner{}
-	mightErrored := &dataRunner{ep.NewDataset(str.Data(1)), port2}
+	mightErrored := &dataRunner{Dataset: ep.NewDataset(str.Data(1)), ThrowOnData: port2}
 	runner := ep.Pipeline(
 		infinityRunner,
 		ep.Scatter(),
