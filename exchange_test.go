@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"math/rand"
 	"net"
-	"reflect"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -152,7 +152,7 @@ func TestPartition_and_Gather(t *testing.T) {
 	require.ElementsMatch(t, secondColumn, res.At(1))
 }
 
-func TestPartition_usesProvidedColumn(t *testing.T) {
+func TestPartition(t *testing.T) {
 	port1 := fmt.Sprintf(":%d", 5551)
 	peer1 := eptest.NewPeer(t, port1)
 
@@ -163,95 +163,79 @@ func TestPartition_usesProvidedColumn(t *testing.T) {
 		require.NoError(t, peer2.Close())
 	}()
 
-	// deliberately opposite values: column switch has to change to output
-	firstColumn := strs{"one", "two"}
-	secondColumn := strs{"two", "one"}
+	t.Run("SingleColumn", func(t *testing.T) {
+		col1 := strs{"one-1", "one-1", "two-2", "two-2", "", "", "a", "a"}
+		col1.MarkNull(4)
+		col1.MarkNull(5)
 
-	data := ep.NewDataset(firstColumn, secondColumn)
+		col2 := strs{"two-2", "meh", "one-1", "moo", "a", "", "", "b"}
+		col2.MarkNull(5)
+		col2.MarkNull(6)
 
-	runner := ep.Pipeline(ep.Partition(0), &nodeAddr{}, ep.Gather())
-	runner = peer1.Distribute(runner, port1, port2)
-	firstRes, err := eptest.Run(runner, data)
+		data := ep.NewDataset(col1, col2)
 
-	require.NoError(t, err)
-	require.NotNil(t, firstRes)
+		runner := ep.Pipeline(ep.Partition(0), &nodeAddr{}, ep.Gather())
+		runner = peer1.Distribute(runner, port1, port2)
+		res, err := eptest.Run(runner, data)
+		require.NoError(t, err)
 
-	runner = ep.Pipeline(ep.Partition(1), &nodeAddr{}, ep.Gather())
-	runner = peer1.Distribute(runner, port1, port2)
-	secondRes, err := eptest.Run(runner, data)
+		sort.Sort(res)
 
-	require.NoError(t, err)
-	require.NotNil(t, secondRes)
+		// the following output is valid for the current algorithm only
+		// when the first col is the same, data arrives to the same node
+		expectedOutput := []string{
+			"(,,:5551)", "(,a,:5551)",
+			"(a,,:5551)", "(a,b,:5551)",
+			"(one-1,meh,:5551)", "(one-1,two-2,:5551)",
+			"(two-2,moo,:5552)", "(two-2,one-1,:5552)",
+		}
 
-	/*
-		Expected output similar to:
-		[[one two] [two one] [:5552 :5551]]
-		[[two one] [one two] [:5552 :5551]]
-	*/
+		require.Equal(t, expectedOutput, res.Strings())
+	})
 
-	firstResAt0 := firstRes.At(0)
-	firstResAt1 := firstRes.At(1)
-	secondResAt1 := secondRes.At(1)
-	secondResAt0 := secondRes.At(0)
-	if reflect.DeepEqual(firstRes.At(2), secondRes.At(2)) {
-		// node addresses are the same - data should be different
-		require.Equalf(t, firstResAt0, secondResAt1, "%s != %s", firstResAt0, secondResAt1)
-		require.Equalf(t, firstResAt1, secondResAt0, "%s != %s", firstResAt1, secondResAt0)
-	} else {
-		// node addresses are different - data should be the same
-		require.Equalf(t, firstResAt0, secondResAt0, "%s != %s", firstResAt0, secondResAt0)
-		require.Equalf(t, firstResAt1, secondResAt1, "%s != %s", firstResAt1, secondResAt1)
-	}
-}
+	t.Run("MultipleColumns", func(t *testing.T) {
+		col1 := strs{
+			"10", "20", "", "10",
+			"10", "20", "", "10",
+		}
+		col1.MarkNull(2)
+		col1.MarkNull(5)
 
-func TestPartition_usesMultipleColumns(t *testing.T) {
-	port1 := fmt.Sprintf(":%d", 5551)
-	peer1 := eptest.NewPeer(t, port1)
+		col2 := strs{
+			"", "10", "", "20",
+			"", "10", "", "20",
+		}
+		col2.MarkNull(0)
+		col2.MarkNull(2)
+		col2.MarkNull(3)
+		col2.MarkNull(5)
 
-	port2 := fmt.Sprintf(":%d", 5552)
-	peer2 := eptest.NewPeer(t, port2)
-	defer func() {
-		require.NoError(t, peer1.Close())
-		require.NoError(t, peer2.Close())
-	}()
+		col3 := strs{
+			"a", "b", "c", "d",
+			"e", "f", "g", "h",
+		}
 
-	// ---------------------------
-	// a thing | a thing
-	// a thing | a different thing
-	// a thing | a thing
-	// ---------------------------
-	// when partitioned by only first col, all rows arrive to the same node
-	// when partitioned by both cols, one row ends up on a different node
-	firstColumn := strs{"a thing", "a thing", "a thing"}
-	secondColumn := strs{"a thing", "a different thing", "a thing"}
+		data := ep.NewDataset(col1, col2, col3)
 
-	data := ep.NewDataset(firstColumn, secondColumn)
+		runner := ep.Pipeline(ep.Partition(0, 1), &nodeAddr{}, ep.Gather())
+		runner = peer1.Distribute(runner, port1, port2)
+		res, err := eptest.Run(runner, data)
+		require.NoError(t, err)
 
-	// firstRes is partitioned by two cols (two rows have the same values)
-	runner := ep.Pipeline(ep.Partition(0, 1), &nodeAddr{}, ep.Gather())
-	runner = peer1.Distribute(runner, port1, port2)
-	firstRes, err := eptest.Run(runner, data)
+		sort.Sort(res)
 
-	require.NoError(t, err)
-	require.NotNil(t, firstRes)
-	require.Equal(t, 3, firstRes.Len())
-	// two rows end up on the same node, the third - does not
-	require.ElementsMatch(t, []string{":5551", ":5551", ":5552"}, firstRes.At(2).Strings())
+		// the following output is valid for the current algorithm only
+		// when first two columns are the same, data is on the same node
+		expectedOutput := []string{
+			"(,,c,:5551)", "(,,g,:5551)",
+			"(10,,a,:5551)", "(10,,e,:5551)",
+			"(10,20,d,:5551)", "(10,20,h,:5551)",
+			"(20,10,b,:5552)", "(20,10,f,:5552)",
+		}
 
-	// secondRes is partitioned by one col (the same for all rows)
-	runner = ep.Pipeline(ep.Partition(0), &nodeAddr{}, ep.Gather())
-	runner = peer1.Distribute(runner, port1, port2)
-	secondRes, err := eptest.Run(runner, data)
+		require.Equal(t, expectedOutput, res.Strings())
 
-	require.NoError(t, err)
-	require.NotNil(t, secondRes)
-	require.Equal(t, 3, secondRes.Len())
-	// all rows end up on the same node
-	require.ElementsMatch(t, []string{":5552", ":5552", ":5552"}, secondRes.At(2).Strings())
-
-	// partition targets for the above input should be different
-	// when using different partition conditions
-	require.NotEqual(t, firstRes.At(2), secondRes.At(2))
+	})
 }
 
 func TestPartition_sendsCompleteDatasets(t *testing.T) {
