@@ -52,7 +52,6 @@ func Broadcast() Runner {
 // will be used to find an appropriate endpoint for this data. Order not guaranteed
 func Partition(columns ...int) Runner {
 	uid, _ := uuid.NewV4()
-
 	sortCols := make([]SortingCol, len(columns))
 	for i := 0; i < len(sortCols); i++ {
 		sortCols[i] = SortingCol{Index: columns[i]}
