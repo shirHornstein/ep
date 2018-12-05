@@ -290,7 +290,7 @@ func (ex *exchange) encodePartition(e interface{}) error {
 
 	// before partitioning data, sort it to generate larger batches
 	Sort(data, ex.SortingCols)
-	stringValues := data.ColumnStrings(ex.PartitionCols...)
+	stringValues := ColumnStrings(data, ex.PartitionCols...)
 
 	lastSeenHash := ex.getRowHash(stringValues, 0)
 	lastSlicedRow := 0
