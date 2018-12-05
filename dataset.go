@@ -300,7 +300,8 @@ func (set dataset) Strings() []string {
 	return res
 }
 
-// ColumnStrings returns string values of selected columns of a provided dataset
+// ColumnStrings returns string values of selected columns of a provided dataset.
+// If no columns provided, all columns are used
 func ColumnStrings(set Dataset, cols ...int) [][]string {
 	if len(cols) == 0 {
 		cols = make([]int, set.Width())
