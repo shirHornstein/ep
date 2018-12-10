@@ -234,7 +234,6 @@ func TestPartition(t *testing.T) {
 		}
 
 		require.Equal(t, expectedOutput, res.Strings())
-
 	})
 }
 
