@@ -299,3 +299,20 @@ func (set dataset) Strings() []string {
 	}
 	return res
 }
+
+// ColumnStrings returns string values of selected columns of a provided dataset.
+// If no columns provided, all columns are used
+func ColumnStrings(set Dataset, cols ...int) [][]string {
+	if len(cols) == 0 {
+		cols = make([]int, set.Width())
+		for i := 0; i < set.Width(); i++ {
+			cols[i] = i
+		}
+	}
+
+	stringValues := make([][]string, len(cols))
+	for i, col := range cols {
+		stringValues[i] = set.At(col).Strings()
+	}
+	return stringValues
+}
