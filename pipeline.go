@@ -52,8 +52,13 @@ func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 
 	defer func() {
 		wg.Wait()
-		for i := 0; err == nil && i < len(rs); i++ {
-			err = errs[i]
+		for _, e := range errs {
+			if e != nil {
+				err = e
+				if e != context.Canceled {
+					break
+				}
+			}
 		}
 	}()
 
@@ -81,18 +86,20 @@ func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 			defer wg.Done()
 			defer close(middle)
 			errs[i] = rs[i].Run(ctx, inp, middle)
+			if errs[i] == context.Canceled {
+				cancel()
+			}
 		}(i, inp, middle)
 
 		// input to the next channel is the output from the current one.
 		inp = middle
 	}
 
-	// cancel the all of the runners when we're done - just in case some are
-	// still running. This might happen if the top of the pipeline ends before
-	// the bottom of the pipeline.
+	// cancel all runners when we're done - just in case some are still running. This
+	// might happen if the top of the pipeline ends before the bottom of the pipeline.
 	defer cancel()
 
-	// block run the last runner until completed
+	// block until last runner completion
 	return rs[len(rs)-1].Run(ctx, inp, out)
 }
 
