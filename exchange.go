@@ -8,6 +8,7 @@ import (
 	"github.com/satori/go.uuid"
 	"io"
 	"net"
+	"strings"
 )
 
 var _ = registerGob(&exchange{}, &req{}, &errMsg{})
@@ -49,9 +50,19 @@ func Broadcast() Runner {
 // Partition returns an exchange Runner that routes the data between nodes using
 // consistent hashing algorithm. The provided column of an incoming dataset
 // will be used to find an appropriate endpoint for this data. Order not guaranteed
-func Partition(column int) Runner {
+func Partition(columns ...int) Runner {
 	uid, _ := uuid.NewV4()
-	return &exchange{UID: uid.String(), Type: partition, partitionCol: column}
+	sortCols := make([]SortingCol, len(columns))
+	for i := 0; i < len(sortCols); i++ {
+		sortCols[i] = SortingCol{Index: columns[i]}
+	}
+
+	return &exchange{
+		UID:           uid.String(),
+		Type:          partition,
+		SortingCols:   sortCols,
+		PartitionCols: columns,
+	}
 }
 
 // exchange is a Runner that exchanges data between peer nodes
@@ -66,16 +77,18 @@ type exchange struct {
 	encsNext int         // Encoders Round Robin next index
 	decsNext int         // Decoders Round Robin next index
 
+	// partition and sortGather specific variables
+	SortingCols []SortingCol // columns to sort by
+
 	// partition specific variables
-	hashRing     *consistent.Consistent // hash ring for consistent hashing
-	encsByKey    map[string]encoder     // encoders mapped by key (node address)
-	partitionCol int                    // column index to use for partitioning
+	PartitionCols []int                  // column indexes to use for partitioning
+	hashRing      *consistent.Consistent // hash ring for consistent hashing
+	encsByKey     map[string]encoder     // encoders mapped by key (node address)
 
 	// sortGather specific variables
-	SortingCols    []SortingCol // columns to sort by
-	batches        []Dataset    // current batch from each peer
-	batchesNextIdx []int        // next index to visit for each batch per peer
-	nextPeer       int          // next peer to read from
+	batches        []Dataset // current batch from each peer
+	batchesNextIdx []int     // next index to visit for each batch per peer
+	nextPeer       int       // next peer to read from
 }
 
 func (ex *exchange) Returns() []Type { return []Type{Wildcard} }
@@ -274,39 +287,48 @@ func (ex *exchange) encodePartition(e interface{}) error {
 		return fmt.Errorf("encodePartition called without a dataset")
 	}
 
-	// dataByEncoder holds datasets grouped by encoders that were assigned these
-	// datasets using consistent hashing algorithm. Datasets are partitioned
-	// in memory using this map, and then every dataset is sent to a
-	// corresponding node
-	dataByEncoder := make(map[encoder]Dataset)
+	// before partitioning data, sort it to generate larger batches
+	Sort(data, ex.SortingCols)
+	stringValues := ColumnStrings(data, ex.PartitionCols...)
 
-	// ids are values that are used for partitioning.
-	// Based on these values the data will be spread between nodes
-	ids := data.At(ex.partitionCol).Strings()
-	for i, key := range ids {
-		enc, err := ex.getPartitionEncoder(key)
+	lastSeenHash := ex.getRowHash(stringValues, 0)
+	lastSlicedRow := 0
+	for row := 1; row < data.Len(); row++ {
+		hash := ex.getRowHash(stringValues, row)
+		if hash == lastSeenHash {
+			continue
+		}
+
+		dataToEncode := data.Slice(lastSlicedRow, row)
+		err := ex.partitionData(dataToEncode, lastSeenHash)
 		if err != nil {
 			return err
 		}
 
-		d, ok := dataByEncoder[enc]
-		if !ok {
-			d = NewDataset()
-		}
-
-		dataByEncoder[enc] = d.Append(data.Slice(i, i+1)).(Dataset)
+		lastSeenHash = hash
+		lastSlicedRow = row
 	}
 
-	// at this point partitioning is complete, and datasets are ready to be sent
-	for enc, data := range dataByEncoder {
-		req := &req{data}
-		err := enc.Encode(req)
-		if err != nil {
-			return err
-		}
+	// leftover
+	dataToEncode := data.Slice(lastSlicedRow, data.Len())
+	return ex.partitionData(dataToEncode, lastSeenHash)
+}
+
+func (ex *exchange) getRowHash(stringValues [][]string, row int) string {
+	var sb strings.Builder
+	for col := range ex.SortingCols {
+		sb.WriteString(stringValues[col][row])
+	}
+	return sb.String()
+}
+
+func (ex *exchange) partitionData(data Data, hash string) error {
+	enc, err := ex.getPartitionEncoder(hash)
+	if err != nil {
+		return err
 	}
 
-	return nil
+	return enc.Encode(&req{data})
 }
 
 // getPartitionEncoder uses a hash ring to find a node that should handle
