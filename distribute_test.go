@@ -95,8 +95,8 @@ func TestDistributer_Distribute_ignoreCanceledError(t *testing.T) {
 		name string
 		r    ep.Runner
 	}{
-		{name: "from peer", r: &dataRunner{ep.NewDataset(str.Data(1)), port2, true}},
-		{name: "from master", r: &dataRunner{ep.NewDataset(str.Data(1)), port1, true}},
+		{name: "from peer", r: &dataRunner{Dataset: ep.NewDataset(str.Data(1)), ThrowOnData: port2, ThrowCanceled: true}},
+		{name: "from master", r: &dataRunner{Dataset: ep.NewDataset(str.Data(1)), ThrowOnData: port1, ThrowCanceled: true}},
 	}
 
 	for _, tc := range tests {
