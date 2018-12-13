@@ -136,6 +136,20 @@ func TestPipeline_errNestedPipelineWithProject(t *testing.T) {
 	require.Equal(t, false, infinityRunner3.IsRunning(), "Infinity go-routine leak")
 }
 
+func TestPipeline_ignoreCanceledError(t *testing.T) {
+	runner := ep.Pipeline(&dataRunner{Dataset: ep.NewDataset(str.Data(1)), ThrowOnData: "cancel", ThrowCanceled: true}, &count{})
+
+	data1 := ep.NewDataset(strs{"not cancel"})
+	data2 := ep.NewDataset(strs{"cancel"})
+	res, err := eptest.Run(runner, data1, data2)
+
+	require.NoError(t, err)
+	require.NotNil(t, res)
+	require.Equal(t, 1, res.Width())
+	require.Equal(t, 1, res.Len())
+	require.Equal(t, []string{"(1)"}, res.Strings())
+}
+
 func TestPipeline_Returns_wildcard(t *testing.T) {
 	runner := ep.Project(&upper{}, &question{})
 	runner = ep.Pipeline(runner, ep.PassThrough())

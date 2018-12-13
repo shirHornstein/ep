@@ -11,7 +11,7 @@ import (
 
 func TestRows(t *testing.T) {
 	data := ep.NewDataset(strs([]string{"hello", "world"}))
-	runner := ep.Pipeline(&dataRunner{Dataset: data}, &upper{})
+	runner := ep.Pipeline(&fixedData{Dataset: data}, &upper{})
 	rows := ep.Rows(context.Background(), runner).(driver.Rows)
 	cols := rows.Columns()
 	require.Equal(t, 1, len(cols))
