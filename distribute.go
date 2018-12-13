@@ -332,7 +332,7 @@ func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) error {
 	}
 	// wait for respErrs channel anyway, and select first meaningful error
 	for e := range respErrs {
-		if (finalError == nil || finalError == errProjectState) && e != context.Canceled {
+		if finalError == nil || finalError == errProjectState {
 			finalError = e
 		}
 	}

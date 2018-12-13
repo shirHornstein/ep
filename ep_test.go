@@ -11,6 +11,7 @@ import (
 var _ = ep.Runners.
 	Register("errRunner", &errRunner{}).
 	Register("infinityRunner", &infinityRunner{}).
+	Register("fixedData", &fixedData{}).
 	Register("dataRunner", &dataRunner{}).
 	Register("nodeAddr", &nodeAddr{}).
 	Register("count", &count{}).
@@ -77,6 +78,22 @@ func (r *infinityRunner) Run(ctx context.Context, inp, out chan ep.Dataset) erro
 	}
 }
 
+type fixedData struct {
+	ep.Dataset
+}
+
+func (r *fixedData) Returns() []ep.Type {
+	var types []ep.Type
+	for i := 0; i < r.Dataset.Len(); i++ {
+		types = append(types, r.Dataset.At(i).Type())
+	}
+	return types
+}
+func (r *fixedData) Run(ctx context.Context, _, out chan ep.Dataset) (err error) {
+	out <- r.Dataset
+	return nil
+}
+
 type dataRunner struct {
 	ep.Dataset
 	// ThrowOnData is a condition for throwing error. in case the last column
@@ -102,8 +119,8 @@ func (r *dataRunner) Run(ctx context.Context, inp, out chan ep.Dataset) (err err
 		if r.ThrowOnData == data.At(data.Width() - 1).Strings()[0] {
 			return err
 		}
+		out <- r.Dataset
 	}
-	out <- r.Dataset
 	return nil
 }
 

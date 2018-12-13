@@ -53,20 +53,19 @@ func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 	defer func() {
 		wg.Wait()
 		for _, e := range errs {
-			if e != nil {
+			if e != nil && e != context.Canceled {
 				err = e
-				if e != context.Canceled {
-					break
-				}
+				break
 			}
 		}
 	}()
 
 	ctx, cancel := context.WithCancel(ctx)
 
-	// run all of the internal runners (all except the very last one), piping
-	// the output from each runner to the next.
-	for i := 0; i < len(rs)-1; i++ {
+	// run all (except the very last one) internal runners, piping the output
+	// from each runner to the next.
+	lastIndex := len(rs) - 1
+	for i := 0; i < lastIndex; i++ {
 		// middle chan is the output from the current runner and the input to
 		// the next. We need to wait until this channel is closed before this
 		// Run() function returns to avoid leaking go routines. This is achieved
@@ -100,7 +99,8 @@ func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 	defer cancel()
 
 	// block until last runner completion
-	return rs[len(rs)-1].Run(ctx, inp, out)
+	errs[lastIndex] = rs[lastIndex].Run(ctx, inp, out)
+	return
 }
 
 // The implementation isn't trivial because it has to account for Wildcard types
