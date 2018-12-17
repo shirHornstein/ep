@@ -110,9 +110,11 @@ func (rs project) Run(origCtx context.Context, inp, out chan Dataset) (err error
 	go func() {
 		defer wg.Done()
 
-		for i := range rs {
-			defer close(inps[i])
-		}
+		defer func() {
+			for i := range rs {
+				close(inps[i])
+			}
+		}()
 
 		for {
 			select {
