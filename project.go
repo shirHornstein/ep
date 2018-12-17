@@ -2,13 +2,10 @@ package ep
 
 import (
 	"context"
-	"fmt"
 	"sync"
 )
 
 var _ = registerGob(project([]Runner{}), &dummyRunner{})
-
-var errProjectState = fmt.Errorf("mismatched runners state")
 
 // Project returns a horizontal composite projection runner that dispatches
 // its input to all of the internal runners, and joins the result into a single
@@ -79,11 +76,9 @@ func (rs project) Run(origCtx context.Context, inp, out chan Dataset) (err error
 		wg.Wait()
 		// choose first error out from all errors, that isn't project internal error
 		for _, errI := range errs {
-			if (err == nil || err == errProjectState) && errI != nil {
+			if err == nil && errI != nil {
 				err = errI
-				if err != errProjectState {
-					break
-				}
+				break
 			}
 		}
 	}()
@@ -115,9 +110,11 @@ func (rs project) Run(origCtx context.Context, inp, out chan Dataset) (err error
 	go func() {
 		defer wg.Done()
 
-		for i := range rs {
-			defer close(inps[i])
-		}
+		defer func() {
+			for i := range rs {
+				close(inps[i])
+			}
+		}()
 
 		for {
 			select {
@@ -141,15 +138,13 @@ func (rs project) Run(origCtx context.Context, inp, out chan Dataset) (err error
 	// cancel all runners when we're done - just in case few still running
 	// NOTE: cancel must be first defer to be called, to allow internal runners to finish
 	defer func() {
-		if err != nil {
-			cancel()
-			for i := range rs {
-				// drain all runners' output to allow them catch cancellation
-				go func(i int) {
-					for range outs[i] {
-					}
-				}(i)
-			}
+		cancel()
+		for i := range rs {
+			// drain all runners' output to allow them catch cancellation
+			go func(i int) {
+				for range outs[i] {
+				}
+			}(i)
 		}
 	}()
 
@@ -168,7 +163,7 @@ func (rs project) Run(origCtx context.Context, inp, out chan Dataset) (err error
 				// init allOpen according to first out channel of non dummy runner
 				allOpen = open
 			} else if allOpen != open { // verify all still open or all closed
-				return errProjectState
+				return nil
 			}
 
 			if open {
