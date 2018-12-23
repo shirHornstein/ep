@@ -5,16 +5,16 @@ var _ = registerGob(dummy, &variadicDummies{})
 
 type dummyType struct{}
 
-func (t *dummyType) String() string       { return t.Name() }
-func (*dummyType) Name() string           { return "dummy" }
-func (*dummyType) Size() uint             { return 0 }
-func (*dummyType) Data(n int) Data        { return &variadicDummies{} }
-func (t *dummyType) DataEmpty(n int) Data { return &variadicDummies{} }
+func (t *dummyType) String() string     { return t.Name() }
+func (*dummyType) Name() string         { return "dummy" }
+func (*dummyType) Size() uint           { return 0 }
+func (*dummyType) Data(n int) Data      { return &variadicDummies{} }
+func (*dummyType) DataEmpty(n int) Data { return &variadicDummies{} }
 
 type variadicDummies struct{}
 
 func (*variadicDummies) Type() Type                    { return dummy }
-func (vs *variadicDummies) Len() int                   { return -1 }
+func (*variadicDummies) Len() int                      { return -1 }
 func (*variadicDummies) Less(int, int) bool            { return false }
 func (*variadicDummies) Swap(int, int)                 {}
 func (*variadicDummies) LessOther(int, Data, int) bool { return false }
