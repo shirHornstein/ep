@@ -144,8 +144,21 @@ func TestPipeline_errNestedPipelineWithProject(t *testing.T) {
 				}
 			}
 		})
-
 	}
+}
+
+func TestPipeline_ignoreCanceledError(t *testing.T) {
+	runner := ep.Pipeline(&dataRunner{Dataset: ep.NewDataset(str.Data(1)), ThrowOnData: "cancel", ThrowCanceled: true}, &count{})
+
+	data1 := ep.NewDataset(strs{"not cancel"})
+	data2 := ep.NewDataset(strs{"cancel"})
+	res, err := eptest.Run(runner, data1, data2)
+
+	require.NoError(t, err)
+	require.NotNil(t, res)
+	require.Equal(t, 1, res.Width())
+	require.Equal(t, 1, res.Len())
+	require.Equal(t, []string{"(1)"}, res.Strings())
 }
 
 func TestPipeline_Returns_wildcard(t *testing.T) {
@@ -183,6 +196,28 @@ func TestPipeline_Returns_wildcardMinusTail(t *testing.T) {
 	require.Equal(t, "upper", ep.GetAlias(types[0]))
 }
 
+func TestPipeline_Args_runnerArgs(t *testing.T) {
+	// two runners are required to create an instance of pipeline
+	runner := ep.Pipeline(&runnerWithArgs{}, &runnerWithoutArgs{})
+
+	runnerArgs, ok := runner.(ep.RunnerArgs)
+	require.True(t, ok)
+
+	args := runnerArgs.Args()
+	require.Equal(t, []ep.Type{ep.Any}, args)
+}
+
+func TestPipeline_Args_noArgs(t *testing.T) {
+	// two runners are required to create an instance of pipeline
+	runner := ep.Pipeline(&runnerWithoutArgs{}, &runnerWithArgs{})
+
+	runnerArgs, ok := runner.(ep.RunnerArgs)
+	require.True(t, ok)
+
+	args := runnerArgs.Args()
+	require.Equal(t, []ep.Type{ep.Wildcard}, args)
+}
+
 type tailCutter struct {
 	CutFromTail int
 }
@@ -194,3 +229,9 @@ func (*tailCutter) Run(_ context.Context, inp, out chan ep.Dataset) error {
 	}
 	return nil
 }
+
+type runnerWithArgs struct{ ep.Runner }
+
+func (r *runnerWithArgs) Args() []ep.Type { return []ep.Type{ep.Any} }
+
+type runnerWithoutArgs struct{ ep.Runner }

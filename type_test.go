@@ -15,28 +15,28 @@ func TestAreEqualTypes(t *testing.T) {
 	}{
 		{
 			name:     "same types, same order",
-			ts1:      []ep.Type{str, ep.Null},
-			ts2:      []ep.Type{str, ep.Null},
+			ts1:      []ep.Type{str, integer},
+			ts2:      []ep.Type{str, integer},
 			expected: true,
 		}, {
 			name:     "same types, different order",
-			ts1:      []ep.Type{str, ep.Null},
-			ts2:      []ep.Type{ep.Null, str},
+			ts1:      []ep.Type{str, integer},
+			ts2:      []ep.Type{integer, str},
 			expected: false,
 		}, {
 			name:     "different length",
-			ts1:      []ep.Type{ep.Null},
-			ts2:      []ep.Type{ep.Null, str},
+			ts1:      []ep.Type{integer},
+			ts2:      []ep.Type{integer, str},
 			expected: false,
 		}, {
 			name:     "any on one of them",
-			ts1:      []ep.Type{ep.Null, ep.Any},
-			ts2:      []ep.Type{ep.Null, str},
+			ts1:      []ep.Type{integer, ep.Any},
+			ts2:      []ep.Type{integer, str},
 			expected: true,
 		}, {
 			name:     "any on both",
-			ts1:      []ep.Type{ep.Null, ep.Any, ep.Any},
-			ts2:      []ep.Type{ep.Any, ep.Null, ep.Any},
+			ts1:      []ep.Type{integer, ep.Any, ep.Any},
+			ts2:      []ep.Type{ep.Any, integer, ep.Any},
 			expected: true,
 		}, {
 			name:     "only any",

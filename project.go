@@ -2,13 +2,10 @@ package ep
 
 import (
 	"context"
-	"fmt"
 	"sync"
 )
 
 var _ = registerGob(project([]Runner{}), &dummyRunner{})
-
-var errProjectState = fmt.Errorf("mismatched runners state")
 
 // Project returns a horizontal composite projection runner that dispatches
 // its input to all of the internal runners, and joins the result into a single
@@ -19,8 +16,8 @@ func Project(runners ...Runner) Runner {
 	// pre-created project was already flatten during its creation
 	var flat project
 	for _, r := range runners {
-		p, isProj := r.(project)
-		if isProj {
+		p, isProject := r.(project)
+		if isProject {
 			flat = append(flat, p...)
 		} else {
 			flat = append(flat, r)
@@ -79,7 +76,7 @@ func (rs project) Run(origCtx context.Context, inp, out chan Dataset) (err error
 		wg.Wait()
 		// choose first error out from all errors, that isn't project internal error
 		for _, errI := range errs {
-			if errI != nil && errI.Error() != errProjectState.Error() {
+			if err == nil && errI != nil {
 				err = errI
 				break
 			}
@@ -114,9 +111,11 @@ func (rs project) Run(origCtx context.Context, inp, out chan Dataset) (err error
 	go func() {
 		defer wg.Done()
 
-		for i := range rs {
-			defer close(inps[i])
-		}
+		defer func() {
+			for i := range rs {
+				close(inps[i])
+			}
+		}()
 
 		for {
 			select {
@@ -140,15 +139,13 @@ func (rs project) Run(origCtx context.Context, inp, out chan Dataset) (err error
 	// cancel all runners when we're done - just in case few still running
 	// NOTE: cancel must be first defer to be called, to allow internal runners to finish
 	defer func() {
-		if err != nil {
-			cancel()
-			for i := range rs {
-				// drain all runners' output to allow them catch cancellation
-				go func(i int) {
-					for range outs[i] {
-					}
-				}(i)
-			}
+		cancel()
+		for i := range rs {
+			// drain all runners' output to allow them catch cancellation
+			go func(i int) {
+				for range outs[i] {
+				}
+			}(i)
 		}
 	}()
 
@@ -161,16 +158,13 @@ func (rs project) Run(origCtx context.Context, inp, out chan Dataset) (err error
 
 			if rs[i] == dummyRunnerSingleton {
 				// dummy runners shouldn't affect state check
-				curr, open = variadicNullBatch, allOpen
+				curr, open = variadicDummiesBatch, allOpen
 			} else if allDummies {
 				allDummies = false
 				// init allOpen according to first out channel of non dummy runner
 				allOpen = open
 			} else if allOpen != open { // verify all still open or all closed
-				if origCtx.Err() == context.Canceled { // in case of cancellation outside the project: allOpen == true & open==false
-					return nil
-				}
-				return errProjectState
+				return nil
 			}
 
 			if open {
@@ -185,9 +179,7 @@ func (rs project) Run(origCtx context.Context, inp, out chan Dataset) (err error
 			return // all done
 		}
 
-		if err == nil {
-			out <- result
-		}
+		out <- result
 
 		if allDummies {
 			return
@@ -209,13 +201,13 @@ func (rs project) useDummySingleton() {
 // dummyRunnerSingleton is a runner that does nothing and just drain inp
 var dummyRunnerSingleton = &dummyRunner{}
 
-// variadicNullBatch is used for replacing unused columns
-var variadicNullBatch = NewDataset(Null.Data(-1))
+// variadicDummiesBatch is used for replacing unused columns
+var variadicDummiesBatch = NewDataset(dummy.Data(-1))
 
 type dummyRunner struct{}
 
 func (*dummyRunner) Args() []Type    { return []Type{Wildcard} }
-func (*dummyRunner) Returns() []Type { return []Type{Null} }
+func (*dummyRunner) Returns() []Type { return []Type{dummy} }
 func (*dummyRunner) Run(_ context.Context, inp, out chan Dataset) error {
 	return nil
 }

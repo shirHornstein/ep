@@ -36,7 +36,7 @@ func TestPipeline_creationFlat(t *testing.T) {
 	require.False(t, isPipe)
 }
 
-func TestPipeline_creationFlatSkipPassthrogh(t *testing.T) {
+func TestPipeline_creationFlatSkipPassThrough(t *testing.T) {
 	runner := Pipeline(Gather(), PassThrough())
 	runner = Pipeline(runner, Pipeline(Scatter(), Pipeline(PassThrough(), Scatter())))
 
@@ -46,7 +46,7 @@ func TestPipeline_creationFlatSkipPassthrogh(t *testing.T) {
 	require.Equal(t, 3, len(p))
 }
 
-func TestPipeline_creationDontFlatProject(t *testing.T) {
+func TestPipeline_creationPreserveProject(t *testing.T) {
 	runner := Project(Gather(), Pipeline(Scatter(), Scatter()), Pipeline(Scatter(), Scatter()))
 	runner = Pipeline(runner, Gather())
 
@@ -67,7 +67,7 @@ func TestPipeline_creationSingleRunnerAfterFlat(t *testing.T) {
 	onlyPassThrough := Pipeline(PassThrough(), PassThrough())
 	_, isPipe = onlyPassThrough.(pipeline)
 	require.False(t, isPipe)
-	_, isPassThrough := onlyPassThrough.(*passthrough)
+	_, isPassThrough := onlyPassThrough.(*passThrough)
 	require.True(t, isPassThrough)
 
 	nestedPipelineWithOnlyPassThrough := Pipeline(
@@ -78,16 +78,16 @@ func TestPipeline_creationSingleRunnerAfterFlat(t *testing.T) {
 	)
 	_, isPipe = nestedPipelineWithOnlyPassThrough.(pipeline)
 	require.False(t, isPipe)
-	_, isPassThrough = onlyPassThrough.(*passthrough)
+	_, isPassThrough = onlyPassThrough.(*passThrough)
 	require.True(t, isPassThrough)
 }
 
 // Measures the number of datasets (ops) per second going through a pipeline
-// composed of 3 pass-throughs. At the time of writing, it was evident that
+// composed of 3 passThrough-s. At the time of writing, it was evident that
 // performance is not impacted by the size of the datasets (sensible, given
 // the implementation details).
 func BenchmarkPipeline(b *testing.B) {
-	data := NewDataset(Null.Data(4))
+	data := NewDataset(dummy.Data(-1))
 	inp := make(chan Dataset)
 	out := make(chan Dataset)
 	defer close(inp)

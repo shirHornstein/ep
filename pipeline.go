@@ -26,11 +26,10 @@ func Pipeline(runners ...Runner) Runner {
 		}
 	}
 
-	// filter out passthrough runners as they don't affect the pipe
+	// filter out passThrough runners as they don't affect the pipe
 	filtered := flat[:0]
 	for _, r := range flat {
-		_, isPassthrough := r.(*passthrough)
-		if !isPassthrough {
+		if r != passThroughSingleton {
 			filtered = append(filtered, r)
 		}
 	}
@@ -53,16 +52,20 @@ func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 
 	defer func() {
 		wg.Wait()
-		for i := 0; err == nil && i < len(rs); i++ {
-			err = errs[i]
+		for _, e := range errs {
+			if e != nil && e != context.Canceled {
+				err = e
+				break
+			}
 		}
 	}()
 
 	ctx, cancel := context.WithCancel(ctx)
 
-	// run all of the internal runners (all except the very last one), piping
-	// the output from each runner to the next.
-	for i := 0; i < len(rs)-1; i++ {
+	// run all (except the very last one) internal runners, piping the output
+	// from each runner to the next.
+	lastIndex := len(rs) - 1
+	for i := 0; i < lastIndex; i++ {
 		// middle chan is the output from the current runner and the input to
 		// the next. We need to wait until this channel is closed before this
 		// Run() function returns to avoid leaking go routines. This is achieved
@@ -81,26 +84,23 @@ func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 		go func(i int, inp, middle chan Dataset) {
 			defer wg.Done()
 			defer close(middle)
-			e := rs[i].Run(ctx, inp, middle)
-
-			errs[i] = e
-			if e != nil {
+			errs[i] = rs[i].Run(ctx, inp, middle)
+			if errs[i] != nil {
 				cancel()
 			}
-
 		}(i, inp, middle)
 
 		// input to the next channel is the output from the current one.
 		inp = middle
 	}
 
-	// cancel the all of the runners when we're done - just in case some are
-	// still running. This might happen if the top of the pipeline ends before
-	// the bottom of the pipeline.
+	// cancel all runners when we're done - just in case some are still running. This
+	// might happen if the top of the pipeline ends before the bottom of the pipeline.
 	defer cancel()
 
-	// block run the last runner until completed
-	return rs[len(rs)-1].Run(ctx, inp, out)
+	// block until last runner completion
+	errs[lastIndex] = rs[lastIndex].Run(ctx, inp, out)
+	return
 }
 
 // The implementation isn't trivial because it has to account for Wildcard types
@@ -111,6 +111,17 @@ func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 // see Runner & Wildcard
 func (rs pipeline) Returns() []Type {
 	return rs.returnsOne(len(rs) - 1) // start with the last one.
+}
+
+// Args returns the arguments expected by the first runner in this pipeline.
+// If that runner is an instance of RunnerArgs, its Args() result will be returned.
+// Otherwise, Wildcard type is returned.
+func (rs pipeline) Args() []Type {
+	runnerArgs, ok := rs[0].(RunnerArgs)
+	if ok {
+		return runnerArgs.Args()
+	}
+	return []Type{Wildcard}
 }
 
 func (rs pipeline) returnsOne(j int) []Type {

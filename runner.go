@@ -4,7 +4,7 @@ import (
 	"context"
 )
 
-var _ = registerGob(&passthrough{}, &pick{})
+var _ = registerGob(&passThrough{}, &pick{})
 
 // Runner represents objects that can receive a stream of input datasets,
 // manipulate them in some way (filter, mapping, reduction, expansion, etc.) and
@@ -59,7 +59,7 @@ type RunnerArgs interface {
 
 // RunnerPlan is a Runner that also acts as a Runner constructor. This is useful
 // for cases when the Runner needs to be somehow configured, or even replaced
-// altogher based on input arguments
+// altogether based on input arguments
 type RunnerPlan interface {
 	Runner // it's a Runner
 
@@ -67,6 +67,15 @@ type RunnerPlan interface {
 	// argument is context-dependent: it can be an AST node, or a composite
 	// object containing multiple properties.
 	Plan(ctx context.Context, arg interface{}) (Runner, error)
+}
+
+// RunnerExec is a Runner that also supports command execution.
+type RunnerExec interface {
+	Runner // it's a Runner
+
+	// Exec executes a command and returns last inserted id, a number of rows
+	// affected by this command, and an error.
+	Exec(context.Context) (lastID int64, rowsAffected int64, err error)
 }
 
 // FilterRunner is a Runner that also exposes the ability to choose which
@@ -82,15 +91,27 @@ type FilterRunner interface {
 }
 
 // PassThrough returns a runner that lets all of its input through as-is
-func PassThrough() Runner { return passThroughSingleton }
+func PassThrough(types ...Type) Runner {
+	if len(types) == 0 {
+		return passThroughSingleton
+	}
+	return &passThrough{types}
+}
 
-var passThroughSingleton = &passthrough{}
+var passThroughSingleton = &passThrough{}
 
-type passthrough struct{}
+type passThrough struct {
+	ReturnTypes []Type
+}
 
-func (*passthrough) Args() []Type    { return []Type{Wildcard} }
-func (*passthrough) Returns() []Type { return []Type{Wildcard} }
-func (*passthrough) Run(_ context.Context, inp, out chan Dataset) error {
+func (*passThrough) Args() []Type { return []Type{Wildcard} }
+func (r *passThrough) Returns() []Type {
+	if len(r.ReturnTypes) == 0 {
+		return []Type{Wildcard}
+	}
+	return r.ReturnTypes
+}
+func (*passThrough) Run(_ context.Context, inp, out chan Dataset) error {
 	for data := range inp {
 		out <- data
 	}
@@ -116,7 +137,7 @@ func (r *pick) Run(_ context.Context, inp, out chan Dataset) error {
 	for data := range inp {
 		var result Dataset
 		if len(r.Indices) == 0 {
-			result = NewDataset(Null.Data(data.Len()))
+			result = NewDataset(dummy.Data(data.Len()))
 		} else {
 			res := make([]Data, len(r.Indices))
 			for i, idx := range r.Indices {

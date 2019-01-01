@@ -156,3 +156,41 @@ func TestExchange_getPartitionEncoder_consistent(t *testing.T) {
 		require.Equal(t, enc, nextEncoder)
 	}
 }
+
+func TestExchange_encsMappedByNodes(t *testing.T) {
+	port1 := ":5551"
+	ln, err := net.Listen("tcp", port1)
+	require.NoError(t, err)
+	peer1 := NewDistributer(port1, ln)
+
+	port2 := ":5552"
+	ln, err = net.Listen("tcp", port2)
+	require.NoError(t, err)
+	peer2 := NewDistributer(port2, ln)
+
+	port3 := ":5553"
+	ln, err = net.Listen("tcp", port3)
+	require.NoError(t, err)
+	peer3 := NewDistributer(port3, ln)
+
+	defer func() {
+		require.NoError(t, peer1.Close())
+		require.NoError(t, peer2.Close())
+		require.NoError(t, peer3.Close())
+	}()
+
+	allNodes := []string{port1, port2, port3}
+	ctx := context.WithValue(context.Background(), distributerKey, peer1)
+	ctx = context.WithValue(ctx, allNodesKey, allNodes)
+	ctx = context.WithValue(ctx, masterNodeKey, port1)
+	ctx = context.WithValue(ctx, thisNodeKey, port1)
+
+	partition := Partition(0).(*exchange)
+	partition.init(ctx)
+
+	encKeys := make([]string, 0, len(partition.encsByKey))
+	for k := range partition.encsByKey {
+		encKeys = append(encKeys, k)
+	}
+	require.ElementsMatch(t, []string{":5551", ":5552", ":5553"}, encKeys)
+}

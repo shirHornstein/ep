@@ -29,9 +29,7 @@
 // re-use.
 //
 // Finally - the actual Data instances are left for user-space implementation.
-// Please review the example code below, or the Null type for reference. The
-// latter is a built-in type for handling null-data without the overhead of
-// interfaces or pointers.
+// Please review the example code below and all runnable examples.
 //
 // Registries
 //
@@ -91,8 +89,8 @@
 // E.g:
 // 		SELECT scope.col1 AS alias FROM (..) AS scope
 //
-// In that case, internal subselect will be wrapped with Scope runner to mark all its returned
-// columns as belonged to subselect.
+// In that case, internal sub-select will be wrapped with Scope runner to mark all its returned
+// columns as belonged to sub-select.
 // See ep.Scope, ep.Alias and ep.SetAlias for more details.
 package ep
 
@@ -131,13 +129,13 @@ func NodeAddress(ctx context.Context) string {
 }
 
 // MasterNodeAddress returns the address of the master node in the context
-func MasterNodeAddress(ctx context.Context) (addr string) {
-	addr, _ = ctx.Value(masterNodeKey).(string)
-	return
+func MasterNodeAddress(ctx context.Context) string {
+	addr, _ := ctx.Value(masterNodeKey).(string)
+	return addr
 }
 
 // AllNodeAddresses returns the addresses of all of the nodes in the context
-func AllNodeAddresses(ctx context.Context) (res []string) {
-	res, _ = ctx.Value(allNodesKey).([]string)
-	return
+func AllNodeAddresses(ctx context.Context) []string {
+	res, _ := ctx.Value(allNodesKey).([]string)
+	return res
 }

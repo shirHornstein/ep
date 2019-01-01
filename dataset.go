@@ -36,11 +36,10 @@ var Record = &datasetType{}
 type datasetType struct{}
 
 func (sett *datasetType) String() string  { return sett.Name() }
-func (sett *datasetType) Name() string    { return "record" }
+func (*datasetType) Name() string         { return "record" }
+func (*datasetType) Size() uint           { panic("call Size on each Data") }
 func (sett *datasetType) Data(n int) Data { return sett.DataEmpty(n) }
-func (sett *datasetType) DataEmpty(int) Data {
-	panic("runtime error: please use NewDataset function")
-}
+func (*datasetType) DataEmpty(int) Data   { panic("use NewDataset function") }
 
 type dataset []Data
 
@@ -299,4 +298,21 @@ func (set dataset) Strings() []string {
 		res[i] = "(" + s[:len(s)-1] + ")"
 	}
 	return res
+}
+
+// ColumnStrings returns string values of selected columns of a provided dataset.
+// If no columns provided, all columns are used
+func ColumnStrings(set Dataset, cols ...int) [][]string {
+	if len(cols) == 0 {
+		cols = make([]int, set.Width())
+		for i := 0; i < set.Width(); i++ {
+			cols[i] = i
+		}
+	}
+
+	stringValues := make([][]string, len(cols))
+	for i, col := range cols {
+		stringValues[i] = set.At(col).Strings()
+	}
+	return stringValues
 }

@@ -11,6 +11,7 @@ import (
 var _ = ep.Runners.
 	Register("errRunner", &errRunner{}).
 	Register("infinityRunner", &infinityRunner{}).
+	Register("fixedData", &fixedData{}).
 	Register("dataRunner", &dataRunner{}).
 	Register("nodeAddr", &nodeAddr{}).
 	Register("count", &count{}).
@@ -120,11 +121,28 @@ func (r *realInfinityRunner) Run(ctx context.Context, inp, out chan ep.Dataset) 
 	}
 }
 
+type fixedData struct {
+	ep.Dataset
+}
+
+func (r *fixedData) Returns() []ep.Type {
+	var types []ep.Type
+	for i := 0; i < r.Dataset.Len(); i++ {
+		types = append(types, r.Dataset.At(i).Type())
+	}
+	return types
+}
+func (r *fixedData) Run(ctx context.Context, _, out chan ep.Dataset) (err error) {
+	out <- r.Dataset
+	return nil
+}
+
 type dataRunner struct {
 	ep.Dataset
 	// ThrowOnData is a condition for throwing error. in case the last column
 	// contains exactly this string in first row - fail with error
-	ThrowOnData string
+	ThrowOnData   string
+	ThrowCanceled bool
 }
 
 func (r *dataRunner) Returns() []ep.Type {
@@ -134,13 +152,18 @@ func (r *dataRunner) Returns() []ep.Type {
 	}
 	return types
 }
-func (r *dataRunner) Run(ctx context.Context, inp, out chan ep.Dataset) error {
+func (r *dataRunner) Run(ctx context.Context, inp, out chan ep.Dataset) (err error) {
+	if r.ThrowCanceled {
+		err = context.Canceled
+	} else {
+		err = fmt.Errorf("error %s", r.ThrowOnData)
+	}
 	for data := range inp {
 		if r.ThrowOnData == data.At(data.Width() - 1).Strings()[0] {
-			return fmt.Errorf("error %s", r.ThrowOnData)
+			return err
 		}
+		out <- r.Dataset
 	}
-	out <- r.Dataset
 	return nil
 }
 
@@ -181,11 +204,6 @@ type upper struct{}
 func (*upper) Returns() []ep.Type { return []ep.Type{ep.SetAlias(str, "upper")} }
 func (*upper) Run(_ context.Context, inp, out chan ep.Dataset) error {
 	for data := range inp {
-		if data.At(0).Type() == ep.Null {
-			out <- data
-			continue
-		}
-
 		res := make(strs, data.Len())
 		for i, v := range data.At(0).(strs) {
 			res[i] = strings.ToUpper(v)
@@ -204,34 +222,11 @@ func (*question) Returns() []ep.Type { return []ep.Type{ep.SetAlias(str, "questi
 func (q *question) Run(_ context.Context, inp, out chan ep.Dataset) error {
 	q.called = true
 	for data := range inp {
-		if data.At(0).Type() == ep.Null {
-			out <- data
-			continue
-		}
-
 		res := make(strs, data.Len())
 		for i, v := range data.At(0).(strs) {
 			res[i] = "is " + v + "?"
 		}
 		out <- ep.NewDataset(res)
-	}
-	return nil
-}
-
-// runner that accepts strings, and breaks up the characters in the string to
-// one character per row.
-type breakChars struct{}
-
-func (*breakChars) Returns() []ep.Type { return []ep.Type{str} }
-func (*breakChars) Run(ctx context.Context, inp, out chan ep.Dataset) error {
-	for data := range inp {
-		for _, s := range data.At(0).(strs) {
-			res := make(strs, len(s))
-			for i, c := range s { // iterate on the characters
-				res[i] = string(c)
-			}
-			out <- ep.NewDataset(res)
-		}
 	}
 	return nil
 }

@@ -236,9 +236,9 @@ type distRunner struct {
 }
 
 func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) error {
-	errs := []error{}
+	var errs []error
 
-	decs := []*gob.Decoder{}
+	var decs []*gob.Decoder
 	isMain := r.d.addr == r.MasterAddr
 	for i := 0; i < len(r.Addrs) && isMain; i++ {
 		addr := r.Addrs[i]
@@ -322,12 +322,15 @@ func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) error {
 	}()
 
 	var finalError error
-	if len(errs) > 0 {
-		finalError = errs[0]
+	for _, e := range errs {
+		if e != context.Canceled {
+			finalError = e
+			break
+		}
 	}
 	// wait for respErrs channel anyway, and select first meaningful error
 	for e := range respErrs {
-		if finalError == nil && e != errProjectState {
+		if finalError == nil {
 			finalError = e
 		}
 	}

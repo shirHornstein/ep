@@ -11,14 +11,14 @@ import (
 
 func TestRows(t *testing.T) {
 	data := ep.NewDataset(strs([]string{"hello", "world"}))
-	runner := ep.Pipeline(&dataRunner{Dataset: data}, &upper{})
+	runner := ep.Pipeline(&fixedData{Dataset: data}, &upper{})
 	rows := ep.Rows(context.Background(), runner).(driver.Rows)
 	cols := rows.Columns()
 	require.Equal(t, 1, len(cols))
 	require.Equal(t, "upper", cols[0])
 
 	dest := make([]driver.Value, 1)
-	res := []driver.Value{}
+	var res []driver.Value
 	for {
 		err := rows.Next(dest)
 		if err == io.EOF {

@@ -20,6 +20,37 @@ func Plan(ctx context.Context, k interface{}) (Runner, error) {
 	return PlanWithArgs(ctx, k, nil)
 }
 
+// PlanList plans list of items and returns an array of their runners
+func PlanList(ctx context.Context, items []interface{}) ([]Runner, error) {
+	// items can contain nil values (e.g. unary operators like ~,-,! will have one
+	// nil operand). filter nil values as there is no need to plan them
+	for i := 0; i < len(items); i++ {
+		if items[i] == nil {
+			items = append(items[:i], items[i+1:]...)
+			i--
+		}
+	}
+
+	if len(items) == 0 {
+		return []Runner{Pick()}, nil // pick nothing
+	}
+
+	runners := make([]Runner, 0, len(items))
+	for _, n := range items {
+		r, err := Plan(ctx, n)
+		if err != nil {
+			return nil, err
+		}
+
+		if p, ok := r.(project); ok {
+			runners = append(runners, p...)
+		} else {
+			runners = append(runners, r)
+		}
+	}
+	return runners, nil
+}
+
 // PlanWithArgs is similar to Plan, except that it first filters the runners to
 // only keep RunnerArgs instances that have the args provided.
 func PlanWithArgs(ctx context.Context, k interface{}, args []Type) (Runner, error) {
@@ -60,7 +91,7 @@ type runnersReg map[interface{}][]Runner
 // Register a key-runner pair to be globally accessible via the Get() function
 // using the same key.
 func (reg runnersReg) Register(k interface{}, r Runner) runnersReg {
-	registerGob(r)
+	registerGob(k, r)
 	k = registryKey(k)
 	reg[k] = append(reg[k], r)
 	return reg

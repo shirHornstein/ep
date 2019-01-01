@@ -8,7 +8,7 @@ import "fmt"
 // datasets themselves, but only in API declaration.
 var Wildcard = &wildcardType{}
 
-// WildcardMinusTail returns wildcard pseduo-type as described above, with the
+// WildcardMinusTail returns wildcard pseudo-type as described above, with the
 // ability to denote subset of their input type. For example, a function returning
 // [WildcardMinusTail(1), Int] effectively returns its input without input's last
 // column followed by an int column. It should never be used in the datasets
@@ -23,6 +23,7 @@ func WildcardMinusTail(n int) Type {
 // can be determined ahead of time. Examples are JSON parser functions that may
 // produce different data types for each row. Some functions (CAST, COUNT, etc.)
 // may be able to support Any as input.
+// However, no runner should return type Any, but only concrete type.
 var Any = &anyType{}
 
 var _ = registerGob(&modifierType{}, Wildcard, Any)
@@ -33,6 +34,9 @@ type Type interface {
 
 	// Name returns the name of the type
 	Name() string
+
+	// Size returns the size of value with that type
+	Size() uint
 
 	// Data returns a new Data object of this type, containing `n` zero-values
 	Data(n int) Data
@@ -64,6 +68,7 @@ type wildcardType struct {
 
 func (*wildcardType) String() string             { return "*" }
 func (*wildcardType) Name() string               { return "*" }
+func (*wildcardType) Size() uint                 { panic("wildcard has no concrete type") }
 func (*wildcardType) Data(int) Data              { panic("wildcard has no concrete type") }
 func (*wildcardType) DataEmpty(int) Data         { panic("wildcard has no concrete type") }
 func (w *wildcardType) At(idx int) *wildcardType { return &wildcardType{&idx, w.CutFromTail} }
@@ -72,6 +77,7 @@ type anyType struct{}
 
 func (*anyType) String() string     { return "?" }
 func (*anyType) Name() string       { return "?" }
+func (*anyType) Size() uint         { panic("any has no concrete type") }
 func (*anyType) Data(int) Data      { panic("any has no concrete type") }
 func (*anyType) DataEmpty(int) Data { panic("any has no concrete type") }
 func isAny(t Type) bool {
