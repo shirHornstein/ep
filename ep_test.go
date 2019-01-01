@@ -26,7 +26,7 @@ type errRunner struct {
 	Name string
 }
 
-func NewErrRunner(e error) ep.Runner {
+func newErrRunner(e error) ep.Runner {
 	return &errRunner{e, "err"}
 }
 
