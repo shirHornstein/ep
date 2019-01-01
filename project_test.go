@@ -36,8 +36,8 @@ func TestProject_errorInFirstRunner(t *testing.T) {
 	_, resErr := eptest.Run(runner, data)
 
 	require.Error(t, resErr)
-	require.Equal(t, "something bad happened", resErr.Error())
-	require.Equal(t, false, infinity.IsRunning(), "Infinity go-routine leak")
+	require.Equal(t, err.Error(), resErr.Error())
+	require.False(t, infinity.IsRunning(), "Infinity go-routine leak")
 }
 
 func TestProject_errorInSecondRunner(t *testing.T) {
@@ -49,9 +49,9 @@ func TestProject_errorInSecondRunner(t *testing.T) {
 	_, resErr := eptest.Run(runner, data)
 
 	require.Error(t, resErr)
-	require.Equal(t, "something bad happened", resErr.Error())
-	require.Equal(t, false, infinityRunner1.IsRunning(), "Infinity 1 go-routine leak")
-	require.Equal(t, false, infinityRunner2.IsRunning(), "Infinity 2 go-routine leak")
+	require.Equal(t, err.Error(), resErr.Error())
+	require.False(t, infinityRunner1.IsRunning(), "Infinity 1 go-routine leak")
+	require.False(t, infinityRunner2.IsRunning(), "Infinity 2 go-routine leak")
 }
 
 func TestProject_errorInThirdRunner(t *testing.T) {
@@ -63,9 +63,9 @@ func TestProject_errorInThirdRunner(t *testing.T) {
 	_, resErr := eptest.Run(runner, data)
 
 	require.Error(t, resErr)
-	require.Equal(t, "something bad happened", resErr.Error())
-	require.Equal(t, false, infinityRunner1.IsRunning(), "Infinity 1 go-routine leak")
-	require.Equal(t, false, infinityRunner2.IsRunning(), "Infinity 2 go-routine leak")
+	require.Equal(t, err.Error(), resErr.Error())
+	require.False(t, infinityRunner1.IsRunning(), "Infinity 1 go-routine leak")
+	require.False(t, infinityRunner2.IsRunning(), "Infinity 2 go-routine leak")
 }
 
 func TestProject_errorInPipeline(t *testing.T) {
@@ -81,10 +81,10 @@ func TestProject_errorInPipeline(t *testing.T) {
 	_, resErr := eptest.Run(runner, data)
 
 	require.Error(t, resErr)
-	require.Equal(t, "something bad happened", resErr.Error())
-	require.Equal(t, false, infinityRunner1.IsRunning(), "Infinity 1 go-routine leak")
-	require.Equal(t, false, infinityRunner2.IsRunning(), "Infinity 2 go-routine leak")
-	require.Equal(t, false, infinityRunner3.IsRunning(), "Infinity 3 go-routine leak")
+	require.Equal(t, err.Error(), resErr.Error())
+	require.False(t, infinityRunner1.IsRunning(), "Infinity 1 go-routine leak")
+	require.False(t, infinityRunner2.IsRunning(), "Infinity 2 go-routine leak")
+	require.False(t, infinityRunner3.IsRunning(), "Infinity 3 go-routine leak")
 }
 
 func _TestProject_errorWithExchange(t *testing.T) {
@@ -113,7 +113,7 @@ func _TestProject_errorWithExchange(t *testing.T) {
 
 	require.Error(t, resErr)
 	require.Equal(t, "error "+port2, resErr.Error())
-	require.Equal(t, false, infinityRunner.IsRunning(), "Infinity go-routine leak")
+	require.False(t, infinityRunner.IsRunning(), "Infinity go-routine leak")
 }
 
 func TestProject_nested_errorInFirstRunner(t *testing.T) {
@@ -129,10 +129,10 @@ func TestProject_nested_errorInFirstRunner(t *testing.T) {
 	_, resErr := eptest.Run(runner, data)
 
 	require.Error(t, resErr)
-	require.Equal(t, "something bad happened", resErr.Error())
-	require.Equal(t, false, infinityRunner1.IsRunning(), "Infinity 1 go-routine leak")
-	require.Equal(t, false, infinityRunner2.IsRunning(), "Infinity 2 go-routine leak")
-	require.Equal(t, false, infinityRunner3.IsRunning(), "Infinity 3 go-routine leak")
+	require.Equal(t, err.Error(), resErr.Error())
+	require.False(t, infinityRunner1.IsRunning(), "Infinity 1 go-routine leak")
+	require.False(t, infinityRunner2.IsRunning(), "Infinity 2 go-routine leak")
+	require.False(t, infinityRunner3.IsRunning(), "Infinity 3 go-routine leak")
 }
 
 func TestProject_nested_errorInSecondRunner(t *testing.T) {
@@ -148,10 +148,10 @@ func TestProject_nested_errorInSecondRunner(t *testing.T) {
 	_, resErr := eptest.Run(runner, data)
 
 	require.Error(t, resErr)
-	require.Equal(t, "something bad happened", resErr.Error())
-	require.Equal(t, false, infinityRunner1.IsRunning(), "Infinity 1 go-routine leak")
-	require.Equal(t, false, infinityRunner2.IsRunning(), "Infinity 2 go-routine leak")
-	require.Equal(t, false, infinityRunner3.IsRunning(), "Infinity 3 go-routine leak")
+	require.Equal(t, err.Error(), resErr.Error())
+	require.False(t, infinityRunner1.IsRunning(), "Infinity 1 go-routine leak")
+	require.False(t, infinityRunner2.IsRunning(), "Infinity 2 go-routine leak")
+	require.False(t, infinityRunner3.IsRunning(), "Infinity 3 go-routine leak")
 }
 
 // projected runners should return the same number of rows
