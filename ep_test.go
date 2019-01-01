@@ -6,11 +6,12 @@ import (
 	"github.com/panoplyio/ep"
 	"strings"
 	"sync"
+	"time"
 )
 
 var _ = ep.Runners.
 	Register("errRunner", &errRunner{}).
-	Register("infinityRunner", &infinityRunner{}).
+	Register("waitForCancel", &waitForCancel{}).
 	Register("fixedData", &fixedData{}).
 	Register("dataRunner", &dataRunner{}).
 	Register("nodeAddr", &nodeAddr{}).
@@ -37,8 +38,8 @@ func (r *errRunner) Run(ctx context.Context, inp, out chan ep.Dataset) error {
 	return r.error
 }
 
-// infinityRunner infinitely emits data until it's canceled
-type infinityRunner struct {
+// waitForCancel infinitely emits data until it's canceled
+type waitForCancel struct {
 	isRunningLock sync.Mutex
 	// isRunning flag helps tests ensure that the go-routine didn't leak
 	isRunning bool
@@ -47,54 +48,15 @@ type infinityRunner struct {
 	Name string
 }
 
-func (*infinityRunner) Returns() []ep.Type { return []ep.Type{str} }
-func (r *infinityRunner) IsRunning() bool {
+func (*waitForCancel) Returns() []ep.Type { return []ep.Type{str} }
+func (r *waitForCancel) IsRunning() bool {
 	r.isRunningLock.Lock()
 	defer r.isRunningLock.Unlock()
 	return r.isRunning
 }
-func (r *infinityRunner) Run(ctx context.Context, inp, out chan ep.Dataset) error {
-	r.isRunningLock.Lock()
-	r.isRunning = true
-	r.isRunningLock.Unlock()
+func (r *waitForCancel) Run(ctx context.Context, inp, out chan ep.Dataset) error {
+	ticker := time.NewTicker(100 * time.Millisecond)
 
-	defer func() {
-		r.isRunningLock.Lock()
-		r.isRunning = false
-		r.isRunningLock.Unlock()
-	}()
-
-	// infinitely produce data, until canceled
-	for { // TODO infinity
-		select {
-		case <-ctx.Done():
-			return nil
-		case _, ok := <-inp:
-			if !ok {
-				return nil
-			}
-			out <- ep.NewDataset(strs{"data"})
-		}
-	}
-}
-
-// realInfinityRunner infinitely emits data until it's canceled
-type realInfinityRunner struct {
-	isRunningLock sync.Mutex
-	// isRunning flag helps tests ensure that the go-routine didn't leak
-	isRunning bool
-
-	// Name is unused field, defined to allow gob-ing infinityRunner between peers
-	Name string
-}
-
-func (*realInfinityRunner) Returns() []ep.Type { return []ep.Type{str} }
-func (r *realInfinityRunner) IsRunning() bool {
-	r.isRunningLock.Lock()
-	defer r.isRunningLock.Unlock()
-	return r.isRunning
-}
-func (r *realInfinityRunner) Run(ctx context.Context, inp, out chan ep.Dataset) error {
 	r.isRunningLock.Lock()
 	r.isRunning = true
 	r.isRunningLock.Unlock()
@@ -107,15 +69,15 @@ func (r *realInfinityRunner) Run(ctx context.Context, inp, out chan ep.Dataset) 
 
 	go func() {
 		for range inp {
-		} // drain input, infinityRunner doesn't depend in input
+		} // drain input, waitForCancel doesn't depend in input
 	}()
 
-	// infinitely ignore input & produce data, until canceled
+	// infinitely produce data, until canceled
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
-		default:
+		case <-ticker.C:
 			out <- ep.NewDataset(strs{"data"})
 		}
 	}

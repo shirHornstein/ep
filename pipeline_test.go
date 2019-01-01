@@ -35,8 +35,8 @@ func ExamplePipeline_reverse() {
 // Otherwise - this test will block indefinitely
 func TestPipeline_errInFirstRunner(t *testing.T) {
 	err := fmt.Errorf("something bad happened")
-	infinityRunner1 := &infinityRunner{}
-	infinityRunner2 := &infinityRunner{}
+	infinityRunner1 := &waitForCancel{}
+	infinityRunner2 := &waitForCancel{}
 	runner := ep.Pipeline(NewErrRunner(err), infinityRunner1, infinityRunner2)
 	data := ep.NewDataset(str.Data(1))
 	_, resErr := eptest.Run(runner, data)
@@ -51,8 +51,8 @@ func TestPipeline_errInFirstRunner(t *testing.T) {
 // Otherwise - this test will block indefinitely
 func TestPipeline_errInSecondRunner(t *testing.T) {
 	err := fmt.Errorf("something bad happened")
-	infinityRunner1 := &infinityRunner{}
-	infinityRunner2 := &infinityRunner{}
+	infinityRunner1 := &waitForCancel{}
+	infinityRunner2 := &waitForCancel{}
 	runner := ep.Pipeline(infinityRunner1, NewErrRunner(err), infinityRunner2)
 	data := ep.NewDataset(str.Data(1))
 	_, resErr := eptest.Run(runner, data)
@@ -67,8 +67,8 @@ func TestPipeline_errInSecondRunner(t *testing.T) {
 // Otherwise - this test will block indefinitely
 func TestPipeline_errInThirdRunner(t *testing.T) {
 	err := fmt.Errorf("something bad happened")
-	infinityRunner1 := &infinityRunner{}
-	infinityRunner2 := &infinityRunner{}
+	infinityRunner1 := &waitForCancel{}
+	infinityRunner2 := &waitForCancel{}
 	runner := ep.Pipeline(infinityRunner1, infinityRunner2, NewErrRunner(err))
 	data := ep.NewDataset(str.Data(1))
 	_, resErr := eptest.Run(runner, data)
@@ -83,9 +83,9 @@ func TestPipeline_errInThirdRunner(t *testing.T) {
 // Otherwise - this test will block indefinitely
 func TestPipeline_errInNestedPipeline(t *testing.T) {
 	err := fmt.Errorf("something bad happened")
-	infinityRunner1 := &infinityRunner{}
-	infinityRunner2 := &infinityRunner{}
-	infinityRunner3 := &infinityRunner{}
+	infinityRunner1 := &waitForCancel{}
+	infinityRunner2 := &waitForCancel{}
+	infinityRunner3 := &waitForCancel{}
 	runner := ep.Pipeline(
 		ep.Pipeline(infinityRunner1, NewErrRunner(err)),
 		ep.Pipeline(infinityRunner2, infinityRunner3),
@@ -108,29 +108,36 @@ func TestPipeline_errNestedPipelineWithProject(t *testing.T) {
 	var testsCases = []struct {
 		casee    string
 		errIndex int
-		runners  []ep.Runner
 	}{
-		{"error in runner", 7, []ep.Runner{&infinityRunner{}, &infinityRunner{}, &infinityRunner{}, &infinityRunner{}, &infinityRunner{}, &infinityRunner{}, &infinityRunner{}, NewErrRunner(err)}},
-		{"error in runner", 6, []ep.Runner{&infinityRunner{}, &infinityRunner{}, &infinityRunner{}, &infinityRunner{}, &infinityRunner{}, &infinityRunner{}, NewErrRunner(err), &infinityRunner{}}},
-		{"error in runner", 5, []ep.Runner{&infinityRunner{}, &infinityRunner{}, &infinityRunner{}, &infinityRunner{}, &infinityRunner{}, NewErrRunner(err), &infinityRunner{}, &infinityRunner{}}},
-		{"error in runner", 4, []ep.Runner{&infinityRunner{}, &infinityRunner{}, &infinityRunner{}, &infinityRunner{}, NewErrRunner(err), &infinityRunner{}, &infinityRunner{}, &infinityRunner{}}},
-		{"error in runner", 3, []ep.Runner{&infinityRunner{}, &infinityRunner{}, &infinityRunner{}, NewErrRunner(err), &infinityRunner{}, &infinityRunner{}, &infinityRunner{}, &infinityRunner{}}},
-		{"error in runner", 2, []ep.Runner{&infinityRunner{}, &infinityRunner{}, NewErrRunner(err), &infinityRunner{}, &infinityRunner{}, &infinityRunner{}, &infinityRunner{}, &infinityRunner{}}},
-		{"error in runner", 1, []ep.Runner{&infinityRunner{}, NewErrRunner(err), &infinityRunner{}, &infinityRunner{}, &infinityRunner{}, &infinityRunner{}, &infinityRunner{}, &infinityRunner{}}},
-		{"error in runner", 0, []ep.Runner{NewErrRunner(err), &infinityRunner{}, &infinityRunner{}, &infinityRunner{}, &infinityRunner{}, &infinityRunner{}, &infinityRunner{}, &infinityRunner{}}},
+		{"error in runner", 7},
+		{"error in runner", 6},
+		{"error in runner", 5},
+		{"error in runner", 4},
+		{"error in runner", 3},
+		{"error in runner", 2},
+		{"error in runner", 1},
+		{"error in runner", 0},
 	}
 
 	for _, tt := range testsCases {
 		t.Run(tt.casee+strconv.Itoa(tt.errIndex), func(t *testing.T) {
+			runners := make([]ep.Runner, 8)
+			for i := range runners {
+				if tt.errIndex == i {
+					runners[i] = NewErrRunner(err)
+				} else {
+					runners[i] = &waitForCancel{}
+				}
+			}
 			runner :=
 				ep.Pipeline(
 					ep.Project(
-						ep.Pipeline(tt.runners[0], tt.runners[1]),
-						ep.Pipeline(tt.runners[2], tt.runners[3]),
+						ep.Pipeline(runners[0], runners[1]),
+						ep.Pipeline(runners[2], runners[3]),
 					),
 					ep.Project(
-						ep.Pipeline(tt.runners[4], tt.runners[5]),
-						ep.Pipeline(tt.runners[6], tt.runners[7]),
+						ep.Pipeline(runners[4], runners[5]),
+						ep.Pipeline(runners[6], runners[7]),
 					))
 
 			data := ep.NewDataset(str.Data(1))
@@ -138,9 +145,9 @@ func TestPipeline_errNestedPipelineWithProject(t *testing.T) {
 
 			require.Error(t, resErr)
 			require.Equal(t, "something bad happened", resErr.Error())
-			for i, r := range tt.runners {
+			for i, r := range runners {
 				if i != tt.errIndex {
-					require.Equal(t, false, r.(*infinityRunner).IsRunning(), "Infinity go-routine leak")
+					require.Equal(t, false, r.(*waitForCancel).IsRunning(), "Infinity go-routine leak")
 				}
 			}
 		})

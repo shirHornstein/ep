@@ -30,7 +30,7 @@ func ExampleProject_reversed() {
 
 func TestProject_errorInFirstRunner(t *testing.T) {
 	err := fmt.Errorf("something bad happened")
-	infinity := &infinityRunner{}
+	infinity := &waitForCancel{}
 	runner := ep.Project(NewErrRunner(err), infinity)
 	data := ep.NewDataset(str.Data(1))
 	_, resErr := eptest.Run(runner, data)
@@ -42,8 +42,8 @@ func TestProject_errorInFirstRunner(t *testing.T) {
 
 func TestProject_errorInSecondRunner(t *testing.T) {
 	err := fmt.Errorf("something bad happened")
-	infinityRunner1 := &infinityRunner{}
-	infinityRunner2 := &infinityRunner{}
+	infinityRunner1 := &waitForCancel{}
+	infinityRunner2 := &waitForCancel{}
 	runner := ep.Project(infinityRunner1, NewErrRunner(err), infinityRunner2)
 	data := ep.NewDataset(str.Data(1))
 	_, resErr := eptest.Run(runner, data)
@@ -56,8 +56,8 @@ func TestProject_errorInSecondRunner(t *testing.T) {
 
 func TestProject_errorInThirdRunner(t *testing.T) {
 	err := fmt.Errorf("something bad happened")
-	infinityRunner1 := &infinityRunner{}
-	infinityRunner2 := &infinityRunner{}
+	infinityRunner1 := &waitForCancel{}
+	infinityRunner2 := &waitForCancel{}
 	runner := ep.Project(infinityRunner1, infinityRunner2, NewErrRunner(err))
 	data := ep.NewDataset(str.Data(1))
 	_, resErr := eptest.Run(runner, data)
@@ -70,9 +70,9 @@ func TestProject_errorInThirdRunner(t *testing.T) {
 
 func TestProject_errorInPipeline(t *testing.T) {
 	err := fmt.Errorf("something bad happened")
-	infinityRunner1 := &infinityRunner{}
-	infinityRunner2 := &infinityRunner{}
-	infinityRunner3 := &infinityRunner{}
+	infinityRunner1 := &waitForCancel{}
+	infinityRunner2 := &waitForCancel{}
+	infinityRunner3 := &waitForCancel{}
 	runner := ep.Project(
 		ep.Pipeline(infinityRunner1, infinityRunner2),
 		ep.Pipeline(infinityRunner3, NewErrRunner(err)),
@@ -98,7 +98,7 @@ func _TestProject_errorWithExchange(t *testing.T) {
 		require.NoError(t, peer2.Close())
 	}()
 
-	infinityRunner := &infinityRunner{}
+	infinityRunner := &waitForCancel{}
 	mightErrored := &dataRunner{Dataset: ep.NewDataset(str.Data(1)), ThrowOnData: port2}
 	runner := ep.Pipeline(
 		infinityRunner,
@@ -118,9 +118,9 @@ func _TestProject_errorWithExchange(t *testing.T) {
 
 func TestProject_nested_errorInFirstRunner(t *testing.T) {
 	err := fmt.Errorf("something bad happened")
-	infinityRunner1 := &infinityRunner{}
-	infinityRunner2 := &infinityRunner{}
-	infinityRunner3 := &infinityRunner{}
+	infinityRunner1 := &waitForCancel{}
+	infinityRunner2 := &waitForCancel{}
+	infinityRunner3 := &waitForCancel{}
 	runner := ep.Project(
 		ep.Project(infinityRunner3, NewErrRunner(err)),
 		ep.Project(infinityRunner1, infinityRunner2),
@@ -137,9 +137,9 @@ func TestProject_nested_errorInFirstRunner(t *testing.T) {
 
 func TestProject_nested_errorInSecondRunner(t *testing.T) {
 	err := fmt.Errorf("something bad happened")
-	infinityRunner1 := &infinityRunner{}
-	infinityRunner2 := &infinityRunner{}
-	infinityRunner3 := &infinityRunner{}
+	infinityRunner1 := &waitForCancel{}
+	infinityRunner2 := &waitForCancel{}
+	infinityRunner3 := &waitForCancel{}
 	runner := ep.Project(
 		ep.Project(infinityRunner1, infinityRunner2),
 		ep.Project(infinityRunner3, NewErrRunner(err)),
