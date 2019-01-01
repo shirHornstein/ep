@@ -79,3 +79,24 @@ func Bench(r ep.Runner, datasets ...ep.Dataset) (err error) {
 
 	return err
 }
+
+// BenchWithContext is helper function for tests, doing the same as Bench
+// with given context
+func BenchWithContext(ctx context.Context, r ep.Runner, datasets ...ep.Dataset) (err error) {
+	out := make(chan ep.Dataset)
+	inp := make(chan ep.Dataset, len(datasets))
+	for _, data := range datasets {
+		inp <- data
+	}
+	close(inp)
+
+	go func() {
+		defer close(out)
+		err = r.Run(ctx, inp, out)
+	}()
+
+	for range out {
+	}
+
+	return err
+}
