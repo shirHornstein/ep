@@ -6,7 +6,6 @@ import (
 	"github.com/panoplyio/ep"
 	"github.com/panoplyio/ep/eptest"
 	"github.com/stretchr/testify/require"
-	"strconv"
 	"testing"
 )
 
@@ -42,9 +41,9 @@ func TestPipeline_errInFirstRunner(t *testing.T) {
 	_, resErr := eptest.Run(runner, data)
 
 	require.Error(t, resErr)
-	require.Equal(t, "something bad happened", resErr.Error())
-	require.Equal(t, false, infinityRunner1.IsRunning(), "Infinity go-routine leak")
-	require.Equal(t, false, infinityRunner2.IsRunning(), "Infinity go-routine leak")
+	require.Equal(t, err.Error(), resErr.Error())
+	require.False(t, infinityRunner1.IsRunning(), "Infinity go-routine leak")
+	require.False(t, infinityRunner2.IsRunning(), "Infinity go-routine leak")
 }
 
 // test that upon an error, the producing (infinity) runners are canceled.
@@ -58,9 +57,9 @@ func TestPipeline_errInSecondRunner(t *testing.T) {
 	_, resErr := eptest.Run(runner, data)
 
 	require.Error(t, resErr)
-	require.Equal(t, "something bad happened", resErr.Error())
-	require.Equal(t, false, infinityRunner1.IsRunning(), "Infinity go-routine leak")
-	require.Equal(t, false, infinityRunner2.IsRunning(), "Infinity go-routine leak")
+	require.Equal(t, err.Error(), resErr.Error())
+	require.False(t, infinityRunner1.IsRunning(), "Infinity go-routine leak")
+	require.False(t, infinityRunner2.IsRunning(), "Infinity go-routine leak")
 }
 
 // test that upon an error, the producing (infinity) runners are canceled.
@@ -74,9 +73,9 @@ func TestPipeline_errInThirdRunner(t *testing.T) {
 	_, resErr := eptest.Run(runner, data)
 
 	require.Error(t, resErr)
-	require.Equal(t, "something bad happened", resErr.Error())
-	require.Equal(t, false, infinityRunner1.IsRunning(), "Infinity go-routine leak")
-	require.Equal(t, false, infinityRunner2.IsRunning(), "Infinity go-routine leak")
+	require.Equal(t, err.Error(), resErr.Error())
+	require.False(t, infinityRunner1.IsRunning(), "Infinity go-routine leak")
+	require.False(t, infinityRunner2.IsRunning(), "Infinity go-routine leak")
 }
 
 // test that upon an error, the producing (infinity) runners are canceled.
@@ -94,60 +93,48 @@ func TestPipeline_errInNestedPipeline(t *testing.T) {
 	_, resErr := eptest.Run(runner, data)
 
 	require.Error(t, resErr)
-	require.Equal(t, "something bad happened", resErr.Error())
-	require.Equal(t, false, infinityRunner1.IsRunning(), "Infinity go-routine leak")
-	require.Equal(t, false, infinityRunner2.IsRunning(), "Infinity go-routine leak")
-	require.Equal(t, false, infinityRunner3.IsRunning(), "Infinity go-routine leak")
+	require.Equal(t, err.Error(), resErr.Error())
+	require.False(t, infinityRunner1.IsRunning(), "Infinity go-routine leak")
+	require.False(t, infinityRunner2.IsRunning(), "Infinity go-routine leak")
+	require.False(t, infinityRunner3.IsRunning(), "Infinity go-routine leak")
 }
 
 // test that upon an error, the producing (infinity) runners are canceled.
 // Otherwise - this test will block indefinitely
 // project error should cancel all inner runners
 func TestPipeline_errNestedPipelineWithProject(t *testing.T) {
+	pipeLength := 8
 	err := fmt.Errorf("something bad happened")
-	var testsCases = []struct {
-		casee    string
-		errIndex int
-	}{
-		{"error in runner", 7},
-		{"error in runner", 6},
-		{"error in runner", 5},
-		{"error in runner", 4},
-		{"error in runner", 3},
-		{"error in runner", 2},
-		{"error in runner", 1},
-		{"error in runner", 0},
-	}
 
-	for _, tt := range testsCases {
-		t.Run(tt.casee+strconv.Itoa(tt.errIndex), func(t *testing.T) {
+	for errIdx := 0; errIdx < pipeLength; errIdx++ {
+		t.Run(fmt.Sprintf("error in runner %d", errIdx), func(t *testing.T) {
 			runners := make([]ep.Runner, 8)
 			for i := range runners {
-				if tt.errIndex == i {
+				if i == errIdx {
 					runners[i] = NewErrRunner(err)
 				} else {
 					runners[i] = &waitForCancel{}
 				}
 			}
-			runner :=
-				ep.Pipeline(
-					ep.Project(
-						ep.Pipeline(runners[0], runners[1]),
-						ep.Pipeline(runners[2], runners[3]),
-					),
-					ep.Project(
-						ep.Pipeline(runners[4], runners[5]),
-						ep.Pipeline(runners[6], runners[7]),
-					))
+			runner := ep.Pipeline(
+				ep.Project(
+					ep.Pipeline(runners[0], runners[1]),
+					ep.Pipeline(runners[2], runners[3]),
+				),
+				ep.Project(
+					ep.Pipeline(runners[4], runners[5]),
+					ep.Pipeline(runners[6], runners[7]),
+				),
+			)
 
 			data := ep.NewDataset(str.Data(1))
 			_, resErr := eptest.Run(runner, data)
 
 			require.Error(t, resErr)
-			require.Equal(t, "something bad happened", resErr.Error())
+			require.Equal(t, err.Error(), resErr.Error())
 			for i, r := range runners {
-				if i != tt.errIndex {
-					require.Equal(t, false, r.(*waitForCancel).IsRunning(), "Infinity go-routine leak")
+				if i != errIdx {
+					require.False(t, r.(*waitForCancel).IsRunning(), "Infinity go-routine leak")
 				}
 			}
 		})
