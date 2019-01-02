@@ -62,6 +62,12 @@ func RunDist(n int, r ep.Runner, datasets ...ep.Dataset) (ep.Dataset, error) {
 
 // Bench is like Run except that it doesn't accumulate its output in memory
 func Bench(r ep.Runner, datasets ...ep.Dataset) (err error) {
+	return BenchWithContext(context.Background(), r, datasets...)
+}
+
+// BenchWithContext is helper function for tests, doing the same as Bench
+// with given context
+func BenchWithContext(ctx context.Context, r ep.Runner, datasets ...ep.Dataset) (err error) {
 	out := make(chan ep.Dataset)
 	inp := make(chan ep.Dataset, len(datasets))
 	for _, data := range datasets {
@@ -71,7 +77,7 @@ func Bench(r ep.Runner, datasets ...ep.Dataset) (err error) {
 
 	go func() {
 		defer close(out)
-		err = r.Run(context.Background(), inp, out)
+		err = r.Run(ctx, inp, out)
 	}()
 
 	for range out {
