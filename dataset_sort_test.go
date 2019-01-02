@@ -1,8 +1,10 @@
 package ep_test
 
 import (
+	"context"
 	"fmt"
 	"github.com/panoplyio/ep"
+	"github.com/panoplyio/ep/eptest"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -119,4 +121,39 @@ func TestDatasetSort_noSortingCols(t *testing.T) {
 	// verify other columns were updated as well
 	require.Equal(t, "[d a f g b e c]", fmt.Sprintf("%+v", dataset.At(1)))
 	require.Equal(t, "[bar hello z a world bar foo]", fmt.Sprintf("%+v", dataset.At(2)))
+}
+
+func TestDatasetSort_ignoreDummies(t *testing.T) {
+	var d1 ep.Data = strs([]string{"hello", "world", "foo", "bar", "bar", "a", "z"})
+	data := ep.NewDataset(d1)
+
+	runner := ep.Project(&question{}, &upper{}, ep.PassThrough(), &question{}).(ep.FilterRunner)
+	runner.Filter([]bool{false, true, true, false}) // make 0 & 3 dummies
+	sortRunner := &sorter{[]ep.SortingCol{{Index: 1, Desc: false}}}
+
+	res, err := eptest.Run(ep.Pipeline(runner, sortRunner), data)
+	require.NoError(t, err)
+
+	require.Equal(t, 7, res.Len())
+	require.Equal(t, 4, res.Width())
+
+	// sorting done according to sorting columns
+	require.Equal(t, "[A BAR BAR FOO HELLO WORLD Z]", fmt.Sprintf("%+v", res.At(1)))
+	// verify other columns were updated as well
+	require.Equal(t, "[a bar bar foo hello world z]", fmt.Sprintf("%+v", res.At(2)))
+	require.Equal(t, -1, res.At(0).Len(), "expected dummies")
+	require.Equal(t, -1, res.At(3).Len(), "expected dummies")
+}
+
+type sorter struct {
+	sortingCols []ep.SortingCol
+}
+
+func (*sorter) Returns() []ep.Type { return []ep.Type{ep.Wildcard} }
+func (r *sorter) Run(ctx context.Context, inp, out chan ep.Dataset) error {
+	for data := range inp {
+		ep.Sort(data, r.sortingCols)
+		out <- data
+	}
+	return nil
 }
