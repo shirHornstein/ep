@@ -9,6 +9,10 @@ var _ = Types.register("record", Record)
 
 var errMismatch = fmt.Errorf("mismatched number of rows")
 
+// ErrMismatchTypes - triggered in case mismatched types
+var ErrMismatchTypes = fmt.Errorf("mismatched types")
+var errCompareDiffTypes = fmt.Errorf("cannot compare record types with different numbers of columns")
+
 // Dataset is a composite Data interface, containing several internal Data
 // objects. It's a Data in itself, but allows traversing and manipulating the
 // contained Data instances
@@ -272,6 +276,41 @@ func (set dataset) Equal(other Data) bool {
 		}
 	}
 	return true
+}
+
+// see Data.Compare
+func (set dataset) Compare(other Data) ([]Comparison, error) {
+	otherSet, ok := other.(Dataset)
+	if !ok {
+		return nil, ErrMismatchTypes
+	}
+	if set.Width() != otherSet.Width() {
+		return nil, errCompareDiffTypes
+	}
+
+	res, err := set.At(0).Compare(otherSet.At(0))
+	if err != nil {
+		return nil, err
+	}
+	for i := 1; i < set.Width(); i++ {
+		resI, err := set.At(i).Compare(otherSet.At(i))
+		if err != nil {
+			return nil, err
+		}
+		compare(res, resI)
+	}
+	return res, nil
+}
+
+func compare(res, with []Comparison) {
+	for i, resI := range res {
+		if resI != ComparisonBothNulls && resI != ComparisonEqual {
+			continue
+		}
+		if resI < with[i] {
+			res[i] = with[i]
+		}
+	}
 }
 
 // see Data.Copy

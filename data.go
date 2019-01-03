@@ -4,6 +4,22 @@ import (
 	"sort"
 )
 
+// Comparison is an enum for comparing data. We chose to use type byte, due to memory constraints. The 'a', 'b', 'c'... is arbitrary.
+type Comparison byte
+
+const (
+	// ComparisonEqual represents equal to other data object, e.g. 1 == 1
+	ComparisonEqual Comparison = 'a'
+	// ComparisonBothNulls represents a case in which the current & the other data objects are null, e.g. null == null
+	ComparisonBothNulls Comparison = 'b'
+	// ComparisonNull represents a case in which only 1 of the data objects is null, e.g. 1 == null
+	ComparisonNull Comparison = 'c'
+	// ComparisonGreater represents greater than other data object, e.g. 2 > 1
+	ComparisonGreater Comparison = 'd'
+	// ComparisonLess represents less than other data object, e.g. 1 < 2
+	ComparisonLess Comparison = 'e'
+)
+
 // Data is an abstract interface representing a set of typed values. Implement
 // it for each type of data that you need to support.
 // NOTES:
@@ -47,6 +63,9 @@ type Data interface {
 	// Equal checks if another data object refer to same underlying data
 	// as this one (shallow comparison)
 	Equal(other Data) bool
+
+	// Compare checks current object data to other data object
+	Compare(other Data) ([]Comparison, error)
 
 	// Copy copies single row from given data at fromRow position to this data,
 	// located at toRow position.

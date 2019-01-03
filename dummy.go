@@ -28,5 +28,9 @@ func (variadicDummies) Equal(data Data) bool {
 	_, ok := data.(variadicDummies)
 	return ok
 }
+
+func (variadicDummies) Compare(other Data) ([]Comparison, error) {
+	return []Comparison{ComparisonEqual}, nil
+}
 func (variadicDummies) Copy(Data, int, int) {}
 func (variadicDummies) Strings() []string   { return []string{} }

@@ -48,6 +48,34 @@ func (vs strs) Equal(other ep.Data) bool {
 	// for efficiency - avoid reflection and check address of underlying arrays
 	return fmt.Sprintf("%p", vs) == fmt.Sprintf("%p", other)
 }
+
+func (vs strs) Compare(other ep.Data) ([]ep.Comparison, error) {
+	otherData, ok := other.(*strs)
+	if !ok {
+		return nil, ep.ErrMismatchTypes
+	}
+	res := make([]ep.Comparison, vs.Len())
+	computeStrsComparing(vs, *otherData, res)
+	return res, nil
+}
+
+func computeStrsComparing(d strs, otherData strs, res []ep.Comparison) {
+	for i := 0; i < d.Len(); i++ {
+		switch {
+		case d.IsNull(i) && otherData.IsNull(i):
+			res[i] = ep.ComparisonBothNulls
+		case d.IsNull(i) || otherData.IsNull(i):
+			res[i] = ep.ComparisonNull
+		case d[i] == otherData[i]:
+			res[i] = ep.ComparisonEqual
+		case d[i] > otherData[i]:
+			res[i] = ep.ComparisonGreater
+		case d[i] < otherData[i]:
+			res[i] = ep.ComparisonLess
+		}
+	}
+}
+
 func (vs strs) Copy(from ep.Data, fromRow, toRow int) {
 	src := from.(strs)
 	vs[toRow] = src[fromRow]
@@ -88,6 +116,34 @@ func (vs integers) Equal(other ep.Data) bool {
 	// for efficiency - avoid reflection and check address of underlying arrays
 	return fmt.Sprintf("%p", vs) == fmt.Sprintf("%p", other)
 }
+
+func (vs integers) Compare(other ep.Data) ([]ep.Comparison, error) {
+	otherData, ok := other.(*integers)
+	if !ok {
+		return nil, ep.ErrMismatchTypes
+	}
+	res := make([]ep.Comparison, vs.Len())
+	computeIntegersComparing(vs, *otherData, res)
+	return res, nil
+}
+
+func computeIntegersComparing(d integers, otherData integers, res []ep.Comparison) {
+	for i := 0; i < d.Len(); i++ {
+		switch {
+		case d.IsNull(i) && otherData.IsNull(i):
+			res[i] = ep.ComparisonBothNulls
+		case d.IsNull(i) || otherData.IsNull(i):
+			res[i] = ep.ComparisonNull
+		case d[i] == otherData[i]:
+			res[i] = ep.ComparisonEqual
+		case d[i] > otherData[i]:
+			res[i] = ep.ComparisonGreater
+		case d[i] < otherData[i]:
+			res[i] = ep.ComparisonLess
+		}
+	}
+}
+
 func (vs integers) Copy(from ep.Data, fromRow, toRow int) {
 	src := from.(integers)
 	vs[toRow] = src[fromRow]
