@@ -6,11 +6,12 @@ import (
 	"github.com/panoplyio/ep"
 	"strings"
 	"sync"
+	"time"
 )
 
 var _ = ep.Runners.
 	Register("errRunner", &errRunner{}).
-	Register("infinityRunner", &infinityRunner{}).
+	Register("waitForCancel", &waitForCancel{}).
 	Register("fixedData", &fixedData{}).
 	Register("dataRunner", &dataRunner{}).
 	Register("nodeAddr", &nodeAddr{}).
@@ -25,7 +26,7 @@ type errRunner struct {
 	Name string
 }
 
-func NewErrRunner(e error) ep.Runner {
+func newErrRunner(e error) ep.Runner {
 	return &errRunner{e, "err"}
 }
 
@@ -37,8 +38,8 @@ func (r *errRunner) Run(ctx context.Context, inp, out chan ep.Dataset) error {
 	return r.error
 }
 
-// infinityRunner infinitely emits data until it's canceled
-type infinityRunner struct {
+// waitForCancel infinitely emits data until it's canceled
+type waitForCancel struct {
 	isRunningLock sync.Mutex
 	// isRunning flag helps tests ensure that the go-routine didn't leak
 	isRunning bool
@@ -47,13 +48,15 @@ type infinityRunner struct {
 	Name string
 }
 
-func (*infinityRunner) Returns() []ep.Type { return []ep.Type{str} }
-func (r *infinityRunner) IsRunning() bool {
+func (*waitForCancel) Returns() []ep.Type { return []ep.Type{str} }
+func (r *waitForCancel) IsRunning() bool {
 	r.isRunningLock.Lock()
 	defer r.isRunningLock.Unlock()
 	return r.isRunning
 }
-func (r *infinityRunner) Run(ctx context.Context, inp, out chan ep.Dataset) error {
+func (r *waitForCancel) Run(ctx context.Context, inp, out chan ep.Dataset) error {
+	ticker := time.NewTicker(100 * time.Millisecond)
+
 	r.isRunningLock.Lock()
 	r.isRunning = true
 	r.isRunningLock.Unlock()
@@ -64,15 +67,17 @@ func (r *infinityRunner) Run(ctx context.Context, inp, out chan ep.Dataset) erro
 		r.isRunningLock.Unlock()
 	}()
 
+	go func() {
+		for range inp {
+		} // drain input, waitForCancel doesn't depend in input
+	}()
+
 	// infinitely produce data, until canceled
-	for { // TODO infinity
+	for {
 		select {
 		case <-ctx.Done():
 			return nil
-		case _, ok := <-inp:
-			if !ok {
-				return nil
-			}
+		case <-ticker.C:
 			out <- ep.NewDataset(strs{"data"})
 		}
 	}

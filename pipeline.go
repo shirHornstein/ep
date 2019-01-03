@@ -85,7 +85,7 @@ func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 			defer wg.Done()
 			defer close(middle)
 			errs[i] = rs[i].Run(ctx, inp, middle)
-			if errs[i] == context.Canceled {
+			if errs[i] != nil {
 				cancel()
 			}
 		}(i, inp, middle)
