@@ -93,12 +93,12 @@ func (rs project) Run(origCtx context.Context, inp, out chan Dataset) (err error
 		go func(idx int) {
 			errs[idx] = rs[idx].Run(ctx, inps[idx], outs[idx])
 			close(outs[idx])
-			// in case of error - drain inps[idx] to allow project keep
-			// duplicating data
 			if errs[idx] != nil {
 				cancel()
 			}
 			wg.Done()
+			// in case of error - drain inps[idx] to allow project keep
+			// duplicating data
 			drain(inps[idx])
 		}(i)
 	}
@@ -115,10 +115,8 @@ func (rs project) Run(origCtx context.Context, inp, out chan Dataset) (err error
 
 		for {
 			select {
-			case <-origCtx.Done():
+			case <-ctx.Done(): // listen to both ctx and origCtx
 				cancel()
-				return
-			case <-ctx.Done():
 				return
 			case data, ok := <-inp:
 				if !ok {

@@ -61,6 +61,7 @@ func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 	}()
 
 	ctx, cancel := context.WithCancel(ctx)
+	inp = wrapInpWithCancel(ctx, inp)
 
 	// run all (except the very last one) internal runners, piping the output
 	// from each runner to the next.
@@ -98,6 +99,25 @@ func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 	// block until last runner completion
 	errs[lastIndex] = rs[lastIndex].Run(ctx, inp, out)
 	return
+}
+
+func wrapInpWithCancel(ctx context.Context, inp chan Dataset) chan Dataset {
+	newInp := make(chan Dataset)
+	go func() {
+		defer close(newInp)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case data, open := <-inp:
+				if !open {
+					return
+				}
+				newInp <- data
+			}
+		}
+	}()
+	return newInp
 }
 
 // The implementation isn't trivial because it has to account for Wildcard types
