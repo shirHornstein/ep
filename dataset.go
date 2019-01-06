@@ -289,6 +289,9 @@ func (set dataset) Compare(other Data) ([]compare.Comparison, error) {
 		return nil, errCompareDiffTypes
 	}
 
+	// The comparison between the 2 datasets, is being done by batches.
+	// The 1st batch comparison iteration, doesn't need to compare itself to other batches,
+	// because it's the only existing batch.
 	res, err := set.At(0).Compare(otherSet.At(0))
 	if err != nil {
 		return nil, err

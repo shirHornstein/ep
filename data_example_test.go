@@ -51,30 +51,23 @@ func (vs strs) Equal(other ep.Data) bool {
 }
 
 func (vs strs) Compare(other ep.Data) ([]compare.Comparison, error) {
-	otherData, ok := other.(*strs)
-	if !ok {
-		return nil, ep.ErrMismatchTypes
-	}
+	otherData := other.(strs)
 	res := make([]compare.Comparison, vs.Len())
-	computeStrsComparing(vs, *otherData, res)
-	return res, nil
-}
-
-func computeStrsComparing(d strs, otherData strs, res []compare.Comparison) {
-	for i := 0; i < d.Len(); i++ {
+	for i := 0; i < vs.Len(); i++ {
 		switch {
-		case d.IsNull(i) && otherData.IsNull(i):
+		case vs.IsNull(i) && otherData.IsNull(i):
 			res[i] = compare.BothNulls
-		case d.IsNull(i) || otherData.IsNull(i):
+		case vs.IsNull(i) || otherData.IsNull(i):
 			res[i] = compare.Null
-		case d[i] == otherData[i]:
+		case vs[i] == otherData[i]:
 			res[i] = compare.Equal
-		case d[i] > otherData[i]:
+		case vs[i] > otherData[i]:
 			res[i] = compare.BothNulls
-		case d[i] < otherData[i]:
+		case vs[i] < otherData[i]:
 			res[i] = compare.Less
 		}
 	}
+	return res, nil
 }
 
 func (vs strs) Copy(from ep.Data, fromRow, toRow int) {
@@ -119,30 +112,23 @@ func (vs integers) Equal(other ep.Data) bool {
 }
 
 func (vs integers) Compare(other ep.Data) ([]compare.Comparison, error) {
-	otherData, ok := other.(*integers)
-	if !ok {
-		return nil, ep.ErrMismatchTypes
-	}
+	otherData := other.(integers)
 	res := make([]compare.Comparison, vs.Len())
-	computeIntegersComparing(vs, *otherData, res)
-	return res, nil
-}
-
-func computeIntegersComparing(d integers, otherData integers, res []compare.Comparison) {
-	for i := 0; i < d.Len(); i++ {
+	for i := 0; i < vs.Len(); i++ {
 		switch {
-		case d.IsNull(i) && otherData.IsNull(i):
+		case vs.IsNull(i) && otherData.IsNull(i):
 			res[i] = compare.BothNulls
-		case d.IsNull(i) || otherData.IsNull(i):
+		case vs.IsNull(i) || otherData.IsNull(i):
 			res[i] = compare.Null
-		case d[i] == otherData[i]:
+		case vs[i] == otherData[i]:
 			res[i] = compare.Equal
-		case d[i] > otherData[i]:
+		case vs[i] > otherData[i]:
 			res[i] = compare.Greater
-		case d[i] < otherData[i]:
+		case vs[i] < otherData[i]:
 			res[i] = compare.Less
 		}
 	}
+	return res, nil
 }
 
 func (vs integers) Copy(from ep.Data, fromRow, toRow int) {
