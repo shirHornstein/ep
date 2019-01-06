@@ -1,7 +1,7 @@
 package compare
 
 // Comparison is an enum for comparing data. We chose to use type byte,
-// due to memory constraints. The 'a', 'b', 'c'... is arbitrary.
+// due to memory constraints.
 type Comparison byte
 
 const (
