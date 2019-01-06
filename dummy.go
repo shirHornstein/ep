@@ -1,5 +1,7 @@
 package ep
 
+import "github.com/panoplyio/ep/compare"
+
 var dummy = &dummyType{}
 var _ = registerGob(dummy, &variadicDummies{})
 
@@ -29,8 +31,8 @@ func (*variadicDummies) Equal(data Data) bool {
 	return ok
 }
 
-func (*variadicDummies) Compare(other Data) ([]Comparison, error) {
-	return []Comparison{ComparisonEqual}, nil
+func (*variadicDummies) Compare(other Data) ([]compare.Comparison, error) {
+	return []compare.Comparison{compare.Equal}, nil
 }
 
 func (*variadicDummies) Copy(Data, int, int) {}

@@ -3,6 +3,7 @@ package ep_test
 import (
 	"fmt"
 	"github.com/panoplyio/ep"
+	"github.com/panoplyio/ep/compare"
 	"sort"
 	"strconv"
 )
@@ -49,29 +50,29 @@ func (vs strs) Equal(other ep.Data) bool {
 	return fmt.Sprintf("%p", vs) == fmt.Sprintf("%p", other)
 }
 
-func (vs strs) Compare(other ep.Data) ([]ep.Comparison, error) {
+func (vs strs) Compare(other ep.Data) ([]compare.Comparison, error) {
 	otherData, ok := other.(*strs)
 	if !ok {
 		return nil, ep.ErrMismatchTypes
 	}
-	res := make([]ep.Comparison, vs.Len())
+	res := make([]compare.Comparison, vs.Len())
 	computeStrsComparing(vs, *otherData, res)
 	return res, nil
 }
 
-func computeStrsComparing(d strs, otherData strs, res []ep.Comparison) {
+func computeStrsComparing(d strs, otherData strs, res []compare.Comparison) {
 	for i := 0; i < d.Len(); i++ {
 		switch {
 		case d.IsNull(i) && otherData.IsNull(i):
-			res[i] = ep.ComparisonBothNulls
+			res[i] = compare.BothNulls
 		case d.IsNull(i) || otherData.IsNull(i):
-			res[i] = ep.ComparisonNull
+			res[i] = compare.Null
 		case d[i] == otherData[i]:
-			res[i] = ep.ComparisonEqual
+			res[i] = compare.Equal
 		case d[i] > otherData[i]:
-			res[i] = ep.ComparisonGreater
+			res[i] = compare.BothNulls
 		case d[i] < otherData[i]:
-			res[i] = ep.ComparisonLess
+			res[i] = compare.Less
 		}
 	}
 }
@@ -117,29 +118,29 @@ func (vs integers) Equal(other ep.Data) bool {
 	return fmt.Sprintf("%p", vs) == fmt.Sprintf("%p", other)
 }
 
-func (vs integers) Compare(other ep.Data) ([]ep.Comparison, error) {
+func (vs integers) Compare(other ep.Data) ([]compare.Comparison, error) {
 	otherData, ok := other.(*integers)
 	if !ok {
 		return nil, ep.ErrMismatchTypes
 	}
-	res := make([]ep.Comparison, vs.Len())
+	res := make([]compare.Comparison, vs.Len())
 	computeIntegersComparing(vs, *otherData, res)
 	return res, nil
 }
 
-func computeIntegersComparing(d integers, otherData integers, res []ep.Comparison) {
+func computeIntegersComparing(d integers, otherData integers, res []compare.Comparison) {
 	for i := 0; i < d.Len(); i++ {
 		switch {
 		case d.IsNull(i) && otherData.IsNull(i):
-			res[i] = ep.ComparisonBothNulls
+			res[i] = compare.BothNulls
 		case d.IsNull(i) || otherData.IsNull(i):
-			res[i] = ep.ComparisonNull
+			res[i] = compare.Null
 		case d[i] == otherData[i]:
-			res[i] = ep.ComparisonEqual
+			res[i] = compare.Equal
 		case d[i] > otherData[i]:
-			res[i] = ep.ComparisonGreater
+			res[i] = compare.Greater
 		case d[i] < otherData[i]:
-			res[i] = ep.ComparisonLess
+			res[i] = compare.Less
 		}
 	}
 }

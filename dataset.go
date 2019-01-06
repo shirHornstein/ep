@@ -2,6 +2,7 @@ package ep
 
 import (
 	"fmt"
+	"github.com/panoplyio/ep/compare"
 )
 
 var _ = registerGob(Record, NewDataset())
@@ -279,7 +280,7 @@ func (set dataset) Equal(other Data) bool {
 }
 
 // see Data.Compare
-func (set dataset) Compare(other Data) ([]Comparison, error) {
+func (set dataset) Compare(other Data) ([]compare.Comparison, error) {
 	otherSet, ok := other.(Dataset)
 	if !ok {
 		return nil, ErrMismatchTypes
@@ -293,22 +294,22 @@ func (set dataset) Compare(other Data) ([]Comparison, error) {
 		return nil, err
 	}
 	for i := 1; i < set.Width(); i++ {
-		resI, err := set.At(i).Compare(otherSet.At(i))
+		iterationResult, err := set.At(i).Compare(otherSet.At(i))
 		if err != nil {
 			return nil, err
 		}
-		compare(res, resI)
+		mergeComparisonResults(res, iterationResult)
 	}
 	return res, nil
 }
 
-func compare(res, with []Comparison) {
+func mergeComparisonResults(res, mergeWith []compare.Comparison) {
 	for i, resI := range res {
-		if resI != ComparisonBothNulls && resI != ComparisonEqual {
+		if resI != compare.BothNulls && resI != compare.Equal {
 			continue
 		}
-		if resI < with[i] {
-			res[i] = with[i]
+		if resI < mergeWith[i] {
+			res[i] = mergeWith[i]
 		}
 	}
 }
