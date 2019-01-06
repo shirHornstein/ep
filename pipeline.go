@@ -75,10 +75,7 @@ func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 		// can happen if the top runner has exited early due to an error or some
 		// other logic (LIMIT).
 		middle := make(chan Dataset)
-		defer func(middle chan Dataset) {
-			for range middle {
-			}
-		}(middle)
+		defer drain(middle)
 
 		wg.Add(1)
 		go func(i int, inp, middle chan Dataset) {
@@ -149,11 +146,12 @@ func (rs pipeline) returnsOne(j int) []Type {
 }
 
 func (rs pipeline) Filter(keep []bool) {
-	last := rs[len(rs)-1]
+	lastIdx := len(rs) - 1
+	last := rs[lastIdx]
 	// pipeline contains at least 2 runners.
 	// if last is exchange, filter its input (i.e. one runner before last)
 	if _, isExchanger := last.(*exchange); isExchanger {
-		last = rs[len(rs)-2]
+		last = rs[lastIdx-1]
 	}
 	if f, isFilterable := last.(FilterRunner); isFilterable {
 		f.Filter(keep)

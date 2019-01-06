@@ -91,7 +91,6 @@ func (rs project) Run(origCtx context.Context, inp, out chan Dataset) (err error
 		outs[i] = make(chan Dataset)
 		wg.Add(1)
 		go func(idx int) {
-			defer wg.Done()
 			errs[idx] = rs[idx].Run(ctx, inps[idx], outs[idx])
 			close(outs[idx])
 			// in case of error - drain inps[idx] to allow project keep
@@ -99,10 +98,8 @@ func (rs project) Run(origCtx context.Context, inp, out chan Dataset) (err error
 			if errs[idx] != nil {
 				cancel()
 			}
-			go func() {
-				for range inps[idx] {
-				}
-			}()
+			wg.Done()
+			drain(inps[idx])
 		}(i)
 	}
 
@@ -141,10 +138,7 @@ func (rs project) Run(origCtx context.Context, inp, out chan Dataset) (err error
 		cancel()
 		for i := range rs {
 			// drain all runners' output to allow them catch cancellation
-			go func(i int) {
-				for range outs[i] {
-				}
-			}(i)
+			go drain(outs[i])
 		}
 	}()
 
@@ -197,7 +191,7 @@ func (rs project) useDummySingleton() {
 	}
 }
 
-// dummyRunnerSingleton is a runner that does nothing and just drain inp
+// dummyRunnerSingleton is a runner that does nothing and just return immediately
 var dummyRunnerSingleton = &dummyRunner{}
 
 // variadicDummiesBatch is used for replacing unused columns

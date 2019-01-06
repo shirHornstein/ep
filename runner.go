@@ -149,3 +149,9 @@ func (r *pick) Run(_ context.Context, inp, out chan Dataset) error {
 	}
 	return nil
 }
+
+// helper function to drain inp/out channel
+func drain(c chan Dataset) {
+	for range c {
+	}
+}
