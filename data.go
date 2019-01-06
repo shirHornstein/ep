@@ -49,7 +49,7 @@ type Data interface {
 	// as this one (shallow comparison)
 	Equal(other Data) bool
 
-	// Compare compares given data to this data, row by row.
+	// Compare compares given data to this data, row by row
 	Compare(other Data) ([]compare.Comparison, error)
 
 	// Copy copies single row from given data at fromRow position to this data,
