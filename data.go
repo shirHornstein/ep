@@ -49,8 +49,10 @@ type Data interface {
 	// as this one (shallow comparison)
 	Equal(other Data) bool
 
-	// Compare comparing current object data (this) to other data object.
-	// The return type '[]compare.Comparison' - is an enum for comparing data.
+	// Compare compares given data to this data, row by row.
+	// The compare is being done on two sets: set (this) and the otherSet (other).
+	// It's being done column by column, and calculate final result for each row
+	// by merging columns comparison results.
 	Compare(other Data) ([]compare.Comparison, error)
 
 	// Copy copies single row from given data at fromRow position to this data,
