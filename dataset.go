@@ -280,6 +280,9 @@ func (set dataset) Equal(other Data) bool {
 }
 
 // see Data.Compare
+// Compare compares given data to this data, row by row.
+// Compare set and the otherSet, column by column, and calculate final result
+// for each row by merging columns comparison results.
 func (set dataset) Compare(other Data) ([]compare.Comparison, error) {
 	otherSet, ok := other.(Dataset)
 	if !ok {
@@ -289,8 +292,7 @@ func (set dataset) Compare(other Data) ([]compare.Comparison, error) {
 		return nil, errCompareDiffTypes
 	}
 
-	// The comparison between the 2 datasets, is being done by batches.
-	// The 1st batch comparison iteration, doesn't need to compare itself to other batches,
+	// The 1st comparison iteration, doesn't need to merge the comparison results,
 	// because it's the only existing batch.
 	res, err := set.At(0).Compare(otherSet.At(0))
 	if err != nil {
