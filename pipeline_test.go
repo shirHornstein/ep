@@ -121,7 +121,7 @@ type runnerWithoutArgs struct{ ep.Runner }
 
 // errors handling
 func TestPipeline_errorPropagation(t *testing.T) {
-	pipeLength := 8
+	pipeLength := 4
 	err := fmt.Errorf("something bad happened")
 
 	for errIdx := 0; errIdx < pipeLength; errIdx++ {
