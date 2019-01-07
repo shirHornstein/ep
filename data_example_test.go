@@ -52,9 +52,9 @@ func (vs strs) Equal(other ep.Data) bool {
 	return fmt.Sprintf("%p", vs) == fmt.Sprintf("%p", other)
 }
 
-func (vs strs) Compare(other ep.Data) ([]compare.Comparison, error) {
+func (vs strs) Compare(other ep.Data) ([]compare.Result, error) {
 	otherData := other.(strs)
-	res := make([]compare.Comparison, vs.Len())
+	res := make([]compare.Result, vs.Len())
 	for i := 0; i < vs.Len(); i++ {
 		switch {
 		case vs.IsNull(i) && otherData.IsNull(i):
@@ -113,9 +113,9 @@ func (vs integers) Equal(other ep.Data) bool {
 	return fmt.Sprintf("%p", vs) == fmt.Sprintf("%p", other)
 }
 
-func (vs integers) Compare(other ep.Data) ([]compare.Comparison, error) {
+func (vs integers) Compare(other ep.Data) ([]compare.Result, error) {
 	otherData := other.(integers)
-	res := make([]compare.Comparison, vs.Len())
+	res := make([]compare.Result, vs.Len())
 	for i := 0; i < vs.Len(); i++ {
 		switch {
 		case vs.IsNull(i) && otherData.IsNull(i):
@@ -154,11 +154,11 @@ func ExampleData() {
 	// Output: [bar foo]
 }
 
-func TestBoris(t *testing.T) {
+func TestStrs(t *testing.T) {
 	t.Run("RegularStrings", func(t *testing.T) {
 		d1 := strs([]string{"a", "bb", "c", "x", " ", "", " "})
 		d2 := strs([]string{"a", "b", "ccc", "", "x", "", " "})
-		expected := []compare.Comparison{compare.Equal, compare.Greater, compare.Less, compare.Greater, compare.Less, compare.Equal, compare.Equal}
+		expected := []compare.Result{compare.Equal, compare.Greater, compare.Less, compare.Greater, compare.Less, compare.Equal, compare.Equal}
 		comparisonResult, _ := d1.Compare(d2)
 		require.EqualValues(t, expected, comparisonResult)
 	})
@@ -166,7 +166,7 @@ func TestBoris(t *testing.T) {
 	t.Run("DifferentStrings", func(t *testing.T) {
 		d1 := strs([]string{"a1", "b@@@", "$$$", "1a2b3c"})
 		d2 := strs([]string{"a1", "b", "###", "abc123"})
-		expected := []compare.Comparison{compare.Equal, compare.Greater, compare.Greater, compare.Less}
+		expected := []compare.Result{compare.Equal, compare.Greater, compare.Greater, compare.Less}
 		comparisonResult, _ := d1.Compare(d2)
 		require.EqualValues(t, expected, comparisonResult)
 	})
@@ -183,11 +183,11 @@ func TestBoris(t *testing.T) {
 	})
 }
 
-func TestColumnStrings3(t *testing.T) {
+func TestIntegers(t *testing.T) {
 	t.Run("RegularIntegers", func(t *testing.T) {
 		d1 := integers{1, 2, 5}
 		d2 := integers{1, 3, 4}
-		expected := []compare.Comparison{compare.Equal, compare.Less, compare.Greater}
+		expected := []compare.Result{compare.Equal, compare.Less, compare.Greater}
 		comparisonResult, _ := d1.Compare(d2)
 		require.EqualValues(t, expected, comparisonResult)
 	})
@@ -195,7 +195,7 @@ func TestColumnStrings3(t *testing.T) {
 	t.Run("DifferentIntegers", func(t *testing.T) {
 		d1 := integers{'1', 8, 9}
 		d2 := integers{'2', '8', ' '}
-		expected := []compare.Comparison{compare.Less, compare.Less, compare.Less}
+		expected := []compare.Result{compare.Less, compare.Less, compare.Less}
 		comparisonResult, _ := d1.Compare(d2)
 		require.EqualValues(t, expected, comparisonResult)
 	})

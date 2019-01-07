@@ -50,7 +50,7 @@ type Data interface {
 	Equal(other Data) bool
 
 	// Compare compares given data to this data, row by row
-	Compare(other Data) ([]compare.Comparison, error)
+	Compare(other Data) ([]compare.Result, error)
 
 	// Copy copies single row from given data at fromRow position to this data,
 	// located at toRow position.

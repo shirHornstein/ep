@@ -282,7 +282,7 @@ func (set dataset) Equal(other Data) bool {
 // see Data.Compare
 // Compare set and the otherSet, column by column, and calculate final result
 // for each row by merging columns comparison results.
-func (set dataset) Compare(other Data) ([]compare.Comparison, error) {
+func (set dataset) Compare(other Data) ([]compare.Result, error) {
 	otherSet, ok := other.(Dataset)
 	if !ok {
 		return nil, ErrMismatchTypes
@@ -306,7 +306,7 @@ func (set dataset) Compare(other Data) ([]compare.Comparison, error) {
 	return res, nil
 }
 
-func mergeComparisonResults(res, mergeWith []compare.Comparison) {
+func mergeComparisonResults(res, mergeWith []compare.Result) {
 	for i, resI := range res {
 		if resI != compare.BothNulls && resI != compare.Equal {
 			continue

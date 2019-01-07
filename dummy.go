@@ -32,9 +32,9 @@ func (*variadicDummies) Equal(data Data) bool {
 }
 
 // Compare implements ep.Data
-func (vs *variadicDummies) Compare(other Data) ([]compare.Comparison, error) {
+func (vs *variadicDummies) Compare(other Data) ([]compare.Result, error) {
 	otherData := other.(*variadicDummies)
-	res := make([]compare.Comparison, vs.Len())
+	res := make([]compare.Result, vs.Len())
 	for i := 0; i < vs.Len(); i++ {
 		switch {
 		case vs.IsNull(i) && otherData.IsNull(i):
