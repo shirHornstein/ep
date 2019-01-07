@@ -31,8 +31,21 @@ func (*variadicDummies) Equal(data Data) bool {
 	return ok
 }
 
-func (*variadicDummies) Compare(other Data) ([]compare.Comparison, error) {
-	return []compare.Comparison{compare.Equal}, nil
+// Compare implements ep.Data
+func (vs *variadicDummies) Compare(other Data) ([]compare.Comparison, error) {
+	otherData := other.(*variadicDummies)
+	res := make([]compare.Comparison, vs.Len())
+	for i := 0; i < vs.Len(); i++ {
+		switch {
+		case vs.IsNull(i) && otherData.IsNull(i):
+			res[i] = compare.BothNulls
+		case vs.IsNull(i) || otherData.IsNull(i):
+			res[i] = compare.Null
+		case vs.Equal(otherData):
+			res[i] = compare.Equal
+		}
+	}
+	return res, nil
 }
 
 func (*variadicDummies) Copy(Data, int, int) {}
