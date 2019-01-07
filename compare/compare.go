@@ -1,7 +1,6 @@
 package compare
 
-// Result is an enum for comparing data. We chose to use type byte,
-// due to memory constraints.
+// Result is an enum for comparison results.
 type Result byte
 
 const (
@@ -13,6 +12,6 @@ const (
 	Null
 	// Greater represents greater than other data object, e.g. 2 > 1
 	Greater
-	// Less represents less than other data object, e.g. 1 < 2
+	// Less represents smaller value than value, e.g. 1 < 2
 	Less
 )

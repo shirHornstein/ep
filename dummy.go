@@ -33,19 +33,7 @@ func (*variadicDummies) Equal(data Data) bool {
 
 // Compare implements ep.Data
 func (vs *variadicDummies) Compare(other Data) ([]compare.Result, error) {
-	otherData := other.(*variadicDummies)
-	res := make([]compare.Result, vs.Len())
-	for i := 0; i < vs.Len(); i++ {
-		switch {
-		case vs.IsNull(i) && otherData.IsNull(i):
-			res[i] = compare.BothNulls
-		case vs.IsNull(i) || otherData.IsNull(i):
-			res[i] = compare.Null
-		case vs.Equal(otherData):
-			res[i] = compare.Equal
-		}
-	}
-	return res, nil
+	panic("dummies are not comparable")
 }
 
 func (*variadicDummies) Copy(Data, int, int) {}
