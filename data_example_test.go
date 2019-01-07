@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"github.com/panoplyio/ep"
 	"github.com/panoplyio/ep/compare"
+	"github.com/stretchr/testify/require"
 	"sort"
 	"strconv"
+	"testing"
 )
 
 var _ = ep.Types.
@@ -62,7 +64,7 @@ func (vs strs) Compare(other ep.Data) ([]compare.Comparison, error) {
 		case vs[i] == otherData[i]:
 			res[i] = compare.Equal
 		case vs[i] > otherData[i]:
-			res[i] = compare.BothNulls
+			res[i] = compare.Greater
 		case vs[i] < otherData[i]:
 			res[i] = compare.Less
 		}
@@ -150,4 +152,62 @@ func ExampleData() {
 	fmt.Println(strs.Strings())
 
 	// Output: [bar foo]
+}
+
+func TestBoris(t *testing.T) {
+	t.Run("RegularStrings", func(t *testing.T) {
+		d1 := strs([]string{"a", "bb", "c", "x", " ", "", " "})
+		d2 := strs([]string{"a", "b", "ccc", "", "x", "", " "})
+		expected := []compare.Comparison{compare.Equal, compare.Greater, compare.Less, compare.Greater, compare.Less, compare.Equal, compare.Equal}
+		comparisonResult, _ := d1.Compare(d2)
+		require.EqualValues(t, expected, comparisonResult)
+	})
+
+	t.Run("DifferentStrings", func(t *testing.T) {
+		d1 := strs([]string{"a1", "b@@@", "$$$", "1a2b3c"})
+		d2 := strs([]string{"a1", "b", "###", "abc123"})
+		expected := []compare.Comparison{compare.Equal, compare.Greater, compare.Greater, compare.Less}
+		comparisonResult, _ := d1.Compare(d2)
+		require.EqualValues(t, expected, comparisonResult)
+	})
+
+	t.Run("PanicIndexOutOfRange", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r != nil {
+				require.Error(t, fmt.Errorf("index out of range"), r)
+			}
+		}()
+		d1 := strs([]string{"a1", "b2b"})
+		d2 := strs([]string{"a1"})
+		_, _ = d1.Compare(d2)
+	})
+}
+
+func TestColumnStrings3(t *testing.T) {
+	t.Run("RegularIntegers", func(t *testing.T) {
+		d1 := integers{1, 2, 5}
+		d2 := integers{1, 3, 4}
+		expected := []compare.Comparison{compare.Equal, compare.Less, compare.Greater}
+		comparisonResult, _ := d1.Compare(d2)
+		require.EqualValues(t, expected, comparisonResult)
+	})
+
+	t.Run("DifferentIntegers", func(t *testing.T) {
+		d1 := integers{'1', 8, 9}
+		d2 := integers{'2', '8', ' '}
+		expected := []compare.Comparison{compare.Less, compare.Less, compare.Less}
+		comparisonResult, _ := d1.Compare(d2)
+		require.EqualValues(t, expected, comparisonResult)
+	})
+
+	t.Run("PanicIndexOutOfRange", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r != nil {
+				require.Error(t, fmt.Errorf("index out of range"), r)
+			}
+		}()
+		d1 := integers{1, 2}
+		d2 := integers{3}
+		_, _ = d1.Compare(d2)
+	})
 }
