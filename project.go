@@ -189,7 +189,7 @@ func (rs project) useDummySingleton() {
 	}
 }
 
-// dummyRunnerSingleton is a runner that does nothing and just return immediately
+// dummyRunnerSingleton is a runner that does nothing and just returns immediately
 var dummyRunnerSingleton = &dummyRunner{}
 
 // variadicDummiesBatch is used for replacing unused columns

@@ -126,7 +126,7 @@ func TestPipeline_errorPropagation(t *testing.T) {
 
 	for errIdx := 0; errIdx < pipeLength; errIdx++ {
 		t.Run(fmt.Sprintf("error in runner %d", errIdx), func(t *testing.T) {
-			runners := make([]ep.Runner, 8)
+			runners := make([]ep.Runner, pipeLength)
 			for i := range runners {
 				if i == errIdx {
 					runners[i] = newErrRunner(err)
@@ -150,30 +150,32 @@ func TestPipeline_errorPropagation(t *testing.T) {
 	}
 }
 
-func TestPipeline_errorPropagationWithProject(t *testing.T) {
-	pipeLength := 8
+func TestPipeline_multipleErrorsPropagation(t *testing.T) {
+	pipeLength := 10
 	err := fmt.Errorf("something bad happened")
 
 	for errIdx := 0; errIdx < pipeLength; errIdx++ {
-		t.Run(fmt.Sprintf("error in runner %d", errIdx), func(t *testing.T) {
-			runners := make([]ep.Runner, 8)
+		t.Run(fmt.Sprintf("first error in runner %d", errIdx), func(t *testing.T) {
+			runners := make([]ep.Runner, pipeLength)
 			for i := range runners {
-				if i == errIdx {
+				if i == errIdx || i == (errIdx+2)%pipeLength {
 					runners[i] = newErrRunner(err)
-				} else {
+				} else if i == (errIdx+1)%pipeLength {
 					runners[i] = &waitForCancel{}
+				} else {
+					runners[i] = ep.PassThrough()
 				}
 			}
 			runner := ep.Pipeline(
+				runners[0],
 				// project error should cancel all inner runners
 				ep.Project(
-					ep.Pipeline(runners[0], runners[1]),
-					ep.Pipeline(runners[2], runners[3]),
-				),
-				ep.Project(
-					ep.Pipeline(runners[4], runners[5]),
+					ep.Pipeline(runners[1], runners[2], runners[3], runners[4]),
+					runners[5],
 					ep.Pipeline(runners[6], runners[7]),
 				),
+				runners[8],
+				runners[9],
 			)
 
 			data := ep.NewDataset(str.Data(1))
@@ -182,7 +184,52 @@ func TestPipeline_errorPropagationWithProject(t *testing.T) {
 			require.Error(t, resErr)
 			require.Equal(t, err.Error(), resErr.Error())
 			for i, r := range runners {
-				if i != errIdx {
+				if i == (errIdx+1)%pipeLength {
+					require.False(t, r.(*waitForCancel).IsRunning(), "Infinity go-routine leak")
+				}
+			}
+		})
+	}
+}
+
+func TestPipeline_errorPropagationWithProject(t *testing.T) {
+	pipeLength := 10
+	err := fmt.Errorf("something bad happened")
+
+	for errIdx := 0; errIdx < pipeLength; errIdx++ {
+		t.Run(fmt.Sprintf("error in runner %d", errIdx), func(t *testing.T) {
+			runners := make([]ep.Runner, pipeLength)
+			for i := range runners {
+				if i == errIdx {
+					runners[i] = newErrRunner(err)
+				} else if (i+3)%pipeLength == errIdx {
+					runners[i] = &waitForCancel{}
+				} else {
+					runners[i] = ep.PassThrough()
+				}
+			}
+			runner := ep.Pipeline(
+				runners[0],
+				// project error should cancel all inner runners
+				ep.Project(
+					ep.Pipeline(runners[1], runners[2]),
+					runners[3],
+				),
+				runners[4],
+				ep.Project(
+					ep.Pipeline(runners[5], runners[6]),
+					ep.Pipeline(runners[7], runners[8]),
+				),
+				runners[9],
+			)
+
+			data := ep.NewDataset(str.Data(1))
+			_, resErr := eptest.Run(runner, data)
+
+			require.Error(t, resErr)
+			require.Equal(t, err.Error(), resErr.Error())
+			for i, r := range runners {
+				if (i+3)%pipeLength == errIdx {
 					require.False(t, r.(*waitForCancel).IsRunning(), "Infinity go-routine leak")
 				}
 			}
