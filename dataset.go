@@ -10,7 +10,7 @@ var _ = Types.register("record", Record)
 
 var errMismatch = fmt.Errorf("mismatched number of rows")
 
-// ErrMismatchTypes - triggered in case mismatched types
+// ErrMismatchTypes is a result of an operation on incompatible types
 var ErrMismatchTypes = fmt.Errorf("mismatched types")
 var errCompareDiffTypes = fmt.Errorf("cannot compare record types with different numbers of columns")
 

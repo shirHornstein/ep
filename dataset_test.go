@@ -184,7 +184,7 @@ func TestDataset_Compare(t *testing.T) {
 		require.EqualValues(t, expected, results)
 	})
 
-	t.Run("CompareStrsVariousResults1", func(t *testing.T) {
+	t.Run("CompareStrsVariousResults", func(t *testing.T) {
 		expected = []compare.Result{compare.Greater, compare.Equal, compare.Less, compare.Less}
 		ds1 = strs([]string{"100", "2", "3", "4"})
 		ds2 = strs([]string{"5", "6", "7", "8"})
