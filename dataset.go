@@ -301,7 +301,7 @@ func (set dataset) Compare(other Data) ([]compare.Result, error) {
 		if err != nil {
 			return nil, err
 		}
-		Merge(res, iterationResult)
+		merge(res, iterationResult)
 	}
 	return res, nil
 }
@@ -311,7 +311,7 @@ func (set dataset) Compare(other Data) ([]compare.Result, error) {
 // (compare.Equal < compare.BothNulls < compare.Null < compare.Greater < compare.Less)
 // will be assigned to the result.
 // Note: the method logic is relevant for dataset Compare func
-func Merge(res, mergeWith []compare.Result) {
+func merge(res, mergeWith []compare.Result) {
 	for i, resI := range res {
 		if resI != compare.BothNulls && resI != compare.Equal {
 			continue
