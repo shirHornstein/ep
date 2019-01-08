@@ -158,7 +158,7 @@ func TestStrs(t *testing.T) {
 	t.Run("RegularStrings", func(t *testing.T) {
 		d1 := strs([]string{"a", "bb", "c", "x", " ", "", " "})
 		d2 := strs([]string{"a", "b", "ccc", "", "x", "", " "})
-		expected := []compare.Result{compare.Equal, compare.Greater, compare.Less, compare.Greater, compare.Less, compare.Equal, compare.Equal}
+		expected := []compare.Result{compare.Equal, compare.Greater, compare.Less, compare.Null, compare.Less, compare.BothNulls, compare.Equal}
 		comparisonResult, _ := d1.Compare(d2)
 		require.EqualValues(t, expected, comparisonResult)
 	})
