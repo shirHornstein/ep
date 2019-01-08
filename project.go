@@ -64,7 +64,7 @@ func (rs project) Filter(keep []bool) {
 
 // Run dispatches the same input to all inner runners, then collects and
 // joins their results into a single dataset output
-func (rs project) Run(origCtx context.Context, inp, out chan Dataset) (err error) {
+func (rs project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 	rs.useDummySingleton()
 	// set up the left and right channels
 	inps := make([]chan Dataset, len(rs))
@@ -83,7 +83,7 @@ func (rs project) Run(origCtx context.Context, inp, out chan Dataset) (err error
 		}
 	}()
 
-	ctx, cancel := context.WithCancel(origCtx)
+	ctx, cancel := context.WithCancel(ctx)
 
 	// run all runners in go-routines
 	for i := range rs {
@@ -115,7 +115,7 @@ func (rs project) Run(origCtx context.Context, inp, out chan Dataset) (err error
 
 		for {
 			select {
-			case <-ctx.Done(): // listen to both ctx and origCtx
+			case <-ctx.Done(): // listen to both new ctx and original ctx
 				cancel()
 				return
 			case data, ok := <-inp:
