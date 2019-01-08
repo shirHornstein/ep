@@ -44,7 +44,7 @@ func (vs strs) Duplicate(t int) ep.Data {
 	}
 	return ans
 }
-func (vs strs) IsNull(i int) bool { return false }
+func (vs strs) IsNull(i int) bool { return vs[i] == "" }
 func (vs strs) MarkNull(i int)    {}
 func (vs strs) Nulls() []bool     { return make([]bool, vs.Len()) }
 func (vs strs) Equal(other ep.Data) bool {

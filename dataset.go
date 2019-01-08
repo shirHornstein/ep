@@ -301,12 +301,12 @@ func (set dataset) Compare(other Data) ([]compare.Result, error) {
 		if err != nil {
 			return nil, err
 		}
-		merge(res, iterationResult)
+		Merge(res, iterationResult)
 	}
 	return res, nil
 }
 
-func merge(res, mergeWith []compare.Result) {
+func Merge(res, mergeWith []compare.Result) {
 	for i, resI := range res {
 		if resI != compare.BothNulls && resI != compare.Equal {
 			continue
