@@ -306,6 +306,11 @@ func (set dataset) Compare(other Data) ([]compare.Result, error) {
 	return res, nil
 }
 
+// The merge action follows the rule: if you are not compare.BothNulls and
+// not compare.Equal, then the "stronger"'s value
+// (compare.Equal < compare.BothNulls < compare.Null < compare.Greater < compare.Less)
+// will be assigned to the result.
+// Note: the method logic is relevant for dataset Compare func
 func Merge(res, mergeWith []compare.Result) {
 	for i, resI := range res {
 		if resI != compare.BothNulls && resI != compare.Equal {
