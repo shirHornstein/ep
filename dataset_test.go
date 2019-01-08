@@ -197,7 +197,7 @@ func TestDataset_Compare(t *testing.T) {
 	})
 
 	t.Run("CompareStrsWithNullsResults", func(t *testing.T) {
-		expected = []compare.Result{compare.Greater, compare.Less, compare.Equal, compare.Greater}
+		expected = []compare.Result{compare.Greater, compare.Null, compare.BothNulls, compare.Greater}
 		ds1 = strs([]string{"X32x3", "", "", "qwerty"})
 		ds2 = strs([]string{"5", "ab12cd34", "27", ""})
 		d1Dataset = ep.NewDataset(ds1, ds2)
