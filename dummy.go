@@ -1,15 +1,16 @@
 package ep
 
 var dummy = &dummyType{}
-var _ = registerGob(dummy, &variadicDummies{})
+var dummyData = &variadicDummies{}
+var _ = registerGob(dummy, dummyData)
 
 type dummyType struct{}
 
 func (t *dummyType) String() string     { return t.Name() }
 func (*dummyType) Name() string         { return "dummy" }
 func (*dummyType) Size() uint           { return 0 }
-func (*dummyType) Data(n int) Data      { return &variadicDummies{} }
-func (*dummyType) DataEmpty(n int) Data { return &variadicDummies{} }
+func (*dummyType) Data(n int) Data      { return dummyData }
+func (*dummyType) DataEmpty(n int) Data { return dummyData }
 
 type variadicDummies struct{}
 
@@ -25,6 +26,8 @@ func (*variadicDummies) IsNull(int) bool               { return true }
 func (*variadicDummies) MarkNull(int)                  {}
 func (*variadicDummies) Nulls() []bool                 { return []bool{} }
 func (*variadicDummies) Equal(data Data) bool {
+	// note we must use cast and not compare to singleton to handle
+	// distributed dummies data
 	_, ok := data.(*variadicDummies)
 	return ok
 }
