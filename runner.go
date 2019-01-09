@@ -90,7 +90,8 @@ type FilterRunner interface {
 	Filter(keep []bool)
 }
 
-// Run rune the given runner and takes care of channels management involved in runner execution
+// Run runs given runner and takes care of channels management involved in runner execution
+// safe to use only if caller created the out channel
 func Run(ctx context.Context, r Runner, inp, out chan Dataset, cancel context.CancelFunc, err *error) {
 	// drain inp in case there are left overs in the channel.
 	// usually this will be a no-op, unless runner has exited early due to an
