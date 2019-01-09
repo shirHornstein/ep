@@ -75,10 +75,7 @@ func (rs union) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 		inputs[i] = make(chan Dataset)
 		outputs[i] = make(chan Dataset)
 
-		go func(i int) {
-			defer close(outputs[i])
-			errors[i] = rs[i].Run(ctx, inputs[i], outputs[i])
-		}(i)
+		go Run(ctx, rs[i], inputs[i], outputs[i], nil, &errors[i])
 	}
 
 	// fork the input to all inner runners
@@ -94,8 +91,6 @@ func (rs union) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 			close(s)
 		}
 	}()
-	// in case of error - drain input
-	defer drain(inp)
 
 	// collect and union all of the stream into a single output
 	for _, s := range outputs {

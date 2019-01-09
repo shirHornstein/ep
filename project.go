@@ -91,15 +91,8 @@ func (rs project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 		outs[i] = make(chan Dataset)
 		wg.Add(1)
 		go func(idx int) {
-			errs[idx] = rs[idx].Run(ctx, inps[idx], outs[idx])
-			close(outs[idx])
-			if errs[idx] != nil {
-				cancel()
-			}
-			wg.Done()
-			// in case of error - drain inps[idx] to allow project keep
-			// duplicating data
-			drain(inps[idx])
+			defer wg.Done()
+			Run(ctx, rs[idx], inps[idx], outs[idx], cancel, &errs[idx])
 		}(i)
 	}
 

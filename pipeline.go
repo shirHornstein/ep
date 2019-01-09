@@ -63,37 +63,28 @@ func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 	ctx, cancel := context.WithCancel(ctx)
 	inp = wrapInpWithCancel(ctx, inp)
 
-	// run all (except the very last one) internal runners, piping the output
-	// from each runner to the next.
+	// run all (except last one) runners, piping the output from each runner to its next
 	lastIndex := len(rs) - 1
 	for i := 0; i < lastIndex; i++ {
 		// middle chan is the output from the current runner and the input to
-		// the next. We need to wait until this channel is closed before this
-		// Run() function returns to avoid leaking go routines. This is achieved
-		// by draining it. Only when the middle channel is closed we can know for
-		// certain that the go routine has exited. Usually this will be a no-op,
-		// but other times there might still be left overs in the channel. This
-		// can happen if the top runner has exited early due to an error or some
-		// other logic (LIMIT).
+		// the next
 		middle := make(chan Dataset)
-		defer drain(middle)
 
 		wg.Add(1)
 		go func(i int, inp, middle chan Dataset) {
 			defer wg.Done()
-			defer close(middle)
-			errs[i] = rs[i].Run(ctx, inp, middle)
-			if errs[i] != nil {
-				cancel()
-			}
+			Run(ctx, rs[i], inp, middle, cancel, &errs[i])
 		}(i, inp, middle)
 
-		// input to the next channel is the output from the current one.
+		// input to the next channel is the output from the current one
 		inp = middle
 	}
 
+	// allow previous runner to continue and notify cancellation
+	defer drain(inp)
+
 	// cancel all runners when we're done - just in case some are still running. This
-	// might happen if the top of the pipeline ends before the bottom of the pipeline.
+	// might happen if the top of the pipeline ends before the bottom of the pipeline
 	defer cancel()
 
 	// block until last runner completion

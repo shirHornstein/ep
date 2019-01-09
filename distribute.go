@@ -191,7 +191,7 @@ func (d *distributer) Serve(conn net.Conn) error {
 		inp := make(chan Dataset, 1)
 		close(inp)
 
-		err = r.Run(context.Background(), inp, out)
+		Run(context.Background(), r, inp, out, nil, &err)
 		if err != nil {
 			err = &errMsg{err.Error()}
 		}
