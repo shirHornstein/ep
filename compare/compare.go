@@ -1,7 +1,7 @@
 package compare
 
 // Result is the outcome of a comparison result between 2 Rows.
-// Rows - is the Value inside the Data.
+// Rows is the Value inside Data.
 type Result byte
 
 const (
