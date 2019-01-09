@@ -1,21 +1,10 @@
 package compare
 
-// Result is an enum for comparison results.
+// Result is the outcome of a comparison result between 2 Rows.
+// Rows - is the Value inside the Data.
 type Result byte
 
 const (
-	// NOTE: Result const (Equal / BothNulls / Null...) is the outcome of
-	// a comparison between 2 Rows.
-	//
-	// Rows - is the Value inside the Data.
-	// Data - is all the column's data.
-	// Data Object - is the column.
-	//
-	// E.g. ((1,'Bob'), (2,'Danny'), (3,'John')) AS t1(id,name)
-	// Data Object: name
-	// Data: 'Bob', 'Danny', 'John'
-	// Row: 'Danny'
-
 	// Equal represents equality of the current value to other value
 	// e.g. 1 == 1
 	Equal Result = iota + 1
