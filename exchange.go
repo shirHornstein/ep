@@ -174,7 +174,7 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 				continue
 			}
 
-			err = ex.send(data)
+			err = ex.sendParallelToPeers(data, err)
 		case err = <-errs:
 			rcvDone = true // errors (or nil) from the receive go-routine
 		case <-ctx.Done(): // context timeout or cancel
@@ -185,6 +185,28 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 				return nil
 			}
 		}
+	}
+	return err
+}
+
+func (ex *exchange) sendParallelToPeers(data Dataset, err error) error {
+	amountOfPeers := len(ex.encs)
+	modulo := data.Len() % amountOfPeers
+	batchSize := data.Len() / amountOfPeers
+	start := 0
+
+	// send remainder batch size, i.e. send the modulo data size
+	for i := 0; i < modulo; i++ {
+		end := start + batchSize + 1
+		err = ex.send(data.Slice(start, end).(Dataset))
+		start = start + batchSize + 1
+	}
+
+	// send data batch size
+	for i := modulo; i < amountOfPeers; i++ {
+		end := start + batchSize
+		err = ex.send(data.Slice(start, end).(Dataset))
+		start = start + batchSize
 	}
 	return err
 }

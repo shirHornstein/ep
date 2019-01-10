@@ -96,6 +96,61 @@ func TestScatter_singleNode(t *testing.T) {
 	require.Equal(t, 4, data.Len())
 }
 
+func TestScatter_multipleNodes(t *testing.T) {
+	port1 := fmt.Sprintf(":%d", 5551)
+	peer1 := eptest.NewPeer(t, port1)
+
+	port2 := fmt.Sprintf(":%d", 5552)
+	peer2 := eptest.NewPeer(t, port2)
+
+	port3 := fmt.Sprintf(":%d", 5553)
+	peer3 := eptest.NewPeer(t, port3)
+
+	defer func() {
+		require.NoError(t, peer1.Close())
+		require.NoError(t, peer2.Close())
+		require.NoError(t, peer3.Close())
+	}()
+
+	t.Run("MultipleColumns", func(t *testing.T) {
+		col1 := strs{
+			"a1", "b1", "c1", "d1", "e1",
+		}
+		col2 := strs{
+			"a2", "b2", "c2", "d2", "e2",
+		}
+		col3 := strs{
+			"a3", "b3", "c3", "d3", "e3",
+		}
+		col4 := strs{
+			"a4", "b4", "c4", "d4", "e4",
+		}
+		col5 := strs{
+			"a5", "b5", "c5", "d5", "e5",
+		}
+		col6 := strs{
+			"a6", "b6", "c6", "d6", "e6",
+		}
+
+		data := ep.NewDataset(col1, col2, col3, col4, col5, col6)
+
+		runner := ep.Pipeline(ep.Scatter(), &nodeAddr{}, ep.Gather())
+		runner = peer1.Distribute(runner, port1, port2, port3)
+		res, err := eptest.Run(runner, data)
+		require.NoError(t, err)
+
+		expectedOutput := []string{
+			"(a1,a2,a3,a4,a5,a6,:5552)",
+			"(b1,b2,b3,b4,b5,b6,:5552)",
+			"(c1,c2,c3,c4,c5,c6,:5553)",
+			"(d1,d2,d3,d4,d5,d6,:5553)",
+			"(e1,e2,e3,e4,e5,e6,:5551)",
+		}
+
+		require.Equal(t, expectedOutput, res.Strings())
+	})
+}
+
 func TestScatter_and_Gather(t *testing.T) {
 	port1 := ":5551"
 	dist := eptest.NewPeer(t, port1)
