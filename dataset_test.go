@@ -89,7 +89,7 @@ func TestDataset_sortDescending(t *testing.T) {
 	dataset := ep.NewDataset(d1, d2, d3)
 
 	sort.Sort(sort.Reverse(dataset))
-	require.EqualValues(t, expected, dataset.Strings())
+	require.Equal(t, expected, dataset.Strings())
 }
 
 func TestDataset_LessOther_breakOnFirstColumn(t *testing.T) {
@@ -141,7 +141,7 @@ func TestDataset_Strings(t *testing.T) {
 	d2 := strs([]string{"a", "b", "c", "", "e", "f", "g"})
 
 	dataset := ep.NewDataset(d1, d2)
-	require.EqualValues(t, expected, dataset.Strings())
+	require.Equal(t, expected, dataset.Strings())
 }
 
 func TestColumnStrings(t *testing.T) {
@@ -150,18 +150,18 @@ func TestColumnStrings(t *testing.T) {
 	dataset := ep.NewDataset(d1, d2)
 
 	t.Run("AllColumns", func(t *testing.T) {
-		require.EqualValues(t, [][]string{d1, d2}, ep.ColumnStrings(dataset))
+		require.Equal(t, [][]string{d1, d2}, ep.ColumnStrings(dataset))
 	})
 
 	t.Run("FirstColumn", func(t *testing.T) {
-		require.EqualValues(t, [][]string{d1}, ep.ColumnStrings(dataset, 0))
+		require.Equal(t, [][]string{d1}, ep.ColumnStrings(dataset, 0))
 	})
 
 	t.Run("SecondColumn", func(t *testing.T) {
-		require.EqualValues(t, [][]string{d2}, ep.ColumnStrings(dataset, 1))
+		require.Equal(t, [][]string{d2}, ep.ColumnStrings(dataset, 1))
 	})
 
 	t.Run("BothColumns", func(t *testing.T) {
-		require.EqualValues(t, [][]string{d1, d2}, ep.ColumnStrings(dataset, 0, 1))
+		require.Equal(t, [][]string{d1, d2}, ep.ColumnStrings(dataset, 0, 1))
 	})
 }

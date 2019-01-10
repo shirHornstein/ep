@@ -19,10 +19,7 @@ func Run(r ep.Runner, datasets ...ep.Dataset) (ep.Dataset, error) {
 func RunWithContext(ctx context.Context, r ep.Runner, datasets ...ep.Dataset) (res ep.Dataset, err error) {
 	inp := make(chan ep.Dataset)
 	out := make(chan ep.Dataset)
-	go func() {
-		err = r.Run(ctx, inp, out)
-		close(out)
-	}()
+	go ep.Run(ctx, r, inp, out, nil, &err)
 
 	go func() {
 		for _, data := range datasets {
@@ -75,10 +72,7 @@ func BenchWithContext(ctx context.Context, r ep.Runner, datasets ...ep.Dataset) 
 	}
 	close(inp)
 
-	go func() {
-		defer close(out)
-		err = r.Run(ctx, inp, out)
-	}()
+	go ep.Run(ctx, r, inp, out, nil, &err)
 
 	for range out {
 	}

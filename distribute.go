@@ -186,15 +186,12 @@ func (d *distributer) Serve(conn net.Conn) error {
 		// perhaps we want to log/return an error when some of the data is
 		// discarded here?
 		out := make(chan Dataset)
-		go func() {
-			for range out {
-			}
-		}()
+		go drain(out)
 
 		inp := make(chan Dataset, 1)
 		close(inp)
 
-		err = r.Run(context.Background(), inp, out)
+		Run(context.Background(), r, inp, out, nil, &err)
 		if err != nil {
 			err = &errMsg{err.Error()}
 		}
