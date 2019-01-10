@@ -61,46 +61,54 @@ func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 	}()
 
 	ctx, cancel := context.WithCancel(ctx)
+	inp = wrapInpWithCancel(ctx, inp)
 
-	// run all (except the very last one) internal runners, piping the output
-	// from each runner to the next.
+	// run all (except last one) runners, piping the output from each runner to its next
 	lastIndex := len(rs) - 1
 	for i := 0; i < lastIndex; i++ {
 		// middle chan is the output from the current runner and the input to
-		// the next. We need to wait until this channel is closed before this
-		// Run() function returns to avoid leaking go routines. This is achieved
-		// by draining it. Only when the middle channel is closed we can know for
-		// certain that the go routine has exited. Usually this will be a no-op,
-		// but other times there might still be left overs in the channel. This
-		// can happen if the top runner has exited early due to an error or some
-		// other logic (LIMIT).
+		// the next
 		middle := make(chan Dataset)
-		defer func(middle chan Dataset) {
-			for range middle {
-			}
-		}(middle)
 
 		wg.Add(1)
 		go func(i int, inp, middle chan Dataset) {
 			defer wg.Done()
-			defer close(middle)
-			errs[i] = rs[i].Run(ctx, inp, middle)
-			if errs[i] != nil {
-				cancel()
-			}
+			Run(ctx, rs[i], inp, middle, cancel, &errs[i])
 		}(i, inp, middle)
 
-		// input to the next channel is the output from the current one.
+		// input to the next channel is the output from the current one
 		inp = middle
 	}
 
+	// allow previous runner to continue and notify cancellation
+	defer drain(inp)
+
 	// cancel all runners when we're done - just in case some are still running. This
-	// might happen if the top of the pipeline ends before the bottom of the pipeline.
+	// might happen if the top of the pipeline ends before the bottom of the pipeline
 	defer cancel()
 
 	// block until last runner completion
 	errs[lastIndex] = rs[lastIndex].Run(ctx, inp, out)
 	return
+}
+
+func wrapInpWithCancel(ctx context.Context, inp chan Dataset) chan Dataset {
+	newInp := make(chan Dataset)
+	go func() {
+		defer close(newInp)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case data, open := <-inp:
+				if !open {
+					return
+				}
+				newInp <- data
+			}
+		}
+	}()
+	return newInp
 }
 
 // The implementation isn't trivial because it has to account for Wildcard types
@@ -149,11 +157,12 @@ func (rs pipeline) returnsOne(j int) []Type {
 }
 
 func (rs pipeline) Filter(keep []bool) {
-	last := rs[len(rs)-1]
+	lastIdx := len(rs) - 1
+	last := rs[lastIdx]
 	// pipeline contains at least 2 runners.
 	// if last is exchange, filter its input (i.e. one runner before last)
 	if _, isExchanger := last.(*exchange); isExchanger {
-		last = rs[len(rs)-2]
+		last = rs[lastIdx-1]
 	}
 	if f, isFilterable := last.(FilterRunner); isFilterable {
 		f.Filter(keep)

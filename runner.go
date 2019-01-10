@@ -90,6 +90,21 @@ type FilterRunner interface {
 	Filter(keep []bool)
 }
 
+// Run runs given runner and takes care of channels management involved in runner execution
+// safe to use only if caller created the out channel
+func Run(ctx context.Context, r Runner, inp, out chan Dataset, cancel context.CancelFunc, err *error) {
+	// drain inp in case there are left overs in the channel.
+	// usually this will be a no-op, unless runner has exited early due to an
+	// error or some other logic (LIMIT, irrelevant inp, etc.). in such cases
+	// draining allows preceding runner to be canceled
+	defer drain(inp)
+	defer close(out)
+	*err = r.Run(ctx, inp, out)
+	if *err != nil && cancel != nil {
+		cancel()
+	}
+}
+
 // PassThrough returns a runner that lets all of its input through as-is
 func PassThrough(types ...Type) Runner {
 	if len(types) == 0 {
@@ -148,4 +163,10 @@ func (r *pick) Run(_ context.Context, inp, out chan Dataset) error {
 		out <- result
 	}
 	return nil
+}
+
+// helper function to drain inp/out channel
+func drain(c chan Dataset) {
+	for range c {
+	}
 }
