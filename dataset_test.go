@@ -184,14 +184,24 @@ func TestDataset_Compare(t *testing.T) {
 		require.EqualValues(t, expected, results)
 	})
 
+	t.Run("MixTypes", func(t *testing.T) {
+		expected = []compare.Result{compare.Equal, compare.Equal, compare.Equal, compare.Equal}
+		ds1 = strs([]string{"1", "2", "3", "4"})
+		di2 = integers{1, 3, 4, 9}
+		d1Dataset = ep.NewDataset(ds1, di2)
+		d2Dataset = ep.NewDataset(ds1, di2)
+		results, _ = d1Dataset.Compare(d2Dataset)
+		require.EqualValues(t, expected, results)
+	})
+
 	t.Run("CompareStrsVariousResults", func(t *testing.T) {
-		expected = []compare.Result{compare.Greater, compare.Equal, compare.Less, compare.Less}
-		ds1 = strs([]string{"100", "2", "3", "4"})
-		ds2 = strs([]string{"5", "6", "7", "8"})
-		d1Dataset = ep.NewDataset(ds1, ds2)
-		ds1 = strs([]string{"10", "2", "3", "4"})
-		ds2 = strs([]string{"5", "6", "70", "80"})
-		d2Dataset = ep.NewDataset(ds1, ds2)
+		expected = []compare.Result{compare.Greater, compare.Equal, compare.Less, compare.Less, compare.BothNulls}
+		ds1 = strs([]string{"100", "2", "3", "4", ""})
+		di2 = integers{6, 6, 7, 8, 9}
+		d1Dataset = ep.NewDataset(ds1, di2)
+		ds1 = strs([]string{"10", "2", "3", "4", ""})
+		di2 = integers{6, 6, 70, 80, 9}
+		d2Dataset = ep.NewDataset(ds1, di2)
 		results, _ = d1Dataset.Compare(d2Dataset)
 		require.EqualValues(t, expected, results)
 	})
