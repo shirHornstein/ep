@@ -66,7 +66,7 @@ func TestRun_callCancel(t *testing.T) {
 		canceledCalled = true
 	}
 
-	r := ep.Pipeline(ep.PassThrough(), &errRunner{errors.New("err"), "err"})
+	r := &errRunner{errors.New("err"), "err"}
 
 	go ep.Run(context.Background(), r, inp, out, cancel, &err)
 	inp <- ep.NewDatasetTypes([]ep.Type{str}, 10)

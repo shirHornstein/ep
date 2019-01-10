@@ -6,6 +6,7 @@ import (
 	"github.com/panoplyio/ep"
 	"github.com/panoplyio/ep/eptest"
 	"github.com/stretchr/testify/require"
+	"strconv"
 	"testing"
 )
 
@@ -155,7 +156,7 @@ func TestPipeline_multipleErrorsPropagation(t *testing.T) {
 	err := fmt.Errorf("something bad happened")
 
 	for errIdx := 0; errIdx < pipeLength; errIdx++ {
-		t.Run(fmt.Sprintf("first error in runner %d", errIdx), func(t *testing.T) {
+		t.Run(strconv.Itoa(errIdx), func(t *testing.T) {
 			runners := make([]ep.Runner, pipeLength)
 			for i := range runners {
 				if i == errIdx || i == (errIdx+2)%pipeLength {
