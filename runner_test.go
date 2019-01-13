@@ -15,7 +15,7 @@ func TestRun_drainInput(t *testing.T) {
 	var err error
 
 	// errRunner reads only one batch from its input
-	r := &errRunner{errors.New("err"), "err"}
+	r := newErrRunner(errors.New("err"))
 
 	go ep.Run(context.Background(), r, inp, out, nil, &err)
 	inp <- ep.NewDatasetTypes([]ep.Type{str}, 10)
@@ -66,7 +66,7 @@ func TestRun_callCancel(t *testing.T) {
 		canceledCalled = true
 	}
 
-	r := &errRunner{errors.New("err"), "err"}
+	r := newErrRunner(errors.New("err"))
 
 	go ep.Run(context.Background(), r, inp, out, cancel, &err)
 	inp <- ep.NewDatasetTypes([]ep.Type{str}, 10)

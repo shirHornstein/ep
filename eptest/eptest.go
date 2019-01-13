@@ -8,6 +8,9 @@ import (
 	"net"
 )
 
+var _ = ep.Runners.
+	Register("ErrRunner", &ErrRunner{})
+
 // Run is helper function for tests, that runs given runner with given
 // list of input datasets. Output is consumed up to completion, then returned
 func Run(r ep.Runner, datasets ...ep.Dataset) (ep.Dataset, error) {
@@ -78,4 +81,20 @@ func BenchWithContext(ctx context.Context, r ep.Runner, datasets ...ep.Dataset) 
 	}
 
 	return err
+}
+
+// ErrRunner is a Runner that returns an error upon first input or inp closing
+type ErrRunner struct {
+	ep.Runner
+	Error error
+	// Name is unused field, defined to allow gob-ing ErrRunner between peers
+	Name string
+}
+
+// Run implements ep.Runner
+func (r *ErrRunner) Run(ctx context.Context, inp, out chan ep.Dataset) error {
+	for range inp {
+		return r.Error
+	}
+	return r.Error
 }
