@@ -3,6 +3,7 @@ package eptest
 import (
 	"fmt"
 	"github.com/panoplyio/ep"
+	"github.com/panoplyio/ep/compare"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -79,7 +80,7 @@ func VerifyDataInterfaceInvariant(t *testing.T, data ep.Data) {
 	})
 
 	t.Run("TestData_Compare_invariant_"+data.Type().String(), func(t *testing.T) {
-		data.Compare(data)
+		_, _ = data.Compare(data)
 		require.Equal(t, oldLen, data.Len())
 		require.Equal(t, dataString, fmt.Sprintf("%+v", data))
 	})
@@ -177,8 +178,8 @@ func VerifyDataNullsHandling(t *testing.T, data ep.Data, expectedNullString stri
 	})
 
 	t.Run("TestData_Compare_withNulls_"+data.Type().String(), func(t *testing.T) {
-		data.Compare(data)
-		require.True(t, data.IsNull(nullIdx))
+		res, _ := data.Compare(data)
+		require.Equal(t, compare.BothNulls, res[nullIdx])
 	})
 
 	t.Run("TestData_Copy_withNulls_"+data.Type().String(), func(t *testing.T) {

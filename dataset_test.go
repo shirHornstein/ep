@@ -183,7 +183,7 @@ func TestDataset_Compare(t *testing.T) {
 		ds2 = strs([]string{"5", "ab12cd34", "27", "qwerty"})
 		d2Dataset = ep.NewDataset(ds1, ds2)
 		results, _ = d1Dataset.Compare(d2Dataset)
-		require.EqualValues(t, expected, results)
+		require.Equal(t, expected, results)
 	})
 
 	t.Run("CompareIntegers", func(t *testing.T) {
@@ -195,7 +195,7 @@ func TestDataset_Compare(t *testing.T) {
 		di2 = integers{1, 30, 1}
 		d2Dataset = ep.NewDataset(di1, di2)
 		results, _ = d1Dataset.Compare(d2Dataset)
-		require.EqualValues(t, expected, results)
+		require.Equal(t, expected, results)
 	})
 
 	t.Run("MixTypes", func(t *testing.T) {
@@ -207,6 +207,6 @@ func TestDataset_Compare(t *testing.T) {
 		di2 = integers{6, 6, 70, 88, 1, 'y'}
 		d2Dataset = ep.NewDataset(ds1, di2)
 		results, _ = d1Dataset.Compare(d2Dataset)
-		require.EqualValues(t, expected, results)
+		require.Equal(t, expected, results)
 	})
 }
