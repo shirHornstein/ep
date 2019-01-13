@@ -6,8 +6,8 @@ import (
 	"testing"
 )
 
-func TestAllMergeOptionResults(t *testing.T) {
-	t.Run("CompareResultEqualMergeOptions", func(t *testing.T) {
+func TestMergeEqual(t *testing.T) {
+	t.Run("left_is_Equal", func(t *testing.T) {
 		left := []compare.Result{compare.Equal, compare.Equal, compare.Equal, compare.Equal, compare.Equal}
 		right := []compare.Result{compare.Equal, compare.BothNulls, compare.Null, compare.Greater, compare.Less}
 		expected := []compare.Result{compare.Equal, compare.BothNulls, compare.Null, compare.Greater, compare.Less}
@@ -15,10 +15,13 @@ func TestAllMergeOptionResults(t *testing.T) {
 		res := left
 		mergeWith := right
 		merge(res, mergeWith)
+		// Equal should always be overridden
 		require.Equal(t, expected, res)
 	})
+}
 
-	t.Run("CompareResultBothNullsMergeOptions", func(t *testing.T) {
+func TestMergeBothNulls(t *testing.T) {
+	t.Run("left_is_BothNulls", func(t *testing.T) {
 		left := []compare.Result{compare.BothNulls, compare.BothNulls, compare.BothNulls, compare.BothNulls, compare.BothNulls}
 		right := []compare.Result{compare.Equal, compare.BothNulls, compare.Null, compare.Greater, compare.Less}
 		expected := []compare.Result{compare.BothNulls, compare.BothNulls, compare.Null, compare.Greater, compare.Less}
@@ -28,8 +31,10 @@ func TestAllMergeOptionResults(t *testing.T) {
 		merge(res, mergeWith)
 		require.Equal(t, expected, res)
 	})
+}
 
-	t.Run("CompareResultNullMergeOptions", func(t *testing.T) {
+func TestMergeNull(t *testing.T) {
+	t.Run("left_is_Null", func(t *testing.T) {
 		left := []compare.Result{compare.Null, compare.Null, compare.Null, compare.Null, compare.Null}
 		right := []compare.Result{compare.Equal, compare.BothNulls, compare.Null, compare.Greater, compare.Less}
 		expected := []compare.Result{compare.Null, compare.Null, compare.Null, compare.Null, compare.Null}
@@ -37,10 +42,13 @@ func TestAllMergeOptionResults(t *testing.T) {
 		res := left
 		mergeWith := right
 		merge(res, mergeWith)
+		// Null should never be overridden
 		require.Equal(t, expected, res)
 	})
+}
 
-	t.Run("CompareResultGreaterMergeOptions", func(t *testing.T) {
+func TestMergeGreater(t *testing.T) {
+	t.Run("left_is_Greater", func(t *testing.T) {
 		left := []compare.Result{compare.Greater, compare.Greater, compare.Greater, compare.Greater, compare.Greater}
 		right := []compare.Result{compare.Equal, compare.BothNulls, compare.Null, compare.Greater, compare.Less}
 		expected := []compare.Result{compare.Greater, compare.Greater, compare.Greater, compare.Greater, compare.Greater}
@@ -48,10 +56,12 @@ func TestAllMergeOptionResults(t *testing.T) {
 		res := left
 		mergeWith := right
 		merge(res, mergeWith)
+		// Greater should never be overridden
 		require.Equal(t, expected, res)
 	})
-
-	t.Run("CompareResultLessMergeOptions", func(t *testing.T) {
+}
+func TestMergeLess(t *testing.T) {
+	t.Run("left_is_Less", func(t *testing.T) {
 		left := []compare.Result{compare.Less, compare.Less, compare.Less, compare.Less, compare.Less}
 		right := []compare.Result{compare.Equal, compare.BothNulls, compare.Null, compare.Greater, compare.Less}
 		expected := []compare.Result{compare.Less, compare.Less, compare.Less, compare.Less, compare.Less}
@@ -59,6 +69,7 @@ func TestAllMergeOptionResults(t *testing.T) {
 		res := left
 		mergeWith := right
 		merge(res, mergeWith)
+		// Less should never be overridden
 		require.Equal(t, expected, res)
 	})
 }

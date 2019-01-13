@@ -179,7 +179,7 @@ func TestStrs(t *testing.T) {
 		}()
 		d1 := strs([]string{"a1", "b2b"})
 		d2 := strs([]string{"a1"})
-		_, _ = d1.Compare(d2)
+		d1.Compare(d2)
 	})
 }
 
@@ -208,6 +208,6 @@ func TestIntegers(t *testing.T) {
 		}()
 		d1 := integers{1, 2}
 		d2 := integers{3}
-		_, _ = d1.Compare(d2)
+		d1.Compare(d2)
 	})
 }

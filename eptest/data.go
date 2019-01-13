@@ -80,7 +80,7 @@ func VerifyDataInterfaceInvariant(t *testing.T, data ep.Data) {
 	})
 
 	t.Run("TestData_Compare_invariant_"+data.Type().String(), func(t *testing.T) {
-		_, _ = data.Compare(data)
+		data.Compare(data)
 		require.Equal(t, oldLen, data.Len())
 		require.Equal(t, dataString, fmt.Sprintf("%+v", data))
 	})
@@ -178,7 +178,8 @@ func VerifyDataNullsHandling(t *testing.T, data ep.Data, expectedNullString stri
 	})
 
 	t.Run("TestData_Compare_withNulls_"+data.Type().String(), func(t *testing.T) {
-		res, _ := data.Compare(data)
+		res, err := data.Compare(data)
+		require.NoError(t, err)
 		require.Equal(t, compare.BothNulls, res[nullIdx])
 	})
 
