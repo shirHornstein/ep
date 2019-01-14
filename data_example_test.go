@@ -154,7 +154,7 @@ func ExampleData() {
 	// Output: [bar foo]
 }
 
-func TestStrs(t *testing.T) {
+func TestStrs_Compare(t *testing.T) {
 	t.Run("RegularStrings", func(t *testing.T) {
 		d1 := strs([]string{"a", "bb", "c", "x", " ", "", " "})
 		d2 := strs([]string{"a", "b", "ccc", "", "x", "", " "})
@@ -183,7 +183,7 @@ func TestStrs(t *testing.T) {
 	})
 }
 
-func TestIntegers(t *testing.T) {
+func TestIntegers_Compare(t *testing.T) {
 	t.Run("RegularIntegers", func(t *testing.T) {
 		d1 := integers{1, 2, 5}
 		d2 := integers{1, 3, 4}
@@ -192,22 +192,9 @@ func TestIntegers(t *testing.T) {
 		require.EqualValues(t, expected, comparisonResult)
 	})
 
-	t.Run("DifferentIntegers", func(t *testing.T) {
-		d1 := integers{'1', 8, 9}
-		d2 := integers{'2', '8', ' '}
-		expected := []compare.Result{compare.Less, compare.Less, compare.Less}
-		comparisonResult, _ := d1.Compare(d2)
-		require.EqualValues(t, expected, comparisonResult)
-	})
-
-	t.Run("PanicIndexOutOfRange", func(t *testing.T) {
-		defer func() {
-			if r := recover(); r != nil {
-				require.Error(t, fmt.Errorf("index out of range"), r)
-			}
-		}()
-		d1 := integers{1, 2}
-		d2 := integers{3}
-		d1.Compare(d2)
+	t.Run("ShouldPanicIndexOutOfRange", func(t *testing.T) {
+		d1 := strs([]string{"a1", "b2b"})
+		d2 := strs([]string{"a1"})
+		require.Panics(t, func() { d1.Compare(d2) })
 	})
 }
