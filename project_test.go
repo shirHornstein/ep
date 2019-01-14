@@ -31,7 +31,7 @@ func ExampleProject_reversed() {
 func TestProject_errorInFirstRunner(t *testing.T) {
 	err := fmt.Errorf("something bad happened")
 	infinity := &waitForCancel{}
-	runner := ep.Project(newErrRunner(err), infinity)
+	runner := ep.Project(eptest.NewErrRunner(err), infinity)
 	data := ep.NewDataset(str.Data(1))
 	_, resErr := eptest.Run(runner, data)
 
@@ -44,7 +44,7 @@ func TestProject_errorInSecondRunner(t *testing.T) {
 	err := fmt.Errorf("something bad happened")
 	infinityRunner1 := &waitForCancel{}
 	infinityRunner2 := &waitForCancel{}
-	runner := ep.Project(infinityRunner1, newErrRunner(err), infinityRunner2)
+	runner := ep.Project(infinityRunner1, eptest.NewErrRunner(err), infinityRunner2)
 	data := ep.NewDataset(str.Data(1))
 	_, resErr := eptest.Run(runner, data)
 
@@ -58,7 +58,7 @@ func TestProject_errorInThirdRunner(t *testing.T) {
 	err := fmt.Errorf("something bad happened")
 	infinityRunner1 := &waitForCancel{}
 	infinityRunner2 := &waitForCancel{}
-	runner := ep.Project(infinityRunner1, infinityRunner2, newErrRunner(err))
+	runner := ep.Project(infinityRunner1, infinityRunner2, eptest.NewErrRunner(err))
 	data := ep.NewDataset(str.Data(1))
 	_, resErr := eptest.Run(runner, data)
 
@@ -75,7 +75,7 @@ func TestProject_errorInPipeline(t *testing.T) {
 	infinityRunner3 := &waitForCancel{}
 	runner := ep.Project(
 		ep.Pipeline(infinityRunner1, infinityRunner2),
-		ep.Pipeline(infinityRunner3, newErrRunner(err)),
+		ep.Pipeline(infinityRunner3, eptest.NewErrRunner(err)),
 	)
 	data := ep.NewDataset(str.Data(1))
 	_, resErr := eptest.Run(runner, data)
@@ -122,7 +122,7 @@ func TestProject_nested_errorInFirstRunner(t *testing.T) {
 	infinityRunner2 := &waitForCancel{}
 	infinityRunner3 := &waitForCancel{}
 	runner := ep.Project(
-		ep.Project(infinityRunner3, newErrRunner(err)),
+		ep.Project(infinityRunner3, eptest.NewErrRunner(err)),
 		ep.Project(infinityRunner1, infinityRunner2),
 	)
 	data := ep.NewDataset(str.Data(1))
@@ -142,7 +142,7 @@ func TestProject_nested_errorInSecondRunner(t *testing.T) {
 	infinityRunner3 := &waitForCancel{}
 	runner := ep.Project(
 		ep.Project(infinityRunner1, infinityRunner2),
-		ep.Project(infinityRunner3, newErrRunner(err)),
+		ep.Project(infinityRunner3, eptest.NewErrRunner(err)),
 	)
 	data := ep.NewDataset(str.Data(1))
 	_, resErr := eptest.Run(runner, data)
