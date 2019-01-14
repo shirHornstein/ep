@@ -139,6 +139,8 @@ func TestScatter_multipleNodes(t *testing.T) {
 		res, err := eptest.Run(runner, data)
 		require.NoError(t, err)
 
+		sort.Sort(res)
+
 		expectedOutput := []string{
 			"(a1,a2,a3,a4,a5,a6,:5552)",
 			"(b1,b2,b3,b4,b5,b6,:5552)",

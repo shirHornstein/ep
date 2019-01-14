@@ -174,7 +174,7 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 				continue
 			}
 
-			err = ex.sendParallelToPeers(data, err)
+			err = ex.send(data)
 		case err = <-errs:
 			rcvDone = true // errors (or nil) from the receive go-routine
 		case <-ctx.Done(): // context timeout or cancel
@@ -189,38 +189,39 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 	return err
 }
 
-func (ex *exchange) sendParallelToPeers(data Dataset, err error) error {
+// send sends a dataset to destination nodes
+func (ex *exchange) send(data Dataset) error {
+	switch ex.Type {
+	case scatter:
+		return ex.encodeParallelToPeers(data)
+	case partition:
+		return ex.encodePartition(data)
+	default:
+		return ex.encodeAll(data)
+	}
+}
+
+func (ex *exchange) encodeParallelToPeers(data Dataset) error {
 	amountOfPeers := len(ex.encs)
 	modulo := data.Len() % amountOfPeers
 	batchSize := data.Len() / amountOfPeers
 	start := 0
+	var err error
 
 	// send remainder batch size, i.e. send the modulo data size
 	for i := 0; i < modulo; i++ {
 		end := start + batchSize + 1
-		err = ex.send(data.Slice(start, end).(Dataset))
+		err = ex.encodeNext(data.Slice(start, end).(Dataset))
 		start = start + batchSize + 1
 	}
 
 	// send data batch size
 	for i := modulo; i < amountOfPeers; i++ {
 		end := start + batchSize
-		err = ex.send(data.Slice(start, end).(Dataset))
+		err = ex.encodeNext(data.Slice(start, end).(Dataset))
 		start = start + batchSize
 	}
 	return err
-}
-
-// send sends a dataset to destination nodes
-func (ex *exchange) send(data Dataset) error {
-	switch ex.Type {
-	case scatter:
-		return ex.encodeNext(data)
-	case partition:
-		return ex.encodePartition(data)
-	default:
-		return ex.encodeAll(data)
-	}
 }
 
 // receive receives a dataset from next source node
