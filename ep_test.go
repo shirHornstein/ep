@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/panoplyio/ep"
-	"github.com/panoplyio/ep/eptest"
 	"strings"
 	"sync"
 	"time"
@@ -18,10 +17,6 @@ var _ = ep.Runners.
 	Register("count", &count{}).
 	Register("upper", &upper{}).
 	Register("question", &question{})
-
-func newErrRunner(e error) ep.Runner {
-	return &eptest.ErrRunner{Error: e, Name: "err"}
-}
 
 // waitForCancel infinitely emits data until it's canceled
 type waitForCancel struct {
