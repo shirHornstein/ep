@@ -82,6 +82,15 @@ func (s *scope) Filter(keep []bool) {
 	}
 }
 
+// SetScope sets a scope for the given columns
+func SetScope(cols []Type, scope string) []Type {
+	types := make([]Type, len(cols))
+	for i := 0; i < len(cols); i++ {
+		types[i] = Modify(cols[i], "Scope", scope)
+	}
+	return types
+}
+
 // GetScope returns the scope alias of the given typed column
 func GetScope(col Type) string {
 	scope, ok := Modifier(col, "Scope").(string)
