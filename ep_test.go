@@ -17,7 +17,10 @@ var _ = ep.Runners.
 	Register("nodeAddr", &nodeAddr{}).
 	Register("count", &count{}).
 	Register("upper", &upper{}).
-	Register("question", &question{})
+	Register("question", &question{}).
+	Register("localSort", &localSort{})
+
+const batchSize = 3
 
 // errRunner is a Runner that returns an error upon first input or inp closing
 type errRunner struct {
@@ -189,6 +192,34 @@ func (q *question) Run(_ context.Context, inp, out chan ep.Dataset) error {
 			res[i] = "is " + v + "?"
 		}
 		out <- ep.NewDataset(res)
+	}
+	return nil
+}
+
+type localSort struct {
+	Conditions []ep.SortingCol
+}
+
+func (*localSort) Returns() []ep.Type { return []ep.Type{ep.Wildcard, str} }
+func (ls *localSort) Run(ctx context.Context, inp, out chan ep.Dataset) error {
+	var selfData ep.Data = ep.NewDataset()
+	// consume entire local input before sorting all together
+	for data := range inp {
+		selfData = selfData.Append(data)
+	}
+	size := selfData.Len()
+	if size > 0 {
+		selfDataset := selfData.(ep.Dataset)
+		ep.Sort(selfDataset, ls.Conditions)
+
+		// once sorted, split to batches again to stream batches to distributedOrder
+		i := 0
+		for ; i < size/batchSize; i++ {
+			out <- selfData.Slice(i*batchSize, (i+1)*batchSize).(ep.Dataset)
+		}
+		if i*batchSize < size {
+			out <- selfData.Slice(i*batchSize, size).(ep.Dataset)
+		}
 	}
 	return nil
 }

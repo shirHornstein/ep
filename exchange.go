@@ -212,6 +212,9 @@ func (ex *exchange) encodeParallelToPeers(data Dataset) error {
 	for i := 0; i < modulo; i++ {
 		end := start + batchSize + 1
 		err = ex.encodeNext(data.Slice(start, end).(Dataset))
+		if err != nil {
+			return err
+		}
 		start = start + batchSize + 1
 	}
 
@@ -219,6 +222,9 @@ func (ex *exchange) encodeParallelToPeers(data Dataset) error {
 	for i := modulo; i < amountOfPeers; i++ {
 		end := start + batchSize
 		err = ex.encodeNext(data.Slice(start, end).(Dataset))
+		if err != nil {
+			return err
+		}
 		start = start + batchSize
 	}
 	return err

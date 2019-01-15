@@ -173,7 +173,7 @@ func TestScatter_and_Gather(t *testing.T) {
 
 	require.NoError(t, err)
 	require.NotNil(t, data)
-	require.Equal(t, "[[hello world foo bar] [:5552 :5552 :5551 :5551]]", fmt.Sprintf("%v", data))
+	require.Equal(t, "[[hello world foo bar] [:5552 :5551 :5552 :5551]]", fmt.Sprintf("%v", data))
 }
 
 func TestPartition_and_Gather(t *testing.T) {
