@@ -61,7 +61,7 @@ func TestSortGather(t *testing.T) {
 	})
 
 	t.Run("multiple columns", func(t *testing.T) {
-		sortingCols := []ep.SortingCol{{Index: 0, Desc: false}, {Index: 0, Desc: true}}
+		sortingCols := []ep.SortingCol{{Index: 0, Desc: false}, {Index: 1, Desc: true}}
 		data1 := ep.NewDataset(strs{"foo", "world", "what"})
 		data2 := ep.NewDataset(strs{"bar", "foo", "j", "yes"})
 		data3 := ep.NewDataset(strs{"yes", "z"})
