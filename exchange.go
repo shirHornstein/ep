@@ -219,7 +219,7 @@ func (ex *exchange) encodeParallelToPeers(data Dataset) error {
 	}
 
 	// send data batch size
-	for i := modulo; i < amountOfPeers; i++ {
+	for i := modulo; i < amountOfPeers && start < data.Len(); i++ {
 		end := start + batchSize
 		err = ex.encodeNext(data.Slice(start, end).(Dataset))
 		if err != nil {
