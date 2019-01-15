@@ -10,6 +10,10 @@ const UnnamedColumn = "?column?"
 // Useful for planners that need to externally wrap a runner with alias
 // see Aliasing and Scoping
 func Alias(r Runner, label string) Runner {
+	if cmp, ok := r.(*composition); ok {
+		cmp.Ts[0] = SetAlias(cmp.Ts[0], label)
+		return r
+	}
 	return &alias{r, label}
 }
 
@@ -54,6 +58,10 @@ func GetAlias(col Type) string {
 // to externally wrap a runner with scope
 // see Aliasing and Scoping
 func Scope(r Runner, label string) Runner {
+	if cmp, ok := r.(*composition); ok {
+		cmp.Ts = SetScope(cmp.Ts, label)
+		return r
+	}
 	return &scope{r, label}
 }
 
