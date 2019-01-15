@@ -172,3 +172,43 @@ func (q *question) Run(_ context.Context, inp, out chan ep.Dataset) error {
 	}
 	return nil
 }
+
+type adder struct{}
+
+func (*adder) Function() ep.Function {
+	return func(data ep.Dataset) (ep.Dataset, error) {
+		d0 := data.At(0).(integers)
+		d1 := data.At(1).(integers)
+		res := make(integers, data.Len())
+		for i := range res {
+			res[i] = d0[i] + d1[i]
+		}
+		return ep.NewDataset(res), nil
+	}
+}
+
+type opposer struct{}
+
+func (*opposer) Function() ep.Function {
+	return func(data ep.Dataset) (ep.Dataset, error) {
+		d0 := data.At(0).(integers)
+		res := make(integers, data.Len())
+		for i := range res {
+			res[i] = -1 * d0[i]
+		}
+		return ep.NewDataset(res), nil
+	}
+}
+
+type mul2 struct{}
+
+func (*mul2) Function() ep.Function {
+	return func(data ep.Dataset) (ep.Dataset, error) {
+		d0 := data.At(0).(integers)
+		res := make(integers, data.Len())
+		for i := range res {
+			res[i] = d0[i] * 2
+		}
+		return ep.NewDataset(res), nil
+	}
+}
