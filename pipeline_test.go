@@ -130,7 +130,7 @@ func TestPipeline_errorPropagation(t *testing.T) {
 			runners := make([]ep.Runner, pipeLength)
 			for i := range runners {
 				if i == errIdx {
-					runners[i] = newErrRunner(err)
+					runners[i] = eptest.NewErrRunner(err)
 				} else {
 					runners[i] = &waitForCancel{}
 				}
@@ -160,7 +160,7 @@ func TestPipeline_multipleErrorsPropagation(t *testing.T) {
 			runners := make([]ep.Runner, pipeLength)
 			for i := range runners {
 				if i == errIdx || i == (errIdx+2)%pipeLength {
-					runners[i] = newErrRunner(err)
+					runners[i] = eptest.NewErrRunner(err)
 				} else {
 					runners[i] = ep.PassThrough()
 				}
@@ -195,7 +195,7 @@ func TestPipeline_errorPropagationWithProject(t *testing.T) {
 			runners := make([]ep.Runner, pipeLength)
 			for i := range runners {
 				if i == errIdx {
-					runners[i] = newErrRunner(err)
+					runners[i] = eptest.NewErrRunner(err)
 				} else {
 					runners[i] = ep.PassThrough()
 				}
