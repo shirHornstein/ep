@@ -10,7 +10,6 @@ import (
 )
 
 var _ = ep.Runners.
-	Register("errRunner", &errRunner{}).
 	Register("waitForCancel", &waitForCancel{}).
 	Register("fixedData", &fixedData{}).
 	Register("dataRunner", &dataRunner{}).
@@ -21,25 +20,6 @@ var _ = ep.Runners.
 	Register("localSort", &localSort{})
 
 const batchSize = 3
-
-// errRunner is a Runner that returns an error upon first input or inp closing
-type errRunner struct {
-	error
-	// Name is unused field, defined to allow gob-ing errRunner between peers
-	Name string
-}
-
-func newErrRunner(e error) ep.Runner {
-	return &errRunner{e, "err"}
-}
-
-func (*errRunner) Returns() []ep.Type { return []ep.Type{} }
-func (r *errRunner) Run(ctx context.Context, inp, out chan ep.Dataset) error {
-	for range inp {
-		return r.error
-	}
-	return r.error
-}
 
 // waitForCancel infinitely emits data until it's canceled
 type waitForCancel struct {
