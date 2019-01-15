@@ -4,10 +4,8 @@ import (
 	"fmt"
 	"github.com/panoplyio/ep"
 	"github.com/panoplyio/ep/compare"
-	"github.com/stretchr/testify/require"
 	"sort"
 	"strconv"
-	"testing"
 )
 
 var _ = ep.Types.
@@ -154,27 +152,19 @@ func ExampleData() {
 	// Output: [bar foo]
 }
 
-func Test_Compare(t *testing.T) {
-	t.Run("Strings", func(t *testing.T) {
-		d1 := strs([]string{"a", "a@a.a", "bb", "c8", "x", " ", "", " "})
-		d2 := strs([]string{"a", "a", "b", "c9", "", "x", "", " "})
-		expected := []compare.Result{compare.Equal, compare.Greater, compare.Greater,
-			compare.Less, compare.Null, compare.Less, compare.BothNulls, compare.Equal}
-		comparisonResult, _ := d1.Compare(d2)
-		require.EqualValues(t, expected, comparisonResult)
-	})
+func ExampleData_Compare_strings() {
+	d1 := strs([]string{"a", "a@a.a", "bb", "c8", "x", " ", "", " "})
+	d2 := strs([]string{"a", "a", "b", "c9", "", "x", "", " "})
+	comparisonResult, _ := d1.Compare(d2)
+	fmt.Println(comparisonResult)
 
-	t.Run("Integers", func(t *testing.T) {
-		d1 := integers{1, 2, 5}
-		d2 := integers{1, 3, 4}
-		expected := []compare.Result{compare.Equal, compare.Less, compare.Greater}
-		comparisonResult, _ := d1.Compare(d2)
-		require.EqualValues(t, expected, comparisonResult)
-	})
+	// Output: [1 4 4 5 3 5 2 1]
+}
+func ExampleData_Compare_integers() {
+	d1 := integers{1, 2, 5}
+	d2 := integers{1, 3, 4}
+	comparisonResult, _ := d1.Compare(d2)
+	fmt.Println(comparisonResult)
 
-	t.Run("ShouldPanicIndexOutOfRange", func(t *testing.T) {
-		d1 := strs([]string{"a1", "b2b"})
-		d2 := strs([]string{"a1"})
-		require.Panics(t, func() { d1.Compare(d2) })
-	})
+	// Output: [1 5 4]
 }

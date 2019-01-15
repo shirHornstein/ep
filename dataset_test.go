@@ -167,22 +167,20 @@ func TestColumnStrings(t *testing.T) {
 	})
 }
 
-func TestDataset_Compare(t *testing.T) {
+func TestDataset_Compare_mixTypes(t *testing.T) {
 	var expected []compare.Result
 	var ds1, ds2 strs
 	var di1, di2 integers
 	var d1Dataset, d2Dataset ep.Dataset
 	var results []compare.Result
 
-	t.Run("MixTypes", func(t *testing.T) {
-		expected = []compare.Result{compare.Equal, compare.BothNulls, compare.Null, compare.Greater, compare.Less}
-		ds1 = strs([]string{"100", "", "3", "65", "101"})
-		di1 = integers{6, 6, 7, 1, 9}
-		d1Dataset = ep.NewDataset(ds1, di1)
-		ds2 = strs([]string{"100", "", "", "64", "20"})
-		di2 = integers{6, 6, 70, 88, 1}
-		d2Dataset = ep.NewDataset(ds2, di2)
-		results, _ = d1Dataset.Compare(d2Dataset)
-		require.Equal(t, expected, results)
-	})
+	expected = []compare.Result{compare.Equal, compare.BothNulls, compare.Null, compare.Greater, compare.Less, compare.Less}
+	ds1 = strs([]string{"100", "", "3", "65", "101", "aa"})
+	di1 = integers{6, 6, 7, 1, 9, 4}
+	d1Dataset = ep.NewDataset(ds1, di1)
+	ds2 = strs([]string{"100", "", "", "64", "20", "aa"})
+	di2 = integers{6, 6, 70, 88, 1, 5}
+	d2Dataset = ep.NewDataset(ds2, di2)
+	results, _ = d1Dataset.Compare(d2Dataset)
+	require.Equal(t, expected, results)
 }
