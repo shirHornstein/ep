@@ -6,13 +6,14 @@ import (
 
 var _ = registerGob(&composition{}, &composeProject{})
 
-// Function is a function that transforms Datasets. Any function that accepts a
-// Dataset and returns a Dataset with the same length is a Function.
-type Function func(Dataset) (Dataset, error)
+// BatchFunction is a function that transforms a single Dataset.
+// BatchFunction is not blocking: it returns immediately and does not wait for
+// more batches.
+type BatchFunction func(Dataset) (Dataset, error)
 
 // Piece is a type that holds a Function implementation.
 type Piece interface {
-	Function() Function
+	Function() BatchFunction
 }
 
 // Composer is a type that creates a list of Functions held by Pieces based on
@@ -37,7 +38,7 @@ type composition struct {
 
 func (c *composition) Returns() []Type { return c.Ts }
 func (c *composition) Run(ctx context.Context, inp, out chan Dataset) error {
-	funcs := make([]Function, len(c.Pcs))
+	funcs := make([]BatchFunction, len(c.Pcs))
 	for i := 0; i < len(c.Pcs); i++ {
 		funcs[i] = c.Pcs[i].Function()
 	}
@@ -73,11 +74,11 @@ type composeProject struct {
 	Cmps []Composer
 }
 
-func (p *composeProject) Function() Function {
-	funcs := make([][]Function, len(p.Cmps))
+func (p *composeProject) Function() BatchFunction {
+	funcs := make([][]BatchFunction, len(p.Cmps))
 	for i := 0; i < len(p.Cmps); i++ {
 		pcs := p.Cmps[i].Compose()
-		funcs[i] = make([]Function, len(pcs))
+		funcs[i] = make([]BatchFunction, len(pcs))
 		for j := 0; j < len(pcs); j++ {
 			funcs[i][j] = pcs[j].Function()
 		}
