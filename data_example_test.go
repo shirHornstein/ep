@@ -3,6 +3,7 @@ package ep_test
 import (
 	"fmt"
 	"github.com/panoplyio/ep"
+	"github.com/panoplyio/ep/compare"
 	"sort"
 	"strconv"
 )
@@ -41,13 +42,34 @@ func (vs strs) Duplicate(t int) ep.Data {
 	}
 	return ans
 }
-func (vs strs) IsNull(i int) bool { return false }
+func (vs strs) IsNull(i int) bool { return vs[i] == "" }
 func (vs strs) MarkNull(i int)    {}
 func (vs strs) Nulls() []bool     { return make([]bool, vs.Len()) }
 func (vs strs) Equal(other ep.Data) bool {
 	// for efficiency - avoid reflection and check address of underlying arrays
 	return fmt.Sprintf("%p", vs) == fmt.Sprintf("%p", other)
 }
+
+func (vs strs) Compare(other ep.Data) ([]compare.Result, error) {
+	otherData := other.(strs)
+	res := make([]compare.Result, vs.Len())
+	for i := 0; i < vs.Len(); i++ {
+		switch {
+		case vs.IsNull(i) && otherData.IsNull(i):
+			res[i] = compare.BothNulls
+		case vs.IsNull(i) || otherData.IsNull(i):
+			res[i] = compare.Null
+		case vs[i] == otherData[i]:
+			res[i] = compare.Equal
+		case vs[i] > otherData[i]:
+			res[i] = compare.Greater
+		case vs[i] < otherData[i]:
+			res[i] = compare.Less
+		}
+	}
+	return res, nil
+}
+
 func (vs strs) Copy(from ep.Data, fromRow, toRow int) {
 	src := from.(strs)
 	vs[toRow] = src[fromRow]
@@ -88,6 +110,27 @@ func (vs integers) Equal(other ep.Data) bool {
 	// for efficiency - avoid reflection and check address of underlying arrays
 	return fmt.Sprintf("%p", vs) == fmt.Sprintf("%p", other)
 }
+
+func (vs integers) Compare(other ep.Data) ([]compare.Result, error) {
+	otherData := other.(integers)
+	res := make([]compare.Result, vs.Len())
+	for i := 0; i < vs.Len(); i++ {
+		switch {
+		case vs.IsNull(i) && otherData.IsNull(i):
+			res[i] = compare.BothNulls
+		case vs.IsNull(i) || otherData.IsNull(i):
+			res[i] = compare.Null
+		case vs[i] == otherData[i]:
+			res[i] = compare.Equal
+		case vs[i] > otherData[i]:
+			res[i] = compare.Greater
+		case vs[i] < otherData[i]:
+			res[i] = compare.Less
+		}
+	}
+	return res, nil
+}
+
 func (vs integers) Copy(from ep.Data, fromRow, toRow int) {
 	src := from.(integers)
 	vs[toRow] = src[fromRow]
@@ -107,4 +150,21 @@ func ExampleData() {
 	fmt.Println(strs.Strings())
 
 	// Output: [bar foo]
+}
+
+func ExampleData_Compare_strings() {
+	d1 := strs([]string{"a", "a@a.a", "bb", "c8", "x", " ", "", " "})
+	d2 := strs([]string{"a", "a", "b", "c9", "", "x", "", " "})
+	comparisonResult, _ := d1.Compare(d2)
+	fmt.Println(comparisonResult)
+
+	// Output: [1 4 4 5 3 5 2 1]
+}
+func ExampleData_Compare_integers() {
+	d1 := integers{1, 2, 5}
+	d2 := integers{1, 3, 4}
+	comparisonResult, _ := d1.Compare(d2)
+	fmt.Println(comparisonResult)
+
+	// Output: [1 5 4]
 }
