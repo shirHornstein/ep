@@ -2,12 +2,17 @@ package ep
 
 import (
 	"fmt"
+	"github.com/panoplyio/ep/compare"
 )
 
 var _ = registerGob(Record, NewDataset())
 var _ = Types.register("record", Record)
 
 var errMismatch = fmt.Errorf("mismatched number of rows")
+
+// ErrMismatchTypes is a result of an operation on incompatible types
+var ErrMismatchTypes = fmt.Errorf("mismatched types")
+var errCompareDiffTypes = fmt.Errorf("cannot compare record types with different number of columns")
 
 // Dataset is a composite Data interface, containing several internal Data
 // objects. It's a Data in itself, but allows traversing and manipulating the
@@ -272,6 +277,49 @@ func (set dataset) Equal(other Data) bool {
 		}
 	}
 	return true
+}
+
+// see Data.Compare
+// Compare set and the otherSet, column by column, and calculate final result
+// for each row by merging columns comparison results
+func (set dataset) Compare(other Data) ([]compare.Result, error) {
+	otherSet, ok := other.(Dataset)
+	if !ok {
+		return nil, ErrMismatchTypes
+	}
+	if set.Width() != otherSet.Width() {
+		return nil, errCompareDiffTypes
+	}
+
+	// Prepare first compare results, to be merged with future comparison results
+	res, err := set.At(0).Compare(otherSet.At(0))
+	if err != nil {
+		return nil, err
+	}
+	for i := 1; i < set.Width(); i++ {
+		iterationResult, err := set.At(i).Compare(otherSet.At(i))
+		if err != nil {
+			return nil, err
+		}
+		merge(res, iterationResult)
+	}
+	return res, nil
+}
+
+// The merge action follows the rule: if you are not compare.BothNulls and
+// not compare.Equal, then the "stronger"'s value
+// (compare.Equal < compare.BothNulls < compare.Null < compare.Greater < compare.Less)
+// will be assigned to the result.
+// Note: the method logic is relevant for dataset Compare func
+func merge(res, mergeWith []compare.Result) {
+	for i, resI := range res {
+		if resI != compare.BothNulls && resI != compare.Equal {
+			continue
+		}
+		if resI < mergeWith[i] {
+			res[i] = mergeWith[i]
+		}
+	}
 }
 
 // see Data.Copy

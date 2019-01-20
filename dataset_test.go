@@ -3,6 +3,7 @@ package ep_test
 import (
 	"fmt"
 	"github.com/panoplyio/ep"
+	"github.com/panoplyio/ep/compare"
 	"github.com/panoplyio/ep/eptest"
 	"github.com/stretchr/testify/require"
 	"sort"
@@ -164,4 +165,22 @@ func TestColumnStrings(t *testing.T) {
 	t.Run("BothColumns", func(t *testing.T) {
 		require.Equal(t, [][]string{d1, d2}, ep.ColumnStrings(dataset, 0, 1))
 	})
+}
+
+func TestDataset_Compare_mixTypes(t *testing.T) {
+	var expected []compare.Result
+	var ds1, ds2 strs
+	var di1, di2 integers
+	var d1Dataset, d2Dataset ep.Dataset
+	var results []compare.Result
+
+	expected = []compare.Result{compare.Equal, compare.BothNulls, compare.Null, compare.Greater, compare.Less, compare.Less}
+	ds1 = strs([]string{"100", "", "3", "65", "101", "aa"})
+	di1 = integers{6, 6, 7, 1, 9, 4}
+	d1Dataset = ep.NewDataset(ds1, di1)
+	ds2 = strs([]string{"100", "", "", "64", "20", "aa"})
+	di2 = integers{6, 6, 70, 88, 1, 5}
+	d2Dataset = ep.NewDataset(ds2, di2)
+	results, _ = d1Dataset.Compare(d2Dataset)
+	require.Equal(t, expected, results)
 }
