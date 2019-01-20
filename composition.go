@@ -11,91 +11,84 @@ var _ = registerGob(&composition{}, &composeProject{})
 // more batches.
 type BatchFunction func(Dataset) (Dataset, error)
 
-// Composable is a type that holds a BatchFunction implementation.
+// Composable is a type that holds a BatchFunction implementation and can be
+// used to Compose runners.
 type Composable interface {
 	BatchFunction() BatchFunction
 }
 
-// Composer is a type that creates a list of BatchFunctions held by Composables based on
-// other Composers that it receives.
-type Composer interface {
-	Compose(...Composer) []Composable
-}
-
-// Composition returns a Runner with the provided return types. This Runner
-// passes its input through every Composable's BatchFunction implementation, where every
-// following Composable receives the output of the previous one. This Runner is also
-// a Composer, which means that its Composable can be retrieved and used in another
-// Composition.
-func Composition(ts []Type, pcs ...Composable) Runner {
-	return &composition{ts, pcs}
+// Compose returns a Runner with the provided return types. This Runner passes
+// its input through every Composable's BatchFunction implementation, where
+// every following BatchFunction receives the output of the previous one. This
+// Runner is also a Composable, which means that its BatchFunction can be
+// retrieved and used in another Compose call.
+func Compose(ts []Type, cmps ...Composable) Runner {
+	return &composition{ts, cmps}
 }
 
 type composition struct {
-	Ts  []Type
-	Pcs []Composable
+	Ts   []Type
+	Cmps []Composable
 }
 
 func (c *composition) Returns() []Type { return c.Ts }
 func (c *composition) Run(ctx context.Context, inp, out chan Dataset) error {
-	funcs := make([]BatchFunction, len(c.Pcs))
-	for i := 0; i < len(c.Pcs); i++ {
-		funcs[i] = c.Pcs[i].BatchFunction()
-	}
+	batchFunction := c.BatchFunction()
 
 	for data := range inp {
-		res, err := funcs[0](data)
+		res, err := batchFunction(data)
 		if err != nil {
 			return err
-		}
-
-		for i := 1; i < len(funcs); i++ {
-			res, err = funcs[i](res)
-			if err != nil {
-				return err
-			}
 		}
 		out <- res
 	}
 	return nil
 }
-func (c *composition) Compose(...Composer) []Composable {
-	return c.Pcs
+func (c *composition) BatchFunction() BatchFunction {
+	funcs := make([]BatchFunction, len(c.Cmps))
+	for i := 0; i < len(c.Cmps); i++ {
+		funcs[i] = c.Cmps[i].BatchFunction()
+	}
+
+	return func(data Dataset) (Dataset, error) {
+		res, err := funcs[0](data)
+		if err != nil {
+			return nil, err
+		}
+
+		for i := 1; i < len(funcs); i++ {
+			res, err = funcs[i](res)
+			if err != nil {
+				return nil, err
+			}
+		}
+		return res, nil
+	}
 }
 
-// ComposeProject returns a special Composable which forwards its input as-is to
-// every Composer, combining their outputs into a single Dataset. It is a
-// functional implementation of ep.Project.
-func ComposeProject(cmps ...Composer) Composable {
+// ComposeProject returns a special Composable which forwards its input as-is
+// to every Composable's BatchFunction, combining their outputs into a single
+// Dataset. It is a functional implementation of ep.Project.
+func ComposeProject(cmps ...Composable) Composable {
 	return &composeProject{cmps}
 }
 
 type composeProject struct {
-	Cmps []Composer
+	Cmps []Composable
 }
 
 func (p *composeProject) BatchFunction() BatchFunction {
-	funcs := make([][]BatchFunction, len(p.Cmps))
+	funcs := make([]BatchFunction, len(p.Cmps))
 	for i := 0; i < len(p.Cmps); i++ {
-		pcs := p.Cmps[i].Compose()
-		funcs[i] = make([]BatchFunction, len(pcs))
-		for j := 0; j < len(pcs); j++ {
-			funcs[i][j] = pcs[j].BatchFunction()
-		}
+		funcs[i] = p.Cmps[i].BatchFunction()
 	}
 
 	return func(data Dataset) (Dataset, error) {
 		var result Dataset
 		for col := 0; col < len(funcs); col++ {
-			res, err := funcs[col][0](data)
+			res, err := funcs[col](data)
 			if err != nil {
 				return nil, err
-			}
-			for i := 1; i < len(funcs[col]); i++ {
-				res, err = funcs[col][i](res)
-				if err != nil {
-					return nil, err
-				}
 			}
 			if result == nil {
 				result = res

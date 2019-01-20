@@ -13,7 +13,7 @@ func TestComposition(t *testing.T) {
 	input := ep.NewDataset(c1, c2)
 
 	t.Run("OnePiece", func(t *testing.T) {
-		runner := ep.Composition(
+		runner := ep.Compose(
 			[]ep.Type{integer},
 			&adder{},
 		)
@@ -27,7 +27,7 @@ func TestComposition(t *testing.T) {
 	})
 
 	t.Run("TwoPieces", func(t *testing.T) {
-		runner := ep.Composition(
+		runner := ep.Compose(
 			[]ep.Type{integer},
 			&adder{}, &opposer{},
 		)
@@ -45,17 +45,17 @@ func TestComposeProject(t *testing.T) {
 	col := integers{1, 2, 3, 4, 5}
 	input := ep.NewDataset(col)
 
-	comp1 := ep.Composition(
+	comp1 := ep.Compose(
 		[]ep.Type{integer},
 		&opposer{}, &mul2{},
-	).(ep.Composer)
-	comp2 := ep.Composition(
+	).(ep.Composable)
+	comp2 := ep.Compose(
 		[]ep.Type{integer},
 		&mul2{}, &mul2{}, &opposer{},
-	).(ep.Composer)
+	).(ep.Composable)
 	project := ep.ComposeProject(comp1, comp2)
 
-	composition := ep.Composition(
+	composition := ep.Compose(
 		[]ep.Type{integer, integer},
 		project, &adder{},
 	)
