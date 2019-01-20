@@ -20,7 +20,7 @@ func TestSortGather(t *testing.T) {
 	}()
 
 	runSortGather := func(t *testing.T, sortingCols []ep.SortingCol, expected string, datasets ...ep.Dataset) {
-		runner := ep.Pipeline(ep.Scatter(), &nodeAddr{}, ep.SortGather(sortingCols))
+		runner := ep.Pipeline(ep.Scatter(), &nodeAddr{}, &localSort{SortingCols: sortingCols}, ep.SortGather(sortingCols))
 		runner = dist.Distribute(runner, port1, port2)
 		data, err := eptest.Run(runner, datasets...)
 		require.NoError(t, err)
@@ -45,7 +45,7 @@ func TestSortGather(t *testing.T) {
 		data1 := ep.NewDataset(strs{"hello", "world", "what"})
 		data2 := ep.NewDataset(strs{"bar", "foo", "j", "yes"})
 		data3 := ep.NewDataset(strs{"yes", "z"})
-		expected := "[[bar foo hello j world what yes yes z] [:5551 :5551 :5552 :5551 :5552 :5552 :5551 :5552 :5552]]"
+		expected := "[[bar foo hello j what world yes yes z] [:5552 :5552 :5552 :5551 :5551 :5552 :5551 :5552 :5551]]"
 
 		runSortGather(t, sortingCols, expected, data1, data2, data3)
 	})
@@ -55,7 +55,7 @@ func TestSortGather(t *testing.T) {
 		data1 := ep.NewDataset(strs{"z", "yes"})
 		data2 := ep.NewDataset(strs{"yes", "j", "foo", "bar"})
 		data3 := ep.NewDataset(strs{"what", "world", "hello"})
-		expected := "[[z yes yes what world j hello foo bar] [:5552 :5552 :5551 :5552 :5552 :5551 :5552 :5551 :5551]]"
+		expected := "[[z yes yes world what j hello foo bar] [:5552 :5552 :5551 :5552 :5552 :5552 :5551 :5551 :5551]]"
 
 		runSortGather(t, sortingCols, expected, data1, data2, data3)
 	})
@@ -65,7 +65,7 @@ func TestSortGather(t *testing.T) {
 		data1 := ep.NewDataset(strs{"foo", "world", "what"})
 		data2 := ep.NewDataset(strs{"bar", "foo", "j", "yes"})
 		data3 := ep.NewDataset(strs{"yes", "z"})
-		expected := "[[bar foo foo j world what yes yes z] [:5551 :5552 :5551 :5551 :5552 :5552 :5552 :5551 :5552]]"
+		expected := "[[bar foo foo j what world yes yes z] [:5552 :5552 :5552 :5551 :5551 :5552 :5552 :5551 :5551]]"
 
 		runSortGather(t, sortingCols, expected, data1, data2, data3)
 	})
