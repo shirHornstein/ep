@@ -193,41 +193,12 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 func (ex *exchange) send(data Dataset) error {
 	switch ex.Type {
 	case scatter:
-		return ex.encodeParallelToPeers(data)
+		return ex.encodeSplit(data)
 	case partition:
 		return ex.encodePartition(data)
 	default:
 		return ex.encodeAll(data)
 	}
-}
-
-func (ex *exchange) encodeParallelToPeers(data Dataset) error {
-	amountOfPeers := len(ex.encs)
-	modulo := data.Len() % amountOfPeers
-	batchSize := data.Len() / amountOfPeers
-	start := 0
-	var err error
-
-	// send remainder batch size, i.e. send the modulo data size
-	for i := 0; i < modulo; i++ {
-		end := start + batchSize + 1
-		err = ex.encodeNext(data.Slice(start, end).(Dataset))
-		if err != nil {
-			return err
-		}
-		start = start + batchSize + 1
-	}
-
-	// send data batch size
-	for i := modulo; i < amountOfPeers && start < data.Len(); i++ {
-		end := start + batchSize
-		err = ex.encodeNext(data.Slice(start, end).(Dataset))
-		if err != nil {
-			return err
-		}
-		start = start + batchSize
-	}
-	return err
 }
 
 // receive receives a dataset from next source node
@@ -294,6 +265,35 @@ func (ex *exchange) encodeAll(e interface{}) (err error) {
 		if err1 != nil {
 			err = err1
 		}
+	}
+	return err
+}
+
+func (ex *exchange) encodeSplit(data Dataset) error {
+	amountOfPeers := len(ex.encs)
+	peersWithLargerBatch := data.Len() % amountOfPeers
+	batchSize := data.Len() / amountOfPeers
+	start := 0
+	var err error
+
+	// send remainder batch size, i.e. send the peersWithLargerBatch (modulo) data size
+	for i := 0; i < peersWithLargerBatch; i++ {
+		end := start + batchSize + 1
+		err = ex.encodeNext(data.Slice(start, end))
+		if err != nil {
+			return err
+		}
+		start = end
+	}
+
+	// send data batch size
+	for i := peersWithLargerBatch; i < amountOfPeers && start < data.Len(); i++ {
+		end := start + batchSize
+		err = ex.encodeNext(data.Slice(start, end))
+		if err != nil {
+			return err
+		}
+		start = end
 	}
 	return err
 }

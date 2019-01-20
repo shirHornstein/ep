@@ -31,7 +31,7 @@ func ExampleScatter() {
 	data1 := ep.NewDataset(strs{"hello", "world"})
 	data2 := ep.NewDataset(strs{"foo", "bar"})
 	data, err := eptest.Run(runner, data1, data2)
-	fmt.Println(data.Strings(), err) // no gather - only one batch should return
+	fmt.Println(data.Strings(), err) // no gather - only dist1 data should return
 
 	// Output:
 	// [(world) (bar)] <nil>
@@ -166,7 +166,7 @@ func TestScatter_multipleNodes(t *testing.T) {
 		require.Equal(t, expectedOutput, res.Strings())
 	})
 
-	t.Run("enough data to all peers", func(t *testing.T) {
+	t.Run("different batch size to all peers", func(t *testing.T) {
 		col1 := strs{"a1", "b1", "c1", "d1", "e1"}
 		col2 := strs{"a2", "b2", "c2", "d2", "e2"}
 		col3 := strs{"a3", "b3", "c3", "d3", "e3"}

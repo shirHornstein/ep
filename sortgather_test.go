@@ -20,7 +20,7 @@ func TestSortGather(t *testing.T) {
 	}()
 
 	runSortGather := func(t *testing.T, sortingCols []ep.SortingCol, expected string, datasets ...ep.Dataset) {
-		runner := ep.Pipeline(ep.Scatter(), &nodeAddr{}, &localSort{Conditions: sortingCols}, ep.SortGather(sortingCols))
+		runner := ep.Pipeline(ep.Scatter(), &nodeAddr{}, &localSort{SortingCols: sortingCols}, ep.SortGather(sortingCols))
 		runner = dist.Distribute(runner, port1, port2)
 		data, err := eptest.Run(runner, datasets...)
 		require.NoError(t, err)

@@ -177,7 +177,7 @@ func (q *question) Run(_ context.Context, inp, out chan ep.Dataset) error {
 }
 
 type localSort struct {
-	Conditions []ep.SortingCol
+	SortingCols []ep.SortingCol
 }
 
 func (*localSort) Returns() []ep.Type { return []ep.Type{ep.Wildcard, str} }
@@ -190,7 +190,7 @@ func (ls *localSort) Run(ctx context.Context, inp, out chan ep.Dataset) error {
 	size := selfData.Len()
 	if size > 0 {
 		selfDataset := selfData.(ep.Dataset)
-		ep.Sort(selfDataset, ls.Conditions)
+		ep.Sort(selfDataset, ls.SortingCols)
 
 		// once sorted, split to batches again to stream batches to distributedOrder
 		i := 0
