@@ -175,7 +175,7 @@ func (q *question) Run(_ context.Context, inp, out chan ep.Dataset) error {
 
 type adder struct{}
 
-func (*adder) Function() ep.BatchFunction {
+func (*adder) BatchFunction() ep.BatchFunction {
 	return func(data ep.Dataset) (ep.Dataset, error) {
 		d0 := data.At(0).(integers)
 		d1 := data.At(1).(integers)
@@ -189,7 +189,7 @@ func (*adder) Function() ep.BatchFunction {
 
 type opposer struct{}
 
-func (*opposer) Function() ep.BatchFunction {
+func (*opposer) BatchFunction() ep.BatchFunction {
 	return func(data ep.Dataset) (ep.Dataset, error) {
 		d0 := data.At(0).(integers)
 		res := make(integers, data.Len())
@@ -202,7 +202,7 @@ func (*opposer) Function() ep.BatchFunction {
 
 type mul2 struct{}
 
-func (*mul2) Function() ep.BatchFunction {
+func (*mul2) BatchFunction() ep.BatchFunction {
 	return func(data ep.Dataset) (ep.Dataset, error) {
 		d0 := data.At(0).(integers)
 		res := make(integers, data.Len())

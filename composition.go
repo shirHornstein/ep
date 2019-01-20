@@ -11,36 +11,36 @@ var _ = registerGob(&composition{}, &composeProject{})
 // more batches.
 type BatchFunction func(Dataset) (Dataset, error)
 
-// Piece is a type that holds a Function implementation.
-type Piece interface {
-	Function() BatchFunction
+// Composable is a type that holds a BatchFunction implementation.
+type Composable interface {
+	BatchFunction() BatchFunction
 }
 
-// Composer is a type that creates a list of Functions held by Pieces based on
+// Composer is a type that creates a list of BatchFunctions held by Composables based on
 // other Composers that it receives.
 type Composer interface {
-	Compose(...Composer) []Piece
+	Compose(...Composer) []Composable
 }
 
 // Composition returns a Runner with the provided return types. This Runner
-// passes its input through every Piece's Function implementation, where every
-// following Piece receives the output of the previous one. This Runner is also
-// a Composer, which means that its pieces can be retrieved and used in another
+// passes its input through every Composable's BatchFunction implementation, where every
+// following Composable receives the output of the previous one. This Runner is also
+// a Composer, which means that its Composable can be retrieved and used in another
 // Composition.
-func Composition(ts []Type, pcs ...Piece) Runner {
+func Composition(ts []Type, pcs ...Composable) Runner {
 	return &composition{ts, pcs}
 }
 
 type composition struct {
 	Ts  []Type
-	Pcs []Piece
+	Pcs []Composable
 }
 
 func (c *composition) Returns() []Type { return c.Ts }
 func (c *composition) Run(ctx context.Context, inp, out chan Dataset) error {
 	funcs := make([]BatchFunction, len(c.Pcs))
 	for i := 0; i < len(c.Pcs); i++ {
-		funcs[i] = c.Pcs[i].Function()
+		funcs[i] = c.Pcs[i].BatchFunction()
 	}
 
 	for data := range inp {
@@ -59,14 +59,14 @@ func (c *composition) Run(ctx context.Context, inp, out chan Dataset) error {
 	}
 	return nil
 }
-func (c *composition) Compose(...Composer) []Piece {
+func (c *composition) Compose(...Composer) []Composable {
 	return c.Pcs
 }
 
-// ComposeProject returns a special Piece which forwards its input as-is to
+// ComposeProject returns a special Composable which forwards its input as-is to
 // every Composer, combining their outputs into a single Dataset. It is a
 // functional implementation of ep.Project.
-func ComposeProject(cmps ...Composer) Piece {
+func ComposeProject(cmps ...Composer) Composable {
 	return &composeProject{cmps}
 }
 
@@ -74,13 +74,13 @@ type composeProject struct {
 	Cmps []Composer
 }
 
-func (p *composeProject) Function() BatchFunction {
+func (p *composeProject) BatchFunction() BatchFunction {
 	funcs := make([][]BatchFunction, len(p.Cmps))
 	for i := 0; i < len(p.Cmps); i++ {
 		pcs := p.Cmps[i].Compose()
 		funcs[i] = make([]BatchFunction, len(pcs))
 		for j := 0; j < len(pcs); j++ {
-			funcs[i][j] = pcs[j].Function()
+			funcs[i][j] = pcs[j].BatchFunction()
 		}
 	}
 
