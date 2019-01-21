@@ -22,8 +22,8 @@ type Composable interface {
 // every following BatchFunction receives the output of the previous one. This
 // Runner is also a Composable, which means that its BatchFunction can be
 // retrieved and used in another Compose call.
-func Compose(ts []Type, cmps ...Composable) Runner {
-	return &composition{ts, cmps}
+func Compose(returns []Type, cmps ...Composable) Runner {
+	return &composition{returns, cmps}
 }
 
 type composition struct {
