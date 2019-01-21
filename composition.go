@@ -51,18 +51,14 @@ func (c *composition) BatchFunction() BatchFunction {
 	}
 
 	return func(data Dataset) (Dataset, error) {
-		res, err := funcs[0](data)
-		if err != nil {
-			return nil, err
-		}
-
-		for i := 1; i < len(funcs); i++ {
-			res, err = funcs[i](res)
+		var err error
+		for i := 0; i < len(funcs); i++ {
+			data, err = funcs[i](data)
 			if err != nil {
 				return nil, err
 			}
 		}
-		return res, nil
+		return data, nil
 	}
 }
 
