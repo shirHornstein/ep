@@ -176,6 +176,46 @@ func (q *question) Run(_ context.Context, inp, out chan ep.Dataset) error {
 	return nil
 }
 
+type addInts struct{}
+
+func (*addInts) BatchFunction() ep.BatchFunction {
+	return func(data ep.Dataset) (ep.Dataset, error) {
+		d0 := data.At(0).(integers)
+		d1 := data.At(1).(integers)
+		res := make(integers, data.Len())
+		for i := range res {
+			res[i] = d0[i] + d1[i]
+		}
+		return ep.NewDataset(res), nil
+	}
+}
+
+type negateInt struct{}
+
+func (*negateInt) BatchFunction() ep.BatchFunction {
+	return func(data ep.Dataset) (ep.Dataset, error) {
+		d0 := data.At(0).(integers)
+		res := make(integers, data.Len())
+		for i := range res {
+			res[i] = -1 * d0[i]
+		}
+		return ep.NewDataset(res), nil
+	}
+}
+
+type mulIntBy2 struct{}
+
+func (*mulIntBy2) BatchFunction() ep.BatchFunction {
+	return func(data ep.Dataset) (ep.Dataset, error) {
+		d0 := data.At(0).(integers)
+		res := make(integers, data.Len())
+		for i := range res {
+			res[i] = d0[i] * 2
+		}
+		return ep.NewDataset(res), nil
+	}
+}
+
 type localSort struct {
 	SortingCols []ep.SortingCol
 }
