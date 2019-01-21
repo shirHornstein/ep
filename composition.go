@@ -4,7 +4,7 @@ import (
 	"context"
 )
 
-var _ = registerGob(&composition{}, &composeProject{})
+var _ = registerGob(&compose{}, &composeProject{})
 
 // BatchFunction is a function that transforms a single Dataset.
 // BatchFunction is not blocking: it returns immediately and does not wait for
@@ -23,16 +23,16 @@ type Composable interface {
 // Runner is also a Composable, which means that its BatchFunction can be
 // retrieved and used in another Compose call.
 func Compose(returns []Type, cmps ...Composable) Runner {
-	return &composition{returns, cmps}
+	return &compose{returns, cmps}
 }
 
-type composition struct {
+type compose struct {
 	Ts   []Type
 	Cmps []Composable
 }
 
-func (c *composition) Returns() []Type { return c.Ts }
-func (c *composition) Run(ctx context.Context, inp, out chan Dataset) error {
+func (c *compose) Returns() []Type { return c.Ts }
+func (c *compose) Run(ctx context.Context, inp, out chan Dataset) error {
 	batchFunction := c.BatchFunction()
 
 	for data := range inp {
@@ -44,7 +44,7 @@ func (c *composition) Run(ctx context.Context, inp, out chan Dataset) error {
 	}
 	return nil
 }
-func (c *composition) BatchFunction() BatchFunction {
+func (c *compose) BatchFunction() BatchFunction {
 	funcs := make([]BatchFunction, len(c.Cmps))
 	for i := 0; i < len(c.Cmps); i++ {
 		funcs[i] = c.Cmps[i].BatchFunction()
