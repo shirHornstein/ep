@@ -80,19 +80,15 @@ func (p *composeProject) BatchFunction() BatchFunction {
 	}
 
 	return func(data Dataset) (Dataset, error) {
-		var result Dataset
+		result := NewDataset()
 		for col := 0; col < len(funcs); col++ {
 			res, err := funcs[col](data)
 			if err != nil {
 				return nil, err
 			}
-			if result == nil {
-				result = res
-			} else {
-				result, err = result.Expand(res)
-				if err != nil {
-					return nil, err
-				}
+			result, err = result.Expand(res)
+			if err != nil {
+				return nil, err
 			}
 		}
 		return result, nil
