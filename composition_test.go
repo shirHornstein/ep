@@ -15,7 +15,7 @@ func TestComposition(t *testing.T) {
 	t.Run("OnePiece", func(t *testing.T) {
 		runner := ep.Compose(
 			[]ep.Type{integer},
-			&adder{},
+			&addInts{},
 		)
 		expected := []string{"11", "22", "33", "44", "55"}
 
@@ -29,7 +29,7 @@ func TestComposition(t *testing.T) {
 	t.Run("TwoPieces", func(t *testing.T) {
 		runner := ep.Compose(
 			[]ep.Type{integer},
-			&adder{}, &opposer{},
+			&addInts{}, &negateInt{},
 		)
 		expected := []string{"-11", "-22", "-33", "-44", "-55"}
 
@@ -47,17 +47,17 @@ func TestComposeProject(t *testing.T) {
 
 	comp1 := ep.Compose(
 		[]ep.Type{integer},
-		&opposer{}, &mul2{},
+		&negateInt{}, &mulIntBy2{},
 	).(ep.Composable)
 	comp2 := ep.Compose(
 		[]ep.Type{integer},
-		&mul2{}, &mul2{}, &opposer{},
+		&mulIntBy2{}, &mulIntBy2{}, &negateInt{},
 	).(ep.Composable)
 	project := ep.ComposeProject(comp1, comp2)
 
 	composition := ep.Compose(
 		[]ep.Type{integer, integer},
-		project, &adder{},
+		project, &addInts{},
 	)
 	expected := []string{"-6", "-12", "-18", "-24", "-30"}
 
