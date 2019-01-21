@@ -73,14 +73,7 @@ type scope struct {
 // Returns implements ep.Runner
 func (s *scope) Returns() []Type {
 	inpTypes := s.Runner.Returns()
-	outTypes := make([]Type, len(inpTypes))
-	for i, t := range inpTypes {
-		if s.Label != "" {
-			t = Modify(t, "Scope", s.Label)
-		}
-		outTypes[i] = t
-	}
-	return outTypes
+	return SetScope(inpTypes, s.Label)
 }
 
 // Filter implements ep.FilterRunner
@@ -92,6 +85,9 @@ func (s *scope) Filter(keep []bool) {
 
 // SetScope sets a scope for the given columns
 func SetScope(cols []Type, scope string) []Type {
+	if scope == "" {
+		return cols
+	}
 	types := make([]Type, len(cols))
 	for i := 0; i < len(cols); i++ {
 		types[i] = Modify(cols[i], "Scope", scope)
