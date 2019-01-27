@@ -22,8 +22,8 @@ type alias struct {
 	Label string
 }
 
-func (a *alias) Push(conds ScopesRunner) bool {
-	return a.Runner.(PushRunner).Push(conds)
+func (a *alias) Push(toPush ScopesRunner) bool {
+	return a.Runner.(PushRunner).Push(toPush)
 }
 
 func (a *alias) Scopes() map[string]bool {
@@ -81,8 +81,8 @@ type scope struct {
 	Label string
 }
 
-func (s *scope) Push(conds ScopesRunner) bool {
-	return s.Runner.(PushRunner).Push(conds)
+func (s *scope) Push(toPush ScopesRunner) bool {
+	return s.Runner.(PushRunner).Push(toPush)
 }
 
 func (s *scope) Scopes() map[string]bool {

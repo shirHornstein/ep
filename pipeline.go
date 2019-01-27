@@ -45,10 +45,10 @@ func Pipeline(runners ...Runner) Runner {
 
 type pipeline []Runner
 
-func (rs pipeline) Push(conds ScopesRunner) bool {
+func (rs pipeline) Push(toPush ScopesRunner) bool {
 	for _, r := range rs {
 		if r, ok := r.(PushRunner); ok {
-			isPushed := r.Push(conds)
+			isPushed := r.Push(toPush)
 			if isPushed {
 				return isPushed
 			}

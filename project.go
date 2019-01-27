@@ -46,10 +46,10 @@ func Placeholder(shift int, runners ...Runner) Runner {
 
 type project []Runner
 
-func (rs project) Push(conds ScopesRunner) bool {
+func (rs project) Push(toPush ScopesRunner) bool {
 	for _, p := range rs {
 		if p, ok := p.(PushRunner); ok {
-			isPushed := p.Push(conds)
+			isPushed := p.Push(toPush)
 			if isPushed {
 				return true
 			}
