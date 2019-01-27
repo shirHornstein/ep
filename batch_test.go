@@ -8,7 +8,6 @@ import (
 )
 
 func TestBatch(t *testing.T) {
-	d0 := ep.NewDataset(integers{})
 	d1 := ep.NewDataset(integers{1})
 	d2 := ep.NewDataset(integers{2, 3})
 	d3 := ep.NewDataset(integers{4, 5, 6})
@@ -19,7 +18,7 @@ func TestBatch(t *testing.T) {
 		batch := ep.Batch(1)
 
 		runner := ep.Pipeline(batch, &count{})
-		res, err := eptest.Run(runner, d0, d1, d2, d3, d4, d5)
+		res, err := eptest.Run(runner, d1, d2, d3, d4, d5)
 		require.NoError(t, err)
 		require.Equal(t, 15, res.Len())
 		require.Equal(t, 1, res.Width())
@@ -35,7 +34,7 @@ func TestBatch(t *testing.T) {
 		batch := ep.Batch(2)
 
 		runner := ep.Pipeline(batch, &count{})
-		res, err := eptest.Run(runner, d0, d1, d2, d3, d4, d5)
+		res, err := eptest.Run(runner, d1, d2, d3, d4, d5)
 		require.NoError(t, err)
 		require.Equal(t, 8, res.Len())
 		require.Equal(t, 1, res.Width())
@@ -48,7 +47,7 @@ func TestBatch(t *testing.T) {
 		batch := ep.Batch(3)
 
 		runner := ep.Pipeline(batch, &count{})
-		res, err := eptest.Run(runner, d0, d1, d2, d3, d4, d5)
+		res, err := eptest.Run(runner, d1, d2, d3, d4, d5)
 		require.NoError(t, err)
 		require.Equal(t, 5, res.Len())
 		require.Equal(t, 1, res.Width())
@@ -61,7 +60,7 @@ func TestBatch(t *testing.T) {
 		batch := ep.Batch(4)
 
 		runner := ep.Pipeline(batch, &count{})
-		res, err := eptest.Run(runner, d0, d1, d2, d3, d4, d5)
+		res, err := eptest.Run(runner, d1, d2, d3, d4, d5)
 		require.NoError(t, err)
 		require.Equal(t, 4, res.Len())
 		require.Equal(t, 1, res.Width())
@@ -74,7 +73,7 @@ func TestBatch(t *testing.T) {
 		batch := ep.Batch(5)
 
 		runner := ep.Pipeline(batch, &count{})
-		res, err := eptest.Run(runner, d0, d1, d2, d3, d4, d5)
+		res, err := eptest.Run(runner, d1, d2, d3, d4, d5)
 		require.NoError(t, err)
 		require.Equal(t, 3, res.Len())
 		require.Equal(t, 1, res.Width())
