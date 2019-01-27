@@ -192,6 +192,7 @@ func (d *distributer) Serve(conn net.Conn) error {
 		close(inp)
 
 		Run(context.Background(), r, inp, out, nil, &err)
+		// fmt.Println("dist done", err)
 		if err != nil {
 			err = &errMsg{err.Error()}
 		}
@@ -306,9 +307,11 @@ func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) error {
 				err, _ = data.(error)
 			}
 			if err != nil && err.Error() != io.EOF.Error() {
+				fmt.Println("error from peer", err)
 				cancel()
-				// TODO cancelQuery()
-				respErrs <- err
+				if err.Error() != errOnPeer.Error() {
+					respErrs <- err
+				}
 			}
 		}(dec)
 	}
@@ -320,7 +323,7 @@ func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) error {
 
 	var finalError error
 	for _, e := range errs {
-		if e != context.Canceled {
+		if e != context.Canceled && e != errOnPeer {
 			finalError = e
 			break
 		}

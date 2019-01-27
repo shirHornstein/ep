@@ -96,7 +96,7 @@ func TestScatter_singleNode(t *testing.T) {
 	require.Equal(t, 4, data.Len())
 }
 
-func TestScatter_multipleNodes(t *testing.T) {
+func _TestScatter_multipleNodes(t *testing.T) {
 	port1 := fmt.Sprintf(":%d", 5551)
 	peer1 := eptest.NewPeer(t, port1)
 

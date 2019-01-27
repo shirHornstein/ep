@@ -10,6 +10,84 @@ import (
 	"time"
 )
 
+var _ = Runners.Register("cancel", &canceler{})
+
+var exchanges = map[string]func() Runner{
+	"gather":     Gather,
+	"sortGather": func() Runner { return SortGather(nil) },
+	"scatter":    Scatter,
+	"broadcast":  Broadcast,
+	"partition":  func() Runner { return Partition(0) },
+}
+
+func TestExchange_uniqueUIDPerExchanger(t *testing.T) {
+	s1 := Scatter().(*exchange)
+	s2 := Scatter().(*exchange)
+	s3 := Gather().(*exchange)
+	require.NotEqual(t, s1.UID, s2.UID)
+	require.NotEqual(t, s2.UID, s3.UID)
+}
+
+func TestExchange_init_openConnectionsToAll(t *testing.T) {
+	ports := []string{":5551", ":5552", ":5553", ":5554"}
+	distributers := startCluster(t, ports...)
+	master := distributers[0]
+
+	defer func() {
+		for _, d := range distributers {
+			require.NoError(t, d.Close())
+		}
+	}()
+
+	ctx := context.WithValue(context.Background(), distributerKey, master)
+	ctx = context.WithValue(ctx, allNodesKey, ports)
+	ctx = context.WithValue(ctx, masterNodeKey, ports[0])
+
+	for name, ex := range exchanges {
+		t.Run("master/"+name, func(t *testing.T) {
+			ctx = context.WithValue(ctx, thisNodeKey, ports[0])
+			exchange := ex().(*exchange)
+			err := exchange.init(ctx)
+
+			require.NoError(t, err)
+			require.Equal(t, len(ports), len(exchange.decs)+len(exchange.decsErr))
+			require.Equal(t, len(ports), len(exchange.encs)+len(exchange.encsErr))
+			require.Equal(t, len(ports), len(exchange.conns))
+
+			require.IsType(t, &shortCircuit{}, exchange.conns[0])
+			require.NoError(t, exchange.Close())
+			require.True(t, (exchange.conns[0]).(*shortCircuit).closed, "open connections leak")
+		})
+
+		t.Run("non master/"+name, func(t *testing.T) {
+			t.Skip("TODO test peer")
+			ctx = context.WithValue(ctx, thisNodeKey, ports[1])
+			exchange := ex().(*exchange)
+
+			runner := master.Distribute(exchange, ports...)
+
+			inp := make(chan Dataset)
+			out := make(chan Dataset)
+			close(inp)
+			defer close(out)
+
+			err := runner.Run(ctx, inp, out)
+			require.Error(t, err)
+
+			// err = exchange.init(ctx)
+
+			require.NoError(t, err)
+			require.Equal(t, len(ports), len(exchange.decs)+len(exchange.decsErr))
+			require.Equal(t, len(ports), len(exchange.encs)+len(exchange.encsErr))
+			require.Equal(t, len(ports), len(exchange.conns))
+
+			require.IsType(t, &shortCircuit{}, exchange.conns[0])
+			require.NoError(t, exchange.Close())
+			require.True(t, (exchange.conns[0]).(*shortCircuit).closed, "open connections leak")
+		})
+	}
+}
+
 func TestExchange_init_closeAllConnectionsUponError(t *testing.T) {
 	port := ":5551"
 	ln, err := net.Listen("tcp", port)
@@ -30,16 +108,68 @@ func TestExchange_init_closeAllConnectionsUponError(t *testing.T) {
 	require.Equal(t, "dial tcp :5552: connect: connection refused", err.Error())
 	require.Equal(t, 1, len(exchange.conns))
 	require.IsType(t, &shortCircuit{}, exchange.conns[0])
+	require.NoError(t, exchange.Close())
 	require.True(t, (exchange.conns[0]).(*shortCircuit).closed, "open connections leak")
 	require.NoError(t, dist.Close())
 }
 
-func TestExchange_uniqueUIDPerExchanger(t *testing.T) {
-	s1 := Scatter().(*exchange)
-	s2 := Scatter().(*exchange)
-	s3 := Gather().(*exchange)
-	require.NotEqual(t, s1.UID, s2.UID)
-	require.NotEqual(t, s2.UID, s3.UID)
+func _TestExchange_error(t *testing.T) {
+	port, port2 := ":5551", ":5552"
+	distributers := startCluster(t, port, port2)
+	master := distributers[0]
+
+	defer func() {
+		for _, d := range distributers {
+			require.NoError(t, d.Close())
+		}
+	}()
+
+	ctx := context.WithValue(context.Background(), distributerKey, master)
+	ctx = context.WithValue(ctx, allNodesKey, []string{port, port2})
+	ctx = context.WithValue(ctx, masterNodeKey, port)
+	ctx = context.WithValue(ctx, thisNodeKey, port)
+
+	for name, ex := range exchanges {
+		t.Run(name+"/cancel on master", func(t *testing.T) {
+			t.Skip("q")
+
+			exchange := ex().(*exchange)
+			runner := master.Distribute(exchange, port, port2)
+
+			inp := make(chan Dataset)
+			out := make(chan Dataset)
+			defer close(inp)
+			defer close(out)
+			ctx, cancel := context.WithCancel(ctx)
+			cancel()
+			err := runner.Run(ctx, inp, out)
+			require.NoError(t, err)
+
+			require.Equal(t, 2, len(exchange.conns))
+			require.IsType(t, &shortCircuit{}, exchange.conns[0])
+			require.True(t, (exchange.conns[0]).(*shortCircuit).closed, "open connections leak")
+		})
+
+		t.Run(name+"/error on peer", func(t *testing.T) {
+			exchange := ex().(*exchange)
+			runner := Pipeline(cancelOnPort(port2), exchange)
+			runner = master.Distribute(runner, port, port2)
+
+			inp := make(chan Dataset)
+			out := make(chan Dataset)
+			defer close(inp)
+			defer close(out)
+
+			err := runner.Run(ctx, inp, out)
+			require.Error(t, err)
+			require.Equal(t, "error from :5552", err.Error())
+
+			require.Equal(t, 2, len(exchange.conns))
+			require.IsType(t, &shortCircuit{}, exchange.conns[0])
+			require.True(t, (exchange.conns[0]).(*shortCircuit).closed, "open connections leak")
+			require.Contains(t, exchange.conns[1].Close().Error(), "use of closed network connection", "open connections leak")
+		})
+	}
 }
 
 func TestPartition_addsMembersToHashRing(t *testing.T) {
@@ -71,7 +201,8 @@ func TestPartition_addsMembersToHashRing(t *testing.T) {
 	ctx = context.WithValue(ctx, thisNodeKey, port1)
 
 	partition := Partition(0).(*exchange)
-	partition.init(ctx)
+	err = partition.init(ctx)
+	require.NoError(t, err)
 
 	members := partition.hashRing.Members()
 	require.ElementsMatchf(t, members, allNodes, "%s != %s", members, allNodes)
@@ -105,7 +236,8 @@ func TestExchange_encodePartition_failsWithoutDataset(t *testing.T) {
 	ctx = context.WithValue(ctx, thisNodeKey, port1)
 
 	partition := Partition(0).(*exchange)
-	partition.init(ctx)
+	err = partition.init(ctx)
+	require.NoError(t, err)
 
 	require.Error(t, partition.encodePartition([]int{42}))
 }
@@ -143,7 +275,8 @@ func TestExchange_getPartitionEncoder_consistent(t *testing.T) {
 	ctx = context.WithValue(ctx, thisNodeKey, port1)
 
 	partition := Partition(0).(*exchange)
-	partition.init(ctx)
+	err = partition.init(ctx)
+	require.NoError(t, err)
 
 	hashKey := fmt.Sprintf("this-is-a-key-%d", rand.Intn(1e12))
 	enc, err := partition.getPartitionEncoder(hashKey)
@@ -186,11 +319,40 @@ func TestExchange_encsMappedByNodes(t *testing.T) {
 	ctx = context.WithValue(ctx, thisNodeKey, port1)
 
 	partition := Partition(0).(*exchange)
-	partition.init(ctx)
+	err = partition.init(ctx)
+	require.NoError(t, err)
 
 	encKeys := make([]string, 0, len(partition.encsByKey))
 	for k := range partition.encsByKey {
 		encKeys = append(encKeys, k)
 	}
 	require.ElementsMatch(t, []string{":5551", ":5552", ":5553"}, encKeys)
+}
+
+func startCluster(t *testing.T, ports ...string) []Distributer {
+	res := make([]Distributer, len(ports))
+	for i, port := range ports {
+		ln, err := net.Listen("tcp", port)
+		require.NoError(t, err)
+		res[i] = NewDistributer(port, ln)
+	}
+	return res
+}
+
+func cancelOnPort(port string) Runner {
+	return &canceler{port}
+}
+
+type canceler struct {
+	Port string
+}
+
+func (*canceler) Returns() []Type { return nil }
+func (r *canceler) Run(ctx context.Context, inp, out chan Dataset) error {
+	if ctx.Value(thisNodeKey).(string) == r.Port {
+		return fmt.Errorf("error from %s", r.Port)
+	}
+	for range inp {
+	}
+	return nil
 }
