@@ -24,29 +24,25 @@ func (b *batch) Run(ctx context.Context, inp, out chan Dataset) error {
 	buffer := NewDataset()
 
 	for data := range inp {
-		rowsLeft := b.Size - buffer.Len()
-
-		for data.Len() > b.Size {
-			if buffer.Len() == 0 {
-				out <- data.Slice(0, b.Size).(Dataset)
-				data = data.Slice(b.Size, data.Len()).(Dataset)
-			} else {
-				delta := data.Slice(0, rowsLeft)
-				out <- buffer.Append(delta).(Dataset)
-
-				data = data.Slice(rowsLeft, data.Len()).(Dataset)
-				buffer = NewDataset()
-				rowsLeft = b.Size
+		var sliceStart, sliceEnd int
+		for data.Len() > sliceEnd {
+			rowsLeft := b.Size - buffer.Len()
+			sliceEnd = sliceStart + rowsLeft
+			if sliceEnd > data.Len() {
+				sliceEnd = data.Len()
 			}
-		}
+			delta := data.Slice(sliceStart, sliceEnd).(Dataset)
 
-		if data.Len() > rowsLeft {
-			delta := data.Slice(0, rowsLeft)
-			out <- buffer.Append(delta).(Dataset)
-
-			buffer = data.Slice(rowsLeft, data.Len()).(Dataset)
-		} else {
-			buffer = buffer.Append(data).(Dataset)
+			if buffer.Len() == 0 && delta.Len() == b.Size {
+				out <- delta
+			} else {
+				buffer = buffer.Append(delta).(Dataset)
+				if buffer.Len() == b.Size {
+					out <- buffer
+					buffer = NewDataset()
+				}
+			}
+			sliceStart = sliceEnd
 		}
 	}
 	// leftover buffer can be less than Size
