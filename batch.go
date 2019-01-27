@@ -24,10 +24,6 @@ func (b *batch) Run(ctx context.Context, inp, out chan Dataset) error {
 	var buffer Dataset
 	var nextRow int
 	for data := range inp {
-		if data.Len() == 0 {
-			continue
-		}
-
 		if buffer == nil {
 			buffer = NewDatasetLike(data, b.Size)
 		}
