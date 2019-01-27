@@ -33,6 +33,7 @@ func Project(runners ...Runner) Runner {
 	return flat
 }
 
+// Placeholder returns a project with a placeholder o0f shift size length
 func Placeholder(shift int, runners ...Runner) Runner {
 	p := Project(runners...)
 	dummies := make([]Runner, shift)

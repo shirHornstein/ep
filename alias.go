@@ -123,6 +123,7 @@ func GetScope(col Type) string {
 	return ""
 }
 
+// IsScoped gets two maps and checks if other map includes in the scopes map
 func IsScoped(scopes, other map[string]bool) bool {
 	isScoped := true
 	for s, val := range other {

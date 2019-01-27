@@ -189,6 +189,7 @@ func drain(c chan Dataset) {
 	}
 }
 
+// Split returns a split runner
 func Split(returnTypes []Type, secondWidth int) Runner { return &split{returnTypes, secondWidth} }
 
 type split struct {
