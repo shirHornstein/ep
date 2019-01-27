@@ -39,6 +39,7 @@ func (b *batch) Run(ctx context.Context, inp, out chan Dataset) error {
 			nextRow++
 		}
 	}
+	// leftover can be less than Size
 	if buffer != nil && nextRow > 0 {
 		out <- buffer.Slice(0, nextRow).(Dataset)
 	}
