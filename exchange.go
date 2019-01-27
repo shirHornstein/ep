@@ -8,7 +8,6 @@ import (
 	"github.com/satori/go.uuid"
 	"io"
 	"net"
-	"strings"
 )
 
 var _ = registerGob(&exchange{}, &req{}, &errMsg{})
@@ -23,6 +22,14 @@ const (
 	partition
 )
 
+type req struct{ Payload interface{} }
+
+type errMsg struct{ Msg string }
+
+func (err *errMsg) Error() string { return err.Msg }
+
+var eofMsg = &errMsg{io.EOF.Error()}
+
 // Gather returns an exchange Runner that gathers all of its input into a
 // single node. On the main node it will passThrough data from all other
 // nodes, and will produce no output on peers
@@ -31,38 +38,12 @@ func Gather() Runner {
 	return &exchange{UID: uid.String(), Type: gather}
 }
 
-// Scatter returns an exchange Runner that scatters its input uniformly to
-// all other nodes such that the received datasets are dispatched in a round-
-// robin to the nodes
-func Scatter() Runner {
-	uid, _ := uuid.NewV4()
-	return &exchange{UID: uid.String(), Type: scatter}
-}
-
 // Broadcast returns an exchange Runner that duplicates its input to all
 // other nodes. The output will be effectively a union of all inputs from
 // all nodes. Order not guaranteed
 func Broadcast() Runner {
 	uid, _ := uuid.NewV4()
 	return &exchange{UID: uid.String(), Type: broadcast}
-}
-
-// Partition returns an exchange Runner that routes the data between nodes using
-// consistent hashing algorithm. The provided column of an incoming dataset
-// will be used to find an appropriate endpoint for this data. Order not guaranteed
-func Partition(columns ...int) Runner {
-	uid, _ := uuid.NewV4()
-	sortCols := make([]SortingCol, len(columns))
-	for i := 0; i < len(sortCols); i++ {
-		sortCols[i] = SortingCol{Index: columns[i]}
-	}
-
-	return &exchange{
-		UID:           uid.String(),
-		Type:          partition,
-		SortingCols:   sortCols,
-		PartitionCols: columns,
-	}
 }
 
 // exchange is a Runner that exchanges data between peer nodes
@@ -93,19 +74,6 @@ type exchange struct {
 
 func (ex *exchange) Returns() []Type { return []Type{Wildcard} }
 func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) {
-	if ex.inited {
-		// exchanged uses a predefined UID and connection listeners on all of
-		// the nodes. Running it again would conflict with the existing UID,
-		// leading to de-synchronization between the nodes. Thus it's not
-		// currently supported. TODO: reconsider this architecture? Perhaps
-		// we can distribute the exchange upon Run()?
-		// NOTE that while it's possible to run exchange multiple times locally,
-		// it's disabled here to guarantee that runners behave locally as they
-		// do distributed.
-		return fmt.Errorf("exhcnage cannot be Run() more than once")
-	}
-
-	ex.inited = true
 	defer func() {
 		closeErr := ex.Close()
 		// prefer real existing error over close error
@@ -149,7 +117,6 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 		// will be blocked forever. This will lead to deadlock as current exchange waits on
 		// errs channel that will not be closed
 		if !sndDone {
-			eofMsg := &errMsg{io.EOF.Error()}
 			ex.encodeAll(eofMsg)
 		}
 
@@ -163,7 +130,6 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 			if !ok {
 				// the input is exhausted. Notify peers that we're done sending
 				// data (they will use it to stop listening to data from us).
-				eofMsg := &errMsg{io.EOF.Error()}
 				ex.encodeAll(eofMsg)
 				sndDone = true
 
@@ -189,62 +155,6 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 	return err
 }
 
-// send sends a dataset to destination nodes
-func (ex *exchange) send(data Dataset) error {
-	switch ex.Type {
-	case scatter:
-		return ex.encodeSplit(data)
-	case partition:
-		return ex.encodePartition(data)
-	default:
-		return ex.encodeAll(data)
-	}
-}
-
-// receive receives a dataset from next source node
-func (ex *exchange) receive() (Dataset, error) {
-	// if this node is not a receiver or done, return immediately
-	if len(ex.decs) == 0 {
-		return nil, io.EOF
-	}
-
-	switch ex.Type {
-	case sortGather:
-		return ex.decodeNextSort()
-	default:
-		return ex.decodeNext()
-	}
-}
-
-// decodeNext decodes an object from the next source connection in a round robin
-func (ex *exchange) decodeNext() (Dataset, error) {
-	if len(ex.decs) == 0 {
-		return nil, io.EOF
-	}
-
-	i := (ex.decsNext + 1) % len(ex.decs)
-
-	data, err := ex.decodeFrom(i)
-	if err == io.EOF {
-		// remove the current decoder and try again
-		ex.decs = append(ex.decs[:i], ex.decs[i+1:]...)
-		return ex.receive()
-	}
-
-	ex.decsNext = i
-	return data, err
-}
-
-// decodeFrom decodes an object from the i-th source connection
-func (ex *exchange) decodeFrom(i int) (Dataset, error) {
-	req := &req{}
-	err := ex.decs[i].Decode(req)
-	if err != nil {
-		return nil, err
-	}
-	return req.Payload.(Dataset), nil
-}
-
 // Close closes all open connections
 func (ex *exchange) Close() (err error) {
 	for _, conn := range ex.conns {
@@ -256,136 +166,26 @@ func (ex *exchange) Close() (err error) {
 	return err
 }
 
-// encodeAll encodes an object to all destination connections
-// expecting e to be either dataset or EOF error
-func (ex *exchange) encodeAll(e interface{}) (err error) {
-	req := &req{e}
-	for _, enc := range ex.encs {
-		err1 := enc.Encode(req)
-		if err1 != nil {
-			err = err1
-		}
-	}
-	return err
-}
-
-func (ex *exchange) encodeSplit(data Dataset) error {
-	amountOfPeers := len(ex.encs)
-	peersWithLargerBatch := data.Len() % amountOfPeers
-	batchSize := data.Len() / amountOfPeers
-	start := 0
-	var err error
-
-	// send remainder batch size, i.e. send the peersWithLargerBatch (modulo) data size
-	for i := 0; i < peersWithLargerBatch; i++ {
-		end := start + batchSize + 1
-		err = ex.encodeNext(data.Slice(start, end))
-		if err != nil {
-			return err
-		}
-		start = end
-	}
-
-	// send data batch size
-	for i := peersWithLargerBatch; i < amountOfPeers && start < data.Len(); i++ {
-		end := start + batchSize
-		err = ex.encodeNext(data.Slice(start, end))
-		if err != nil {
-			return err
-		}
-		start = end
-	}
-	return err
-}
-
-// encodeNext encodes an object to the next destination connection in a round robin
-func (ex *exchange) encodeNext(e interface{}) error {
-	if len(ex.encs) == 0 {
-		return io.ErrClosedPipe
-	}
-
-	req := &req{e}
-	ex.encsNext = (ex.encsNext + 1) % len(ex.encs)
-	return ex.encs[ex.encsNext].Encode(req)
-}
-
-// encodePartition encodes an object to a destination connection selected by partitioning
-func (ex *exchange) encodePartition(e interface{}) error {
-	data, ok := e.(Dataset)
-	if !ok {
-		return fmt.Errorf("encodePartition called without a dataset")
-	}
-
-	// before partitioning data, sort it to generate larger batches
-	Sort(data, ex.SortingCols)
-	stringValues := ColumnStrings(data, ex.PartitionCols...)
-
-	lastSeenHash := ex.getRowHash(stringValues, 0)
-	lastSlicedRow := 0
-	for row := 1; row < data.Len(); row++ {
-		hash := ex.getRowHash(stringValues, row)
-		if hash == lastSeenHash {
-			continue
-		}
-
-		dataToEncode := data.Slice(lastSlicedRow, row)
-		err := ex.partitionData(dataToEncode, lastSeenHash)
-		if err != nil {
-			return err
-		}
-
-		lastSeenHash = hash
-		lastSlicedRow = row
-	}
-
-	// leftover
-	dataToEncode := data.Slice(lastSlicedRow, data.Len())
-	return ex.partitionData(dataToEncode, lastSeenHash)
-}
-
-func (ex *exchange) getRowHash(stringValues [][]string, row int) string {
-	var sb strings.Builder
-	for col := range ex.SortingCols {
-		sb.WriteString(stringValues[col][row])
-	}
-	return sb.String()
-}
-
-func (ex *exchange) partitionData(data Data, hash string) error {
-	enc, err := ex.getPartitionEncoder(hash)
-	if err != nil {
-		return err
-	}
-
-	return enc.Encode(&req{data})
-}
-
-// getPartitionEncoder uses a hash ring to find a node that should handle
-// a provided key. This function returns an encoder that handles data
-// transmission to the matched node.
-func (ex *exchange) getPartitionEncoder(key string) (encoder, error) {
-	endpoint, err := ex.hashRing.Get(key)
-	if err != nil {
-		return nil, fmt.Errorf("cannot find a target node: %s", err)
-	}
-
-	enc, ok := ex.encsByKey[endpoint]
-	if !ok {
-		return nil, fmt.Errorf("no matching node found")
-	}
-
-	return enc, nil
-}
-
 // init initializes the connections, encoders & decoders
 func (ex *exchange) init(ctx context.Context) (err error) {
-	// hashRing handles partitioning between nodes
-	ex.hashRing = consistent.New()
+	if ex.inited {
+		// exchanged uses a predefined UID and connection listeners on all of
+		// the nodes. Running it again would conflict with the existing UID,
+		// leading to de-synchronization between the nodes. Thus it's not
+		// currently supported. TODO: reconsider this architecture? Perhaps
+		// we can distribute the exchange upon Run()?
+		// NOTE that while it's possible to run exchange multiple times locally,
+		// it's disabled here to guarantee that runners behave locally as they
+		// do distributed
+		return fmt.Errorf("exhcnage cannot be Run() more than once")
+	}
+	ex.inited = true
 
 	// Partitioning assigns datasets to string addresses of nodes,
 	// while only encoders can actually send data.
 	// By using a map we can find an encoder for every address
 	ex.encsByKey = make(map[string]encoder)
+	ex.hashRing = consistent.New()
 
 	allNodes, _ := ctx.Value(allNodesKey).([]string)
 	thisNode, _ := ctx.Value(thisNodeKey).(string)
@@ -467,7 +267,72 @@ func (ex *exchange) init(ctx context.Context) (err error) {
 	return nil
 }
 
-// interfaces for gob.Encoder/Decoder. Used to also implement the short-circuit.
+// send sends a dataset to destination nodes
+func (ex *exchange) send(data Dataset) error {
+	switch ex.Type {
+	case scatter:
+		return ex.encodeScatter(data)
+	case partition:
+		return ex.encodePartition(data)
+	default:
+		return ex.encodeAll(data)
+	}
+}
+
+// encodeAll encodes an object to all destination connections
+// expecting e to be either dataset or EOF error
+func (ex *exchange) encodeAll(e interface{}) (err error) {
+	req := &req{e}
+	for _, enc := range ex.encs {
+		err1 := enc.Encode(req)
+		if err1 != nil {
+			err = err1
+		}
+	}
+	return err
+}
+
+// receive receives a dataset from next source node
+func (ex *exchange) receive() (Dataset, error) {
+	switch ex.Type {
+	case sortGather:
+		return ex.decodeNextSort()
+	default:
+		return ex.decodeNext()
+	}
+}
+
+// decodeNext decodes an object from the next source connection in a round robin
+func (ex *exchange) decodeNext() (Dataset, error) {
+	// if this node is not a receiver or done, return immediately
+	if len(ex.decs) == 0 {
+		return nil, io.EOF
+	}
+
+	i := (ex.decsNext + 1) % len(ex.decs)
+
+	data, err := ex.decodeFrom(i)
+	if err == io.EOF {
+		// remove the current decoder and try again
+		ex.decs = append(ex.decs[:i], ex.decs[i+1:]...)
+		return ex.receive()
+	}
+
+	ex.decsNext = i
+	return data, err
+}
+
+// decodeFrom decodes an object from the i-th source connection
+func (ex *exchange) decodeFrom(i int) (Dataset, error) {
+	req := &req{}
+	err := ex.decs[i].Decode(req)
+	if err != nil {
+		return nil, err
+	}
+	return req.Payload.(Dataset), nil
+}
+
+// interfaces for gob.Encoder/Decoder. Used to also implement the short-circuit
 type encoder interface {
 	Encode(interface{}) error
 }
@@ -497,6 +362,10 @@ type shortCircuit struct {
 	C      chan interface{}
 	closed bool
 	all    []interface{}
+}
+
+func newShortCircuit() *shortCircuit {
+	return &shortCircuit{C: make(chan interface{}, 1000)}
 }
 
 func (sc *shortCircuit) Close() error {
@@ -529,16 +398,7 @@ func (sc *shortCircuit) Decode(e interface{}) error {
 	return nil
 }
 
-func newShortCircuit() *shortCircuit {
-	return &shortCircuit{C: make(chan interface{}, 1000)}
-}
-
-type req struct{ Payload interface{} }
-type errMsg struct{ Msg string }
-
-func (err *errMsg) Error() string { return err.Msg }
-
 func isEOFError(data interface{}) bool {
 	err, isErr := data.(*req).Payload.(error)
-	return isErr && err.Error() == io.EOF.Error()
+	return isErr && err.Error() == eofMsg.Error()
 }

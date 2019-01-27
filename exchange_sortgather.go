@@ -44,8 +44,8 @@ func (ex *exchange) decodeNextSort() (Dataset, error) {
 	// sorted batch from each peer by repeating the following:
 	// 1. compare all next rows from each batch to find next one according SortingCols
 	// 2. add that row to result set
-	//    2.1. if entire batch was copied, fetch next batch from that peer
-	// 4. stop when enough data was sorted into result set or no more batches to consume
+	//    2.1. if entire batch from peer i-th was consumed, fetch next batch from that peer
+	// 3. stop when enough data was sorted into result set or no more batches to consume
 	for {
 		i = ex.pickNext()
 		if i == -1 { // no more data to read
