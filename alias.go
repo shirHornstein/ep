@@ -22,6 +22,17 @@ type alias struct {
 	Label string
 }
 
+func (a *alias) Push(conds ScopesRunner) bool {
+	return a.Runner.(PushRunner).Push(conds)
+}
+
+func (a *alias) Scopes() map[string]bool {
+	if r, ok := a.Runner.(ScopesRunner); ok {
+		return r.Scopes()
+	}
+	return map[string]bool{}
+}
+
 // Returns implements ep.Runner
 func (a *alias) Returns() []Type {
 	inpTypes := a.Runner.Returns()
@@ -70,6 +81,14 @@ type scope struct {
 	Label string
 }
 
+func (s *scope) Push(conds ScopesRunner) bool {
+	return s.Runner.(PushRunner).Push(conds)
+}
+
+func (s *scope) Scopes() map[string]bool {
+	return map[string]bool{s.Label: true}
+}
+
 // Returns implements ep.Runner
 func (s *scope) Returns() []Type {
 	inpTypes := s.Runner.Returns()
@@ -102,4 +121,15 @@ func GetScope(col Type) string {
 		return scope
 	}
 	return ""
+}
+
+func IsScoped(scopes, other map[string]bool) bool {
+	isScoped := true
+	for s, val := range other {
+		if !val {
+			continue
+		}
+		isScoped = isScoped && scopes[s]
+	}
+	return isScoped && len(other) != 0
 }

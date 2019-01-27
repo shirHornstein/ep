@@ -33,7 +33,43 @@ func Project(runners ...Runner) Runner {
 	return flat
 }
 
+func Placeholder(shift int, runners ...Runner) Runner {
+	p := Project(runners...)
+	dummies := make([]Runner, shift)
+	for i := range dummies {
+		dummies[i] = dummyRunnerSingleton
+	}
+	var placeholder project
+	placeholder = append(dummies, p)
+	return placeholder
+}
+
 type project []Runner
+
+func (rs project) Push(conds ScopesRunner) bool {
+	for _, p := range rs {
+		if p, ok := p.(PushRunner); ok {
+			isPushed := p.Push(conds)
+			if isPushed {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (rs project) Scopes() map[string]bool {
+	scopes := make(map[string]bool)
+	for _, r := range rs {
+		if r, ok := r.(ScopesRunner); ok {
+			runnersScope := r.Scopes()
+			for s, val := range runnersScope {
+				scopes[s] = val
+			}
+		}
+	}
+	return scopes
+}
 
 // Returns a concatenation of all runners' return types
 func (rs project) Returns() []Type {

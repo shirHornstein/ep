@@ -90,6 +90,24 @@ type FilterRunner interface {
 	Filter(keep []bool)
 }
 
+// ScopesRunner is a Runner that also exposes the ability
+// to get all inner's runner scopes
+type ScopesRunner interface {
+	Runner // it's a Runner
+
+	// return all inner's scopes
+	Scopes() map[string]bool
+}
+
+// PushRunner is a Runner that also exposes the ability
+// to push another runner into the inner runner
+type PushRunner interface {
+	ScopesRunner // it's a Runner
+
+	// Push tries to push a given runner into the inner runner and returns true if succeeded
+	Push(toPush ScopesRunner) bool
+}
+
 // Run runs given runner and takes care of channels management involved in runner execution
 // safe to use only if caller created the out channel
 func Run(ctx context.Context, r Runner, inp, out chan Dataset, cancel context.CancelFunc, err *error) {
@@ -169,4 +187,21 @@ func (r *pick) Run(_ context.Context, inp, out chan Dataset) error {
 func drain(c chan Dataset) {
 	for range c {
 	}
+}
+
+func Split(returnTypes []Type, secondWidth int) Runner { return &split{returnTypes, secondWidth} }
+
+type split struct {
+	returnTypes []Type
+	secondWidth int
+}
+
+func (s *split) Returns() []Type { return s.returnTypes }
+
+func (s *split) Run(_ context.Context, inp, out chan Dataset) error {
+	for data := range inp {
+		_, secondDataset := data.Split(s.secondWidth)
+		out <- secondDataset
+	}
+	return nil
 }

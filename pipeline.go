@@ -45,6 +45,31 @@ func Pipeline(runners ...Runner) Runner {
 
 type pipeline []Runner
 
+func (rs pipeline) Push(conds ScopesRunner) bool {
+	for _, r := range rs {
+		if r, ok := r.(PushRunner); ok {
+			isPushed := r.Push(conds)
+			if isPushed {
+				return isPushed
+			}
+		}
+	}
+	return false
+}
+
+func (rs pipeline) Scopes() map[string]bool {
+	scopes := make(map[string]bool)
+	for _, r := range rs {
+		if r, ok := r.(ScopesRunner); ok {
+			runnersScope := r.Scopes()
+			for s, val := range runnersScope {
+				scopes[s] = val
+			}
+		}
+	}
+	return scopes
+}
+
 func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 	// choose first error out from all errors
 	errs := make([]error, len(rs))
