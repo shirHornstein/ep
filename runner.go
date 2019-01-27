@@ -30,6 +30,10 @@ type Runner interface {
 	// know to break early in case of cancellation or an error to avoid doing
 	// extra work. For most Runners, this is not as critical, because their
 	// input will just close early.
+	//
+	// NOTE: By convention, empty Datasets should never be sent to `out`
+	// stream. The behavior of other Runners in case they receive empty
+	// Datasets to `inp` stream is undefined.
 	Run(ctx context.Context, inp, out chan Dataset) error
 
 	// Returns the constant list of data types that are produced by this Runner.
