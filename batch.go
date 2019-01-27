@@ -21,27 +21,37 @@ type batch struct {
 
 func (b *batch) Returns() []Type { return []Type{Wildcard} }
 func (b *batch) Run(ctx context.Context, inp, out chan Dataset) error {
-	var buffer Dataset
-	var nextRow int
+	buffer := NewDataset()
+
 	for data := range inp {
-		if buffer == nil {
-			buffer = NewDatasetLike(data, b.Size)
+		rowsLeft := b.Size - buffer.Len()
+
+		for data.Len() > b.Size {
+			if buffer.Len() == 0 {
+				out <- data.Slice(0, b.Size).(Dataset)
+				data = data.Slice(b.Size, data.Len()).(Dataset)
+			} else {
+				delta := data.Slice(0, rowsLeft)
+				out <- buffer.Append(delta).(Dataset)
+
+				data = data.Slice(rowsLeft, data.Len()).(Dataset)
+				buffer = NewDataset()
+				rowsLeft = b.Size
+			}
 		}
 
-		for i := 0; i < data.Len(); i++ {
-			if nextRow == b.Size {
-				out <- buffer
-				buffer = NewDatasetLike(data, b.Size)
-				nextRow = 0
-			}
+		if data.Len() > rowsLeft {
+			delta := data.Slice(0, rowsLeft)
+			out <- buffer.Append(delta).(Dataset)
 
-			buffer.Copy(data, i, nextRow)
-			nextRow++
+			buffer = data.Slice(rowsLeft, data.Len()).(Dataset)
+		} else {
+			buffer = buffer.Append(data).(Dataset)
 		}
 	}
-	// leftover can be less than Size
-	if buffer != nil && nextRow > 0 {
-		out <- buffer.Slice(0, nextRow).(Dataset)
+	// leftover buffer can be less than Size
+	if buffer.Len() > 0 {
+		out <- buffer
 	}
 	return nil
 }
