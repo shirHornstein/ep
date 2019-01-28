@@ -63,8 +63,11 @@ func (c *compose) BatchFunction() BatchFunction {
 }
 
 func (c *compose) Scopes() map[string]bool {
-	// TODO support push in compose
-	return map[string]bool{}
+	scopes := make(map[string]bool, 0)
+	for _, t := range c.Ts {
+		scopes[GetScope(t)] = true
+	}
+	return scopes
 }
 
 // ComposeProject returns a special Composable which forwards its input as-is
