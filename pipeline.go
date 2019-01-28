@@ -57,13 +57,13 @@ func (rs pipeline) Push(toPush ScopesRunner) bool {
 	return false
 }
 
-func (rs pipeline) Scopes() map[string]bool {
-	scopes := make(map[string]bool)
+func (rs pipeline) Scopes() map[string]struct{} {
+	scopes := make(map[string]struct{})
 	for _, r := range rs {
 		if r, ok := r.(ScopesRunner); ok {
 			runnersScope := r.Scopes()
-			for s, val := range runnersScope {
-				scopes[s] = val
+			for s := range runnersScope {
+				scopes[s] = struct{}{}
 			}
 		}
 	}

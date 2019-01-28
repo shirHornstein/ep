@@ -96,7 +96,7 @@ type ScopesRunner interface {
 	Runner // it's a Runner
 
 	// return all inner's scopes
-	Scopes() map[string]bool
+	Scopes() map[string]struct{}
 }
 
 // PushRunner is a Runner that also exposes the ability

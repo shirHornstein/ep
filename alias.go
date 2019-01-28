@@ -26,11 +26,11 @@ func (a *alias) Push(toPush ScopesRunner) bool {
 	return a.Runner.(PushRunner).Push(toPush)
 }
 
-func (a *alias) Scopes() map[string]bool {
+func (a *alias) Scopes() map[string]struct{} {
 	if r, ok := a.Runner.(ScopesRunner); ok {
 		return r.Scopes()
 	}
-	return map[string]bool{}
+	return map[string]struct{}{}
 }
 
 // Returns implements ep.Runner
@@ -85,8 +85,8 @@ func (s *scope) Push(toPush ScopesRunner) bool {
 	return s.Runner.(PushRunner).Push(toPush)
 }
 
-func (s *scope) Scopes() map[string]bool {
-	return map[string]bool{s.Label: true}
+func (s *scope) Scopes() map[string]struct{} {
+	return map[string]struct{}{s.Label: struct{}{}}
 }
 
 // Returns implements ep.Runner
@@ -124,13 +124,11 @@ func GetScope(col Type) string {
 }
 
 // IsScoped gets two maps and checks if other map includes in the scopes map
-func IsScoped(scopes, other map[string]bool) bool {
+func IsScoped(scopes, other map[string]struct{}) bool {
 	isScoped := true
-	for s, val := range other {
-		if !val {
-			continue
-		}
-		isScoped = isScoped && scopes[s]
+	for s := range other {
+		_, ok := scopes[s]
+		isScoped = isScoped && ok
 	}
-	return isScoped && len(other) != 0
+	return isScoped
 }

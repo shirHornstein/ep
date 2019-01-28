@@ -62,10 +62,10 @@ func (c *compose) BatchFunction() BatchFunction {
 	}
 }
 
-func (c *compose) Scopes() map[string]bool {
-	scopes := make(map[string]bool, 0)
+func (c *compose) Scopes() map[string]struct{} {
+	scopes := make(map[string]struct{}, 0)
 	for _, t := range c.Ts {
-		scopes[GetScope(t)] = true
+		scopes[GetScope(t)] = struct{}{}
 	}
 	return scopes
 }
