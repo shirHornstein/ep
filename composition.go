@@ -62,6 +62,11 @@ func (c *compose) BatchFunction() BatchFunction {
 	}
 }
 
+func (c *compose) Scopes() map[string]bool {
+	// TODO support push in compose
+	return map[string]bool{}
+}
+
 // ComposeProject returns a special Composable which forwards its input as-is
 // to every Composable's BatchFunction, combining their outputs into a single
 // Dataset. It is a functional implementation of ep.Project.
