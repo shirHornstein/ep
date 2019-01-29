@@ -23,7 +23,10 @@ type alias struct {
 }
 
 func (a *alias) Push(toPush ScopesRunner) bool {
-	return a.Runner.(PushRunner).Push(toPush)
+	if p, ok := a.Runner.(PushRunner); ok {
+		return p.Push(toPush)
+	}
+	return false
 }
 
 func (a *alias) Scopes() map[string]struct{} {
@@ -82,7 +85,10 @@ type scope struct {
 }
 
 func (s *scope) Push(toPush ScopesRunner) bool {
-	return s.Runner.(PushRunner).Push(toPush)
+	if p, ok := s.Runner.(PushRunner); ok {
+		return p.Push(toPush)
+	}
+	return false
 }
 
 func (s *scope) Scopes() map[string]struct{} {
