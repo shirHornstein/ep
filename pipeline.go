@@ -169,8 +169,8 @@ func (rs pipeline) Filter(keep []bool) {
 	}
 }
 
-func (rs pipeline) Scopes() map[string]struct{} {
-	scopes := make(map[string]struct{})
+func (rs pipeline) Scopes() StringsSet {
+	scopes := make(StringsSet)
 	for _, r := range rs {
 		if r, ok := r.(ScopesRunner); ok {
 			runnersScope := r.Scopes()

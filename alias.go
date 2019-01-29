@@ -38,11 +38,11 @@ func (a *alias) Filter(keep []bool) {
 	}
 }
 
-func (a *alias) Scopes() map[string]struct{} {
+func (a *alias) Scopes() StringsSet {
 	if r, ok := a.Runner.(ScopesRunner); ok {
 		return r.Scopes()
 	}
-	return map[string]struct{}{}
+	return StringsSet{}
 }
 
 func (a *alias) Push(toPush ScopesRunner) bool {
@@ -97,8 +97,8 @@ func (s *scope) Filter(keep []bool) {
 	}
 }
 
-func (s *scope) Scopes() map[string]struct{} {
-	return map[string]struct{}{s.Label: struct{}{}}
+func (s *scope) Scopes() StringsSet {
+	return StringsSet{s.Label: struct{}{}}
 }
 
 func (s *scope) Push(toPush ScopesRunner) bool {
@@ -127,14 +127,4 @@ func GetScope(col Type) string {
 		return scope
 	}
 	return ""
-}
-
-// Contains gets two maps and checks if other map includes in the scopes map
-func Contains(scopes, other map[string]struct{}) bool {
-	isScoped := true
-	for s := range other {
-		_, ok := scopes[s]
-		isScoped = isScoped && ok
-	}
-	return isScoped
 }

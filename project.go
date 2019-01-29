@@ -182,8 +182,8 @@ func (rs project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 	}
 }
 
-func (rs project) Scopes() map[string]struct{} {
-	scopes := make(map[string]struct{})
+func (rs project) Scopes() StringsSet {
+	scopes := make(StringsSet)
 	for _, r := range rs {
 		if r, ok := r.(ScopesRunner); ok {
 			runnersScope := r.Scopes()
