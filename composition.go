@@ -64,8 +64,12 @@ func (c *compose) BatchFunction() BatchFunction {
 
 func (c *compose) Scopes() map[string]struct{} {
 	scopes := make(map[string]struct{}, 0)
-	for _, t := range c.Ts {
-		scopes[GetScope(t)] = struct{}{}
+	for _, r := range c.Cmps {
+		if s, ok := r.(ScopesRunner); ok {
+			for scope := range s.Scopes() {
+				scopes[scope] = struct{}{}
+			}
+		}
 	}
 	return scopes
 }
