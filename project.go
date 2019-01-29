@@ -35,14 +35,13 @@ func Project(runners ...Runner) Runner {
 
 // Placeholder returns a project with a placeholder of shift size length
 func Placeholder(shift int, runners ...Runner) Runner {
-	p := Project(runners...)
-	dummies := make([]Runner, shift)
-	for i := range dummies {
+	dummies := make([]Runner, 0, shift+len(runners))
+	for i := 0; i < shift; i++ {
 		dummies[i] = dummyRunnerSingleton
 	}
-	var placeholder project
-	placeholder = append(dummies, p)
-	return placeholder
+
+	runners = append(dummies, runners...)
+	return Project(runners...)
 }
 
 type project []Runner
