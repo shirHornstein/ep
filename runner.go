@@ -91,20 +91,20 @@ type FilterRunner interface {
 }
 
 // ScopesRunner is a Runner that also exposes the ability
-// to get all inner's runner scopes
+// to get all scopes involved
 type ScopesRunner interface {
 	Runner // it's a Runner
 
-	// return all inner's scopes
+	// Scopes returns all internal runners scopes
 	Scopes() map[string]struct{}
 }
 
 // PushRunner is a Runner that also exposes the ability
-// to push another runner into the inner runner
+// to push another runner into the internal runner
 type PushRunner interface {
 	ScopesRunner // it's a Runner
 
-	// Push tries to push a given runner into the inner runner and returns true if succeeded
+	// Push tries to push a given runner into internal runner and returns true if succeeded
 	Push(toPush ScopesRunner) bool
 }
 
