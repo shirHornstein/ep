@@ -22,20 +22,6 @@ type alias struct {
 	Label string
 }
 
-func (a *alias) Push(toPush ScopesRunner) bool {
-	if p, ok := a.Runner.(PushRunner); ok {
-		return p.Push(toPush)
-	}
-	return false
-}
-
-func (a *alias) Scopes() map[string]struct{} {
-	if r, ok := a.Runner.(ScopesRunner); ok {
-		return r.Scopes()
-	}
-	return map[string]struct{}{}
-}
-
 // Returns implements ep.Runner
 func (a *alias) Returns() []Type {
 	inpTypes := a.Runner.Returns()
@@ -50,6 +36,20 @@ func (a *alias) Filter(keep []bool) {
 	if f, isFilterable := a.Runner.(FilterRunner); isFilterable {
 		f.Filter(keep)
 	}
+}
+
+func (a *alias) Scopes() map[string]struct{} {
+	if r, ok := a.Runner.(ScopesRunner); ok {
+		return r.Scopes()
+	}
+	return map[string]struct{}{}
+}
+
+func (a *alias) Push(toPush ScopesRunner) bool {
+	if p, ok := a.Runner.(PushRunner); ok {
+		return p.Push(toPush)
+	}
+	return false
 }
 
 // SetAlias sets an alias for the given typed column.
@@ -84,17 +84,6 @@ type scope struct {
 	Label string
 }
 
-func (s *scope) Push(toPush ScopesRunner) bool {
-	if p, ok := s.Runner.(PushRunner); ok {
-		return p.Push(toPush)
-	}
-	return false
-}
-
-func (s *scope) Scopes() map[string]struct{} {
-	return map[string]struct{}{s.Label: struct{}{}}
-}
-
 // Returns implements ep.Runner
 func (s *scope) Returns() []Type {
 	inpTypes := s.Runner.Returns()
@@ -106,6 +95,17 @@ func (s *scope) Filter(keep []bool) {
 	if f, isFilterable := s.Runner.(FilterRunner); isFilterable {
 		f.Filter(keep)
 	}
+}
+
+func (s *scope) Scopes() map[string]struct{} {
+	return map[string]struct{}{s.Label: struct{}{}}
+}
+
+func (s *scope) Push(toPush ScopesRunner) bool {
+	if p, ok := s.Runner.(PushRunner); ok {
+		return p.Push(toPush)
+	}
+	return false
 }
 
 // SetScope sets a scope for the given columns
