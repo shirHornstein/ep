@@ -35,7 +35,7 @@ func Project(runners ...Runner) Runner {
 
 // Placeholder returns a project with a placeholder of shift size length
 func Placeholder(shift int, runners ...Runner) Runner {
-	dummies := make([]Runner, 0, shift+len(runners))
+	dummies := make([]Runner, shift, shift+len(runners))
 	for i := 0; i < shift; i++ {
 		dummies[i] = dummyRunnerSingleton
 	}
@@ -45,31 +45,6 @@ func Placeholder(shift int, runners ...Runner) Runner {
 }
 
 type project []Runner
-
-func (rs project) Push(toPush ScopesRunner) bool {
-	for _, p := range rs {
-		if p, ok := p.(PushRunner); ok {
-			isPushed := p.Push(toPush)
-			if isPushed {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-func (rs project) Scopes() map[string]struct{} {
-	scopes := make(map[string]struct{})
-	for _, r := range rs {
-		if r, ok := r.(ScopesRunner); ok {
-			runnersScope := r.Scopes()
-			for s := range runnersScope {
-				scopes[s] = struct{}{}
-			}
-		}
-	}
-	return scopes
-}
 
 // Returns a concatenation of all runners' return types
 func (rs project) Returns() []Type {
@@ -205,6 +180,19 @@ func (rs project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 			return
 		}
 	}
+}
+
+func (rs project) Scopes() map[string]struct{} {
+	scopes := make(map[string]struct{})
+	for _, r := range rs {
+		if r, ok := r.(ScopesRunner); ok {
+			runnersScope := r.Scopes()
+			for s := range runnersScope {
+				scopes[s] = struct{}{}
+			}
+		}
+	}
+	return scopes
 }
 
 // useDummySingleton replaces all dummies with pre-defined singleton to allow addresses comparison
