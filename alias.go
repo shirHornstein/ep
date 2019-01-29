@@ -129,8 +129,8 @@ func GetScope(col Type) string {
 	return ""
 }
 
-// IsScoped gets two maps and checks if other map includes in the scopes map
-func IsScoped(scopes, other map[string]struct{}) bool {
+// Contains gets two maps and checks if other map includes in the scopes map
+func Contains(scopes, other map[string]struct{}) bool {
 	isScoped := true
 	for s := range other {
 		_, ok := scopes[s]
