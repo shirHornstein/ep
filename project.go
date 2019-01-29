@@ -186,10 +186,7 @@ func (rs project) Scopes() StringsSet {
 	scopes := make(StringsSet)
 	for _, r := range rs {
 		if r, ok := r.(ScopesRunner); ok {
-			runnersScope := r.Scopes()
-			for s := range runnersScope {
-				scopes[s] = struct{}{}
-			}
+			scopes.AddAll(r.Scopes())
 		}
 	}
 	return scopes

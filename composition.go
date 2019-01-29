@@ -63,12 +63,10 @@ func (c *compose) BatchFunction() BatchFunction {
 }
 
 func (c *compose) Scopes() StringsSet {
-	scopes := make(StringsSet, 0)
+	scopes := make(StringsSet)
 	for _, r := range c.Cmps {
 		if s, ok := r.(ScopesRunner); ok {
-			for scope := range s.Scopes() {
-				scopes[scope] = struct{}{}
-			}
+			scopes.AddAll(s.Scopes())
 		}
 	}
 	return scopes
