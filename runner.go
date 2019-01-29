@@ -189,19 +189,21 @@ func drain(c chan Dataset) {
 	}
 }
 
-// Split returns a split runner
-func Split(returnTypes []Type, secondWidth int) Runner { return &split{returnTypes, secondWidth} }
-
-type split struct {
-	returnTypes []Type
-	secondWidth int
+// Tail returns a runner that split data and returns only last tailWidth columns
+func Tail(returnTypes []Type, tailWidth int) Runner {
+	return &tail{returnTypes, tailWidth}
 }
 
-func (s *split) Returns() []Type { return s.returnTypes }
+type tail struct {
+	Types     []Type
+	TailWidth int
+}
 
-func (s *split) Run(_ context.Context, inp, out chan Dataset) error {
+func (r *tail) Returns() []Type { return r.Types }
+
+func (r *tail) Run(_ context.Context, inp, out chan Dataset) error {
 	for data := range inp {
-		_, secondDataset := data.Split(s.secondWidth)
+		_, secondDataset := data.Split(r.TailWidth)
 		out <- secondDataset
 	}
 	return nil
