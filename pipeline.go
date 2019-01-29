@@ -45,31 +45,6 @@ func Pipeline(runners ...Runner) Runner {
 
 type pipeline []Runner
 
-func (rs pipeline) Push(toPush ScopesRunner) bool {
-	for _, r := range rs {
-		if r, ok := r.(PushRunner); ok {
-			isPushed := r.Push(toPush)
-			if isPushed {
-				return isPushed
-			}
-		}
-	}
-	return false
-}
-
-func (rs pipeline) Scopes() map[string]struct{} {
-	scopes := make(map[string]struct{})
-	for _, r := range rs {
-		if r, ok := r.(ScopesRunner); ok {
-			runnersScope := r.Scopes()
-			for s := range runnersScope {
-				scopes[s] = struct{}{}
-			}
-		}
-	}
-	return scopes
-}
-
 func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 	// choose first error out from all errors
 	errs := make([]error, len(rs))
@@ -192,4 +167,30 @@ func (rs pipeline) Filter(keep []bool) {
 	if f, isFilterable := last.(FilterRunner); isFilterable {
 		f.Filter(keep)
 	}
+}
+
+func (rs pipeline) Scopes() map[string]struct{} {
+	scopes := make(map[string]struct{})
+	for _, r := range rs {
+		if r, ok := r.(ScopesRunner); ok {
+			runnersScope := r.Scopes()
+			for s := range runnersScope {
+				scopes[s] = struct{}{}
+			}
+		}
+	}
+	return scopes
+}
+
+func (rs pipeline) Push(toPush ScopesRunner) bool {
+	for _, r := range rs {
+		// try to push as earlier as we can
+		if r, ok := r.(PushRunner); ok {
+			isPushed := r.Push(toPush)
+			if isPushed {
+				return isPushed
+			}
+		}
+	}
+	return false
 }
