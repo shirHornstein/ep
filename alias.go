@@ -38,6 +38,20 @@ func (a *alias) Filter(keep []bool) {
 	}
 }
 
+func (a *alias) Scopes() StringsSet {
+	if r, ok := a.Runner.(ScopesRunner); ok {
+		return r.Scopes()
+	}
+	return StringsSet{}
+}
+
+func (a *alias) Push(toPush ScopesRunner) bool {
+	if p, ok := a.Runner.(PushRunner); ok {
+		return p.Push(toPush)
+	}
+	return false
+}
+
 // SetAlias sets an alias for the given typed column.
 // Useful for runner that need aliasing each column internally
 func SetAlias(col Type, alias string) Type {
@@ -81,6 +95,17 @@ func (s *scope) Filter(keep []bool) {
 	if f, isFilterable := s.Runner.(FilterRunner); isFilterable {
 		f.Filter(keep)
 	}
+}
+
+func (s *scope) Scopes() StringsSet {
+	return StringsSet{s.Label: struct{}{}}
+}
+
+func (s *scope) Push(toPush ScopesRunner) bool {
+	if p, ok := s.Runner.(PushRunner); ok {
+		return p.Push(toPush)
+	}
+	return false
 }
 
 // SetScope sets a scope for the given columns

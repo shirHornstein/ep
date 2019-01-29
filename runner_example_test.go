@@ -27,3 +27,20 @@ func ExampleFilterRunner_Filter() {
 	// Output:
 	// [(HELLO) (WORLD)] <nil>
 }
+
+func ExampleScopesRunner_Scopes() {
+	runner := ep.Pipeline(&question{}, &upper{})
+	fmt.Println(runner.(ep.ScopesRunner).Scopes())
+
+	// Output:
+	// map[]
+}
+
+func ExamplePushRunner_Push() {
+	runner := ep.Pipeline(&question{}, &upper{})
+	toPush := ep.Project(ep.PassThrough(), ep.PassThrough()).(ep.ScopesRunner)
+	fmt.Println(runner.(ep.PushRunner).Push(toPush))
+
+	// Output:
+	// false
+}
