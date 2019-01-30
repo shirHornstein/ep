@@ -94,6 +94,24 @@ type FilterRunner interface {
 	Filter(keep []bool)
 }
 
+// ScopesRunner is a Runner that also exposes the ability
+// to get all scopes involved
+type ScopesRunner interface {
+	Runner // it's a Runner
+
+	// Scopes returns all internal runners scopes
+	Scopes() StringsSet
+}
+
+// PushRunner is a Runner that also exposes the ability
+// to push another runner into the internal runner
+type PushRunner interface {
+	ScopesRunner // it's a Runner
+
+	// Push tries to push a given runner into internal runner and returns true if succeeded
+	Push(toPush ScopesRunner) bool
+}
+
 // Run runs given runner and takes care of channels management involved in runner execution
 // safe to use only if caller created the out channel
 func Run(ctx context.Context, r Runner, inp, out chan Dataset, cancel context.CancelFunc, err *error) {
@@ -173,4 +191,24 @@ func (r *pick) Run(_ context.Context, inp, out chan Dataset) error {
 func drain(c chan Dataset) {
 	for range c {
 	}
+}
+
+// Tail returns a runner that split data and returns only last tailWidth columns
+func Tail(returnTypes []Type, tailWidth int) Runner {
+	return &tail{returnTypes, tailWidth}
+}
+
+type tail struct {
+	Types     []Type
+	TailWidth int
+}
+
+func (r *tail) Returns() []Type { return r.Types }
+
+func (r *tail) Run(_ context.Context, inp, out chan Dataset) error {
+	for data := range inp {
+		_, secondDataset := data.Split(r.TailWidth)
+		out <- secondDataset
+	}
+	return nil
 }

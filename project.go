@@ -33,6 +33,17 @@ func Project(runners ...Runner) Runner {
 	return flat
 }
 
+// Placeholder returns a project with a placeholder of shift size length
+func Placeholder(shift int, runners ...Runner) Runner {
+	dummies := make([]Runner, shift, shift+len(runners))
+	for i := 0; i < shift; i++ {
+		dummies[i] = dummyRunnerSingleton
+	}
+
+	runners = append(dummies, runners...)
+	return Project(runners...)
+}
+
 type project []Runner
 
 // Returns a concatenation of all runners' return types
@@ -169,6 +180,16 @@ func (rs project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 			return
 		}
 	}
+}
+
+func (rs project) Scopes() StringsSet {
+	scopes := make(StringsSet)
+	for _, r := range rs {
+		if r, ok := r.(ScopesRunner); ok {
+			scopes.AddAll(r.Scopes())
+		}
+	}
+	return scopes
 }
 
 // useDummySingleton replaces all dummies with pre-defined singleton to allow addresses comparison

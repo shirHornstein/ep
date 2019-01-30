@@ -168,3 +168,26 @@ func (rs pipeline) Filter(keep []bool) {
 		f.Filter(keep)
 	}
 }
+
+func (rs pipeline) Scopes() StringsSet {
+	scopes := make(StringsSet)
+	for _, r := range rs {
+		if r, ok := r.(ScopesRunner); ok {
+			scopes.AddAll(r.Scopes())
+		}
+	}
+	return scopes
+}
+
+func (rs pipeline) Push(toPush ScopesRunner) bool {
+	for _, r := range rs {
+		// try to push as earlier as we can
+		if r, ok := r.(PushRunner); ok {
+			isPushed := r.Push(toPush)
+			if isPushed {
+				return isPushed
+			}
+		}
+	}
+	return false
+}
