@@ -25,15 +25,17 @@ func (b *batch) Run(ctx context.Context, inp, out chan Dataset) error {
 
 	for data := range inp {
 		var sliceStart, sliceEnd int
-		for data.Len() > sliceEnd {
-			rowsLeft := b.Size - buffer.Len()
+		dataLen := data.Len()
+		for dataLen > sliceEnd {
+			bufferLen := buffer.Len()
+			rowsLeft := b.Size - bufferLen
 			sliceEnd = sliceStart + rowsLeft
-			if sliceEnd > data.Len() {
-				sliceEnd = data.Len()
+			if sliceEnd > dataLen {
+				sliceEnd = dataLen
 			}
 			delta := data.Slice(sliceStart, sliceEnd).(Dataset)
 
-			if buffer.Len() == 0 && delta.Len() == b.Size {
+			if bufferLen == 0 && delta.Len() == b.Size {
 				out <- delta
 			} else {
 				buffer = buffer.Append(delta).(Dataset)
