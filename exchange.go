@@ -100,8 +100,8 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 	rcvDone := false
 	sndDone := false
 	defer func() {
-		// thisNode, _ := ctx.Value(thisNodeKey).(string)
-		// fmt.Println(thisNode, "rec", rcvDone, "send", sndDone, err)
+		// TODO thisNode, _ := ctx.Value(thisNodeKey).(string)
+		// TODO fmt.Println(thisNode, "rec", rcvDone, "send", sndDone, err)
 		// in case of cancellation, for loop below stops without sending EOF message
 		// to all peers. Therefore other peers will not close connections, hence ex.receive
 		// will be blocked forever. This will lead to deadlock as current exchange waits on
@@ -309,7 +309,7 @@ func remove(list []string, toRemove string) []string {
 }
 
 func (ex *exchange) passRemoteData(out chan Dataset) chan error {
-	receiversErrs := make(chan error)
+	receiversErrs := make(chan error, len(ex.decsErr)+len(ex.decs))
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {

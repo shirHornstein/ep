@@ -60,7 +60,8 @@ func TestExchange_init_openConnectionsToAll(t *testing.T) {
 		})
 
 		t.Run("non master/"+name, func(t *testing.T) {
-			t.Skip("TODO test peer")
+			t.Skip("TODO test peer") // TODO Avia
+
 			ctx = context.WithValue(ctx, thisNodeKey, ports[1])
 			exchange := ex().(*exchange)
 
@@ -113,7 +114,7 @@ func TestExchange_init_closeAllConnectionsUponError(t *testing.T) {
 	require.NoError(t, dist.Close())
 }
 
-func _TestExchange_error(t *testing.T) {
+func TestExchange_error(t *testing.T) {
 	port, port2 := ":5551", ":5552"
 	distributers := startCluster(t, port, port2)
 	master := distributers[0]
@@ -131,10 +132,9 @@ func _TestExchange_error(t *testing.T) {
 
 	for name, ex := range exchanges {
 		t.Run(name+"/cancel on master", func(t *testing.T) {
-			t.Skip("q")
-
 			exchange := ex().(*exchange)
-			runner := master.Distribute(exchange, port, port2)
+			runner := Pipeline(Project(PassThrough(), PassThrough()), exchange)
+			runner = master.Distribute(runner, port, port2)
 
 			inp := make(chan Dataset)
 			out := make(chan Dataset)
@@ -151,8 +151,10 @@ func _TestExchange_error(t *testing.T) {
 		})
 
 		t.Run(name+"/error on peer", func(t *testing.T) {
+			t.Skip("TODO test peer") // TODO Avia
+
 			exchange := ex().(*exchange)
-			runner := Pipeline(cancelOnPort(port2), exchange)
+			runner := Pipeline(cancelOnPort(port2), Project(PassThrough(), PassThrough()), exchange)
 			runner = master.Distribute(runner, port, port2)
 
 			inp := make(chan Dataset)

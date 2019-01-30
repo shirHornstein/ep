@@ -241,3 +241,33 @@ func runVerifyError(t *testing.T, runner ep.Runner, expected error) {
 	require.Equal(t, expected.Error(), resErr.Error())
 	require.NotPanics(t, func() { close(inp) })
 }
+
+func TestPipeline_errorFromExchange(t *testing.T) {
+	port := ":5551"
+	dist := eptest.NewPeer(t, port)
+
+	port2 := ":5559"
+	peer2 := eptest.NewPeer(t, port2)
+	defer func() {
+		require.NoError(t, dist.Close())
+		require.NoError(t, peer2.Close())
+	}()
+
+	infinityRunner := &waitForCancel{}
+	mightErrored := &dataRunner{Dataset: ep.NewDataset(str.Data(1)), ThrowOnData: port2}
+	runner := ep.Pipeline(
+		infinityRunner,
+		ep.Scatter(),
+		ep.Broadcast(),
+		ep.Project(ep.PassThrough(), ep.Pipeline(&nodeAddr{}, mightErrored)),
+		ep.Gather(),
+	)
+	runner = dist.Distribute(runner, port, port2)
+
+	data := ep.NewDataset(str.Data(1))
+	_, resErr := eptest.Run(runner, data, data, data, data)
+
+	require.Error(t, resErr)
+	require.Equal(t, "error "+port2, resErr.Error())
+	require.False(t, infinityRunner.IsRunning(), "Infinity go-routine leak")
+}

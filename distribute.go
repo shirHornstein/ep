@@ -192,7 +192,6 @@ func (d *distributer) Serve(conn net.Conn) error {
 		close(inp)
 
 		Run(context.Background(), r, inp, out, nil, &err)
-		// fmt.Println("dist done", err)
 		if err != nil {
 			err = &errMsg{err.Error()}
 		}
@@ -307,7 +306,7 @@ func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) error {
 				err, _ = data.(error)
 			}
 			if err != nil && err.Error() != io.EOF.Error() {
-				fmt.Println("error from peer", err)
+				fmt.Println("error from peer", err) // TODO
 				cancel()
 				if err.Error() != errOnPeer.Error() {
 					respErrs <- err

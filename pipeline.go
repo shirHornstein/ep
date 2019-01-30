@@ -53,7 +53,7 @@ func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 	defer func() {
 		wg.Wait()
 		for _, e := range errs {
-			if e != nil && e != context.Canceled {
+			if e != nil && e != context.Canceled && e != errOnPeer {
 				err = e
 				break
 			}
