@@ -35,7 +35,7 @@ func (b *batch) Run(ctx context.Context, inp, out chan Dataset) error {
 			}
 			delta := data.Slice(sliceStart, sliceEnd).(Dataset)
 
-			if bufferLen == 0 && delta.Len() == b.Size {
+			if delta.Len() == b.Size {
 				out <- delta
 			} else {
 				buffer = buffer.Append(delta).(Dataset)
