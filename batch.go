@@ -33,7 +33,10 @@ func (b *batch) Run(ctx context.Context, inp, out chan Dataset) error {
 			if sliceEnd > dataLen {
 				sliceEnd = dataLen
 			}
-			delta := data.Slice(sliceStart, sliceEnd).(Dataset)
+			delta := data
+			if dataLen > rowsLeft || sliceStart > 0 {
+				delta = data.Slice(sliceStart, sliceEnd).(Dataset)
+			}
 
 			if delta.Len() == b.Size {
 				out <- delta
