@@ -28,63 +28,29 @@ func TestExchange_uniqueUIDPerExchanger(t *testing.T) {
 	require.NotEqual(t, s2.UID, s3.UID)
 }
 
-func TestExchange_init_openConnectionsToAll(t *testing.T) {
+func TestExchange_init_createEncsDecsToAll(t *testing.T) {
 	ports := []string{":5551", ":5552", ":5553", ":5554"}
-	distributers := startCluster(t, ports...)
-	master := distributers[0]
-
-	defer func() {
-		for _, d := range distributers {
-			require.NoError(t, d.Close())
-		}
-	}()
-
-	ctx := context.WithValue(context.Background(), distributerKey, master)
-	ctx = context.WithValue(ctx, allNodesKey, ports)
-	ctx = context.WithValue(ctx, masterNodeKey, ports[0])
+	master := ports[0]
+	peer := ports[2]
 
 	for name, ex := range exchanges {
-		t.Run("master/"+name, func(t *testing.T) {
-			ctx = context.WithValue(ctx, thisNodeKey, ports[0])
-			exchange := ex().(*exchange)
-			err := exchange.init(ctx)
-
-			require.NoError(t, err)
-			require.Equal(t, len(ports), len(exchange.decs)+len(exchange.decsErr))
-			require.Equal(t, len(ports), len(exchange.encs)+len(exchange.encsErr))
-			require.Equal(t, len(ports), len(exchange.conns))
-
-			require.IsType(t, &shortCircuit{}, exchange.conns[0])
-			require.NoError(t, exchange.Close())
-			require.True(t, (exchange.conns[0]).(*shortCircuit).closed, "open connections leak")
+		exchange := ex().(*exchange)
+		t.Run("targets from master/"+name, func(t *testing.T) {
+			targets, errTargets := exchange.getTargets(ports, master, master)
+			require.Equal(t, len(ports), len(targets)+len(errTargets))
 		})
 
-		t.Run("non master/"+name, func(t *testing.T) {
-			t.Skip("TODO test peer") // TODO Avia
+		t.Run("targets from peer/"+name, func(t *testing.T) {
+			targets, errTargets := exchange.getTargets(ports, master, peer)
+			require.Equal(t, len(ports), len(targets)+len(errTargets))
+		})
 
-			ctx = context.WithValue(ctx, thisNodeKey, ports[1])
-			exchange := ex().(*exchange)
+		t.Run("source/"+name, func(t *testing.T) {
+			sources, errSources := exchange.getSources(ports, true)
+			require.Equal(t, len(ports), len(sources)+len(errSources))
 
-			runner := master.Distribute(exchange, ports...)
-
-			inp := make(chan Dataset)
-			out := make(chan Dataset)
-			close(inp)
-			defer close(out)
-
-			err := runner.Run(ctx, inp, out)
-			require.Error(t, err)
-
-			// err = exchange.init(ctx)
-
-			require.NoError(t, err)
-			require.Equal(t, len(ports), len(exchange.decs)+len(exchange.decsErr))
-			require.Equal(t, len(ports), len(exchange.encs)+len(exchange.encsErr))
-			require.Equal(t, len(ports), len(exchange.conns))
-
-			require.IsType(t, &shortCircuit{}, exchange.conns[0])
-			require.NoError(t, exchange.Close())
-			require.True(t, (exchange.conns[0]).(*shortCircuit).closed, "open connections leak")
+			sources, errSources = exchange.getSources(ports, false)
+			require.Equal(t, len(ports), len(sources)+len(errSources))
 		})
 	}
 }

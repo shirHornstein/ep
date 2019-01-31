@@ -207,12 +207,11 @@ func (ex *exchange) init(ctx context.Context) error {
 	ex.encsByKey = make(map[string]encoder)
 	ex.hashRing = consistent.New()
 
-	targetNodes, errTargetNodes := ex.getTargets(allNodes, masterNode, thisNode)
-
-	// open a connection to all target nodes
-	connsMap := map[string]net.Conn{}
+	// open a connection to all nodes
+	connsMap := make(map[string]net.Conn, len(allNodes))
 	var sc *shortCircuit
 
+	targetNodes, errTargetNodes := ex.getTargets(allNodes, masterNode, thisNode)
 	for _, node := range targetNodes {
 		if node == thisNode {
 			sc = newShortCircuit()
@@ -236,6 +235,15 @@ func (ex *exchange) init(ctx context.Context) error {
 		ex.encsByKey[node] = enc
 	}
 	for _, node := range errTargetNodes {
+		if node == thisNode {
+			sc = newShortCircuit()
+			ex.conns = append(ex.conns, sc)
+			ex.encs = append(ex.encs, sc)
+			ex.hashRing.Add(node)
+			ex.encsByKey[node] = sc
+			continue
+		}
+
 		conn, err := dist.Connect(node, ex.UID)
 		if err != nil {
 			return err
@@ -247,9 +255,8 @@ func (ex *exchange) init(ctx context.Context) error {
 		ex.encsErr = append(ex.encsErr, enc)
 	}
 
-	destNodes, errDestNodes := ex.getDests(allNodes, sc != nil)
-
-	for _, node := range destNodes {
+	sourceNodes, errSourceNodes := ex.getSources(allNodes, sc != nil)
+	for _, node := range sourceNodes {
 		if node == thisNode {
 			ex.decs = append(ex.decs, sc)
 			continue
@@ -261,7 +268,7 @@ func (ex *exchange) init(ctx context.Context) error {
 		// re-use it. We don't need 2 uni-directional connections
 		ex.decs = append(ex.decs, dbgDecoder{gob.NewDecoder(connsMap[node]), msg})
 	}
-	for _, node := range errDestNodes {
+	for _, node := range errSourceNodes {
 		if node == thisNode {
 			continue
 		}
@@ -280,14 +287,13 @@ func (ex *exchange) getTargets(allNodes []string, masterNode, thisNode string) (
 	case gather, sortGather:
 		target = []string{masterNode}
 		errTarget = remove(allNodes, masterNode)
-		errTarget = remove(errTarget, thisNode)
 	default:
 		target = allNodes
 	}
 	return target, errTarget
 }
 
-func (ex *exchange) getDests(allNodes []string, isDest bool) ([]string, []string) {
+func (ex *exchange) getSources(allNodes []string, isDest bool) ([]string, []string) {
 	// if we're also a destination, listen to all nodes
 	if isDest {
 		return allNodes, nil
