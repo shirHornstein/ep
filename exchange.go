@@ -107,6 +107,9 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 		// will be blocked forever. This will lead to deadlock as current exchange waits on
 		// receiversErrs channel that will not be closed
 		if !sndDone {
+			// close exchange might take time, so don't block preceding runner
+			go drain(inp)
+
 			eofErr := ex.encodeAll(ex.encs, errorMsg)
 			if err == nil {
 				err = eofErr
