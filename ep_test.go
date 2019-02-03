@@ -157,6 +157,9 @@ func (*upper) Run(_ context.Context, inp, out chan ep.Dataset) error {
 	}
 	return nil
 }
+func (*upper) Scopes() ep.StringsSet {
+	return ep.StringsSet{"upper_scope": struct{}{}}
+}
 
 type question struct {
 	// called flag helps tests ensure runner was/wasn't called
