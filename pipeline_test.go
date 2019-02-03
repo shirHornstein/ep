@@ -260,6 +260,7 @@ func TestPipeline_errorFromExchange(t *testing.T) {
 		ep.Scatter(),
 		ep.Broadcast(),
 		ep.Project(ep.PassThrough(), ep.Pipeline(&nodeAddr{}, mightErrored)),
+		ep.Project(ep.Pipeline(ep.Scatter(), &nodeAddr{}), ep.PassThrough()),
 		ep.Gather(),
 	)
 	runner = dist.Distribute(runner, port, port2)
