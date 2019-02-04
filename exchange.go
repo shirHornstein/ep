@@ -128,6 +128,13 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 	// and receiving is complete, exit. Upon error, exit early
 	receiversErrsC := receiversErrs
 	for err == nil && (!rcvDone || !sndDone) {
+		// prioritize cancellation over inp to notify peers as early as possible
+		select {
+		case <-ctx.Done():
+			return nil
+		default:
+		}
+
 		select {
 		case <-ctx.Done():
 			return nil

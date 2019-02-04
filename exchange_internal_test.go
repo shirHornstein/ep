@@ -10,10 +10,13 @@ import (
 	"time"
 )
 
-var _ = Runners.Register("cancel", &canceler{})
+var _ = Runners.
+	Register("err", &errOnPort{}).
+	Register("cancel", &waitForCancel{}).
+	Register("delayedCancel", &delayedCancel{})
 
 var exchanges = map[string]func() Runner{
-	// "gather":     Gather,
+	// "gather":     Gather, // TODO Avia
 	// "sortGather": func() Runner { return SortGather(nil) },
 	"scatter":   Scatter,
 	"broadcast": Broadcast,
@@ -116,16 +119,34 @@ func TestExchange_error(t *testing.T) {
 			require.True(t, (exchange.conns[0]).(*shortCircuit).closed, "open connections leak")
 		})
 
-		t.Run(name+"/error on peer", func(t *testing.T) {
-			t.Skip("TODO test peer") // TODO Avia
-
+		t.Run(name+"/error on peer before inp close", func(t *testing.T) {
 			exchange := ex().(*exchange)
-			runner := Pipeline(cancelOnPort(port2), Project(PassThrough(), PassThrough()), exchange)
+			runner := Pipeline(&errOnPort{port2}, Project(PassThrough(), PassThrough()), &waitForCancel{}, exchange)
 			runner = master.Distribute(runner, port, port2)
 
-			inp := make(chan Dataset)
+			inp := make(chan Dataset, 1)
 			out := make(chan Dataset)
 			defer close(inp)
+			defer close(out)
+
+			err := runner.Run(ctx, inp, out)
+			require.Error(t, err)
+			require.Equal(t, "error from :5552", err.Error())
+
+			require.Equal(t, 2, len(exchange.conns))
+			require.IsType(t, &shortCircuit{}, exchange.conns[0])
+			require.True(t, (exchange.conns[0]).(*shortCircuit).closed, "open connections leak")
+			require.Contains(t, exchange.conns[1].Close().Error(), "use of closed network connection", "open connections leak")
+		})
+
+		t.Run(name+"/error on peer after inp close", func(t *testing.T) {
+			exchange := ex().(*exchange)
+			runner := Pipeline(&errOnPort{port2}, Project(PassThrough(), PassThrough()), delayCancel(exchange, port2))
+			runner = master.Distribute(runner, port, port2)
+
+			inp := make(chan Dataset, 1)
+			out := make(chan Dataset)
+			close(inp)
 			defer close(out)
 
 			err := runner.Run(ctx, inp, out)
@@ -307,20 +328,69 @@ func startCluster(t *testing.T, ports ...string) []Distributer {
 	return res
 }
 
-func cancelOnPort(port string) Runner {
-	return &canceler{port}
-}
-
-type canceler struct {
+type errOnPort struct {
 	Port string
 }
 
-func (*canceler) Returns() []Type { return nil }
-func (r *canceler) Run(ctx context.Context, inp, out chan Dataset) error {
+func (*errOnPort) Returns() []Type { return nil }
+func (r *errOnPort) Run(ctx context.Context, inp, out chan Dataset) error {
 	if ctx.Value(thisNodeKey).(string) == r.Port {
 		return fmt.Errorf("error from %s", r.Port)
 	}
 	for range inp {
 	}
 	return nil
+}
+
+type waitForCancel struct {
+	// Name is unused field, defined to allow gob-ing infinityRunner between peers
+	Name string
+}
+
+func (*waitForCancel) Returns() []Type { return nil }
+func (r *waitForCancel) Run(ctx context.Context, inp, out chan Dataset) error {
+	go func() {
+		for data := range inp {
+			out <- data
+		}
+	}()
+
+	// infinitely wait for cancel
+	<-ctx.Done()
+	time.Sleep(time.Second)
+	return nil
+}
+
+func delayCancel(r Runner, port string) Runner {
+	return &delayedCancel{r, port}
+}
+
+type delayedCancel struct {
+	Runner
+	Port string
+}
+
+func (r *delayedCancel) Returns() []Type { return r.Runner.Returns() }
+func (r *delayedCancel) Run(ctx context.Context, inp, out chan Dataset) error {
+	if ctx.Value(thisNodeKey).(string) != r.Port {
+		return r.Runner.Run(ctx, inp, out)
+	}
+
+	internalInp := make(chan Dataset)
+	internalOut := make(chan Dataset)
+	internalCtx, cancel := context.WithCancel(context.Background())
+	internalCtx = context.WithValue(internalCtx, distributerKey, ctx.Value(distributerKey))
+	internalCtx = context.WithValue(internalCtx, allNodesKey, ctx.Value(allNodesKey))
+	internalCtx = context.WithValue(internalCtx, masterNodeKey, ctx.Value(masterNodeKey))
+	internalCtx = context.WithValue(internalCtx, thisNodeKey, ctx.Value(thisNodeKey))
+
+	go func() {
+		<-ctx.Done()
+		close(internalInp)
+		time.Sleep(time.Second)
+
+		cancel()
+	}()
+
+	return r.Runner.Run(internalCtx, internalInp, internalOut)
 }
