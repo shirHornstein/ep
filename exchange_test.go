@@ -56,7 +56,7 @@ func TestExchange_dialingError(t *testing.T) {
 
 	data1 := ep.NewDataset(strs{"hello", "world"})
 	data2 := ep.NewDataset(strs{"foo", "bar"})
-	data, err := eptest.Run(runner, data1, data2)
+	_, err := eptest.Run(runner, data1, data2)
 
 	require.Error(t, err)
 
@@ -74,7 +74,6 @@ func TestExchange_dialingError(t *testing.T) {
 		errMsg == possibleErrors[2] ||
 		errMsg == possibleErrors[3]
 	require.True(t, isExpectedError, "expected \"%s\" to appear in %s", err.Error(), possibleErrors)
-	require.Nil(t, data)
 }
 
 // Tests the scattering when there's just one node - the whole thing should

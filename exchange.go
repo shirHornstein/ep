@@ -100,8 +100,6 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 	rcvDone := false
 	sndDone := false
 	defer func() {
-		// TODO thisNode, _ := ctx.Value(thisNodeKey).(string)
-		// TODO fmt.Println(thisNode, "rec", rcvDone, "send", sndDone, err)
 		// in case of cancellation, for loop below stops without sending EOF message
 		// to all peers. Therefore other peers will not close connections, hence ex.receive
 		// will be blocked forever. This will lead to deadlock as current exchange waits on
@@ -326,9 +324,10 @@ func (ex *exchange) passRemoteData(out chan Dataset) chan error {
 			if recErr == io.EOF {
 				return
 			}
+
 			if recErr != nil {
 				receiversErrs <- recErr
-				return
+				continue
 			}
 			out <- data
 		}
@@ -396,13 +395,17 @@ func (ex *exchange) decodeNext() (Dataset, error) {
 	i := (ex.decsNext + 1) % len(ex.decs)
 
 	data, err := ex.decodeFrom(i)
-	if err == io.EOF {
-		// remove the current decoder and try again
+	if err != nil {
+		// remove the current decoder
 		ex.decs = append(ex.decs[:i], ex.decs[i+1:]...)
-		return ex.decodeNext()
+	} else {
+		ex.decsNext = i
 	}
 
-	ex.decsNext = i
+	if err == io.EOF {
+		// try again from next decoder
+		return ex.decodeNext()
+	}
 	return data, err
 }
 
