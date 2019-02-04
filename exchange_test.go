@@ -96,15 +96,14 @@ func TestScatter_singleNode(t *testing.T) {
 	require.Equal(t, 4, data.Len())
 }
 
-// TODO Avia
-func _TestScatter_multipleNodes(t *testing.T) {
-	port1 := fmt.Sprintf(":%d", 5551)
+func TestScatter_multipleNodes(t *testing.T) {
+	port1 := ":5551"
 	peer1 := eptest.NewPeer(t, port1)
 
-	port2 := fmt.Sprintf(":%d", 5552)
+	port2 := ":5552"
 	peer2 := eptest.NewPeer(t, port2)
 
-	port3 := fmt.Sprintf(":%d", 5553)
+	port3 := ":5553"
 	peer3 := eptest.NewPeer(t, port3)
 
 	defer func() {
@@ -253,10 +252,10 @@ func TestPartition_and_Gather(t *testing.T) {
 }
 
 func TestPartition(t *testing.T) {
-	port1 := fmt.Sprintf(":%d", 5551)
+	port1 := ":5551"
 	peer1 := eptest.NewPeer(t, port1)
 
-	port2 := fmt.Sprintf(":%d", 5552)
+	port2 := ":5552"
 	peer2 := eptest.NewPeer(t, port2)
 	defer func() {
 		require.NoError(t, peer1.Close())
@@ -338,10 +337,10 @@ func TestPartition(t *testing.T) {
 }
 
 func TestPartition_sendsCompleteDatasets(t *testing.T) {
-	port1 := fmt.Sprintf(":%d", 5551)
+	port1 := ":5551"
 	peer1 := eptest.NewPeer(t, port1)
 
-	port2 := fmt.Sprintf(":%d", 5552)
+	port2 := ":5552"
 	peer2 := eptest.NewPeer(t, port2)
 	defer func() {
 		require.NoError(t, peer1.Close())

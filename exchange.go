@@ -114,15 +114,7 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 			if err == nil {
 				err = eofErr
 			}
-		}
-
-		if !rcvDone || !sndDone {
-			eofErr := ex.encodeAll(ex.encsErr, errorMsg)
-			if err == nil {
-				err = eofErr
-			}
-		} else {
-			eofErr := ex.encodeAll(ex.encsErr, eofMsg)
+			eofErr = ex.encodeAll(ex.encsErr, errorMsg)
 			if err == nil {
 				err = eofErr
 			}
@@ -148,7 +140,11 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 				// the input is exhausted. Notify peers that we're done sending
 				// data (they will use it to stop listening to data from us)
 				eofErr := ex.encodeAll(ex.encs, eofMsg)
-				if err != nil {
+				if err == nil {
+					err = eofErr
+				}
+				eofErr = ex.encodeAll(ex.encsErr, eofMsg)
+				if err == nil {
 					err = eofErr
 				}
 				sndDone = true
@@ -237,6 +233,7 @@ func (ex *exchange) init(ctx context.Context) error {
 		ex.hashRing.Add(node)
 		ex.encsByKey[node] = enc
 	}
+	isTarget := sc != nil
 	for _, node := range errTargetNodes {
 		if node == thisNode {
 			sc = newShortCircuit()
@@ -258,7 +255,7 @@ func (ex *exchange) init(ctx context.Context) error {
 		ex.encsErr = append(ex.encsErr, enc)
 	}
 
-	sourceNodes, errSourceNodes := ex.getSources(allNodes, sc != nil)
+	sourceNodes, errSourceNodes := ex.getSources(allNodes, isTarget)
 	for _, node := range sourceNodes {
 		if node == thisNode {
 			ex.decs = append(ex.decs, sc)
@@ -273,6 +270,7 @@ func (ex *exchange) init(ctx context.Context) error {
 	}
 	for _, node := range errSourceNodes {
 		if node == thisNode {
+			ex.decsErr = append(ex.decsErr, sc)
 			continue
 		}
 
@@ -434,13 +432,13 @@ type dbgDecoder struct {
 func (dec dbgDecoder) Decode(e interface{}) error {
 	// fmt.Println("DECODE", dec.msg)
 	err := dec.decoder.Decode(e)
+	// fmt.Println("DECODE DONE", dec.msg, e, err)
 	if isEOFError(e) {
 		return io.EOF
 	}
 	if isPeerError(e) {
 		return errOnPeer
 	}
-	// fmt.Println("DECODE DONE", dec.msg, e, decErr)
 	return err
 }
 

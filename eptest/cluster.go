@@ -5,6 +5,7 @@ package eptest
 import (
 	"fmt"
 	"github.com/panoplyio/ep"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"net"
 	"testing"
@@ -15,6 +16,14 @@ func NewPeer(t *testing.T, port string) ep.Distributer {
 	ln, err := net.Listen("tcp", port)
 	require.NoError(t, err)
 	return ep.NewDistributer(port, ln)
+}
+
+func ClosePeers(t *testing.T, dists ...ep.Distributer) {
+	for _, d := range dists {
+		err := d.Close()
+		// use assert and not require to make sure all dists will be closed
+		assert.NoError(t, err)
+	}
 }
 
 // NewDialingErrorPeer returns distributer that fails to .Dial()
