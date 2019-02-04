@@ -18,6 +18,7 @@ func NewPeer(t *testing.T, port string) ep.Distributer {
 	return ep.NewDistributer(port, ln)
 }
 
+// ClosePeers closes all given distributers
 func ClosePeers(t *testing.T, dists ...ep.Distributer) {
 	for _, d := range dists {
 		err := d.Close()

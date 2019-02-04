@@ -80,7 +80,8 @@ func TestExchange_init_closeAllConnectionsUponError(t *testing.T) {
 	require.NoError(t, dist.Close())
 }
 
-func _TestExchange_error(t *testing.T) {
+func TestExchange_error(t *testing.T) {
+	t.Skip("wip")
 	port, port2 := ":5551", ":5552"
 	distributers := startCluster(t, port, port2)
 	master := distributers[0]
