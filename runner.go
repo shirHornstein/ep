@@ -112,6 +112,14 @@ type PushRunner interface {
 	Push(toPush ScopesRunner) bool
 }
 
+// ApproxSizer is a Runner that can roughly predict the size of its output
+type ApproxSizer interface {
+	Runner
+
+	// ApproxSize returns a roughly estimated size of the output produced by this Runner
+	ApproxSize() int
+}
+
 // Run runs given runner and takes care of channels management involved in runner execution
 // safe to use only if caller created the out channel
 func Run(ctx context.Context, r Runner, inp, out chan Dataset, cancel context.CancelFunc, err *error) {
