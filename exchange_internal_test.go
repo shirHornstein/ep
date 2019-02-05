@@ -3,6 +3,7 @@ package ep
 import (
 	"context"
 	"fmt"
+	"github.com/panoplyio/ep/compare"
 	"github.com/stretchr/testify/require"
 	"math/rand"
 	"net"
@@ -13,14 +14,19 @@ import (
 var _ = Runners.
 	Register("err", &errOnPort{}).
 	Register("cancel", &waitForCancel{}).
-	Register("delayedCancel", &delayedCancel{})
+	Register("delayedCancel", &delayedCancel{}).
+	Register("drainInp", &drainInp{}).
+	Register("fixedData", &fixedData{})
+
+var _ = Types.Register("dummyString", str)
+var str = &strType{}
 
 var exchanges = map[string]func() Runner{
-	// "gather":     Gather, // TODO Avia
-	// "sortGather": func() Runner { return SortGather(nil) },
-	"scatter":   Scatter,
-	"broadcast": Broadcast,
-	"partition": func() Runner { return Partition(0) },
+	"gather":     Gather,
+	"sortGather": func() Runner { return SortGather(nil) },
+	"scatter":    Scatter,
+	"broadcast":  Broadcast,
+	"partition":  func() Runner { return Partition(0) },
 }
 
 func TestExchange_uniqueUIDPerExchanger(t *testing.T) {
@@ -84,8 +90,8 @@ func TestExchange_init_closeAllConnectionsUponError(t *testing.T) {
 }
 
 func TestExchange_error(t *testing.T) {
-	port, port2 := ":5551", ":5552"
-	distributers := startCluster(t, port, port2)
+	ports := []string{":5551", ":5552"}
+	distributers := startCluster(t, ports...)
 	master := distributers[0]
 
 	defer func() {
@@ -94,69 +100,71 @@ func TestExchange_error(t *testing.T) {
 		}
 	}()
 
-	ctx := context.WithValue(context.Background(), distributerKey, master)
-	ctx = context.WithValue(ctx, allNodesKey, []string{port, port2})
-	ctx = context.WithValue(ctx, masterNodeKey, port)
-	ctx = context.WithValue(ctx, thisNodeKey, port)
+	errorWhileReadingFromInp := func(t *testing.T, ex func() Runner, cancelOnMaster bool) {
+		cancelOnPort := ports[1]
+		if cancelOnMaster {
+			cancelOnPort = ports[0]
+		}
+
+		exchange := ex().(*exchange)
+		runner := Pipeline(&fixedData{}, &errOnPort{cancelOnPort}, &waitForCancel{}, exchange, &drainInp{})
+		runner = master.Distribute(runner, ports...)
+
+		inp := make(chan Dataset)
+		out := make(chan Dataset)
+		close(inp)
+		defer close(out)
+
+		err := runner.Run(context.Background(), inp, out)
+		require.Error(t, err)
+		require.Equal(t, "error from "+cancelOnPort, err.Error())
+
+		require.Equal(t, 2, len(exchange.conns))
+		require.IsType(t, &shortCircuit{}, exchange.conns[0])
+		require.True(t, (exchange.conns[0]).(*shortCircuit).closed, "open connections leak")
+		require.Contains(t, exchange.conns[1].Close().Error(), "use of closed network connection", "open connections leak")
+	}
+
+	errorAfterReadingFromInpDone := func(t *testing.T, ex func() Runner, cancelOnMaster bool) {
+		cancelOnPort := ports[1]
+		if cancelOnMaster {
+			cancelOnPort = ports[0]
+		}
+
+		exchange := ex().(*exchange)
+		runner := Pipeline(&errOnPort{cancelOnPort}, delayCancel(exchange, cancelOnPort))
+		runner = master.Distribute(runner, ports...)
+
+		inp := make(chan Dataset)
+		out := make(chan Dataset)
+		close(inp)
+		defer close(out)
+
+		err := runner.Run(context.Background(), inp, out)
+		require.Error(t, err)
+		require.Equal(t, "error from "+cancelOnPort, err.Error())
+
+		require.Equal(t, 2, len(exchange.conns))
+		require.IsType(t, &shortCircuit{}, exchange.conns[0])
+		require.True(t, (exchange.conns[0]).(*shortCircuit).closed, "open connections leak")
+		require.Contains(t, exchange.conns[1].Close().Error(), "use of closed network connection", "open connections leak")
+	}
 
 	for name, ex := range exchanges {
-		t.Run(name+"/cancel on master", func(t *testing.T) {
-			exchange := ex().(*exchange)
-			runner := Pipeline(Project(PassThrough(), PassThrough()), exchange)
-			runner = master.Distribute(runner, port, port2)
-
-			inp := make(chan Dataset)
-			out := make(chan Dataset)
-			defer close(inp)
-			defer close(out)
-			ctx, cancel := context.WithCancel(ctx)
-			cancel()
-			err := runner.Run(ctx, inp, out)
-			require.NoError(t, err)
-
-			require.Equal(t, 2, len(exchange.conns))
-			require.IsType(t, &shortCircuit{}, exchange.conns[0])
-			require.True(t, (exchange.conns[0]).(*shortCircuit).closed, "open connections leak")
+		t.Run(name+"/error on master/inp open", func(t *testing.T) {
+			errorWhileReadingFromInp(t, ex, true)
 		})
 
-		t.Run(name+"/error on peer before inp close", func(t *testing.T) {
-			exchange := ex().(*exchange)
-			runner := Pipeline(&errOnPort{port2}, Project(PassThrough(), PassThrough()), &waitForCancel{}, exchange)
-			runner = master.Distribute(runner, port, port2)
-
-			inp := make(chan Dataset, 1)
-			out := make(chan Dataset)
-			defer close(inp)
-			defer close(out)
-
-			err := runner.Run(ctx, inp, out)
-			require.Error(t, err)
-			require.Equal(t, "error from :5552", err.Error())
-
-			require.Equal(t, 2, len(exchange.conns))
-			require.IsType(t, &shortCircuit{}, exchange.conns[0])
-			require.True(t, (exchange.conns[0]).(*shortCircuit).closed, "open connections leak")
-			require.Contains(t, exchange.conns[1].Close().Error(), "use of closed network connection", "open connections leak")
+		t.Run(name+"/error on peer/inp open", func(t *testing.T) {
+			errorWhileReadingFromInp(t, ex, false)
 		})
 
-		t.Run(name+"/error on peer after inp close", func(t *testing.T) {
-			exchange := ex().(*exchange)
-			runner := Pipeline(&errOnPort{port2}, Project(PassThrough(), PassThrough()), delayCancel(exchange, port2))
-			runner = master.Distribute(runner, port, port2)
+		t.Run(name+"/error on master/inp close", func(t *testing.T) {
+			errorAfterReadingFromInpDone(t, ex, true)
+		})
 
-			inp := make(chan Dataset, 1)
-			out := make(chan Dataset)
-			close(inp)
-			defer close(out)
-
-			err := runner.Run(ctx, inp, out)
-			require.Error(t, err)
-			require.Equal(t, "error from :5552", err.Error())
-
-			require.Equal(t, 2, len(exchange.conns))
-			require.IsType(t, &shortCircuit{}, exchange.conns[0])
-			require.True(t, (exchange.conns[0]).(*shortCircuit).closed, "open connections leak")
-			require.Contains(t, exchange.conns[1].Close().Error(), "use of closed network connection", "open connections leak")
+		t.Run(name+"/error on peer/inp close", func(t *testing.T) {
+			errorAfterReadingFromInpDone(t, ex, false)
 		})
 	}
 }
@@ -337,7 +345,8 @@ func (r *errOnPort) Run(ctx context.Context, inp, out chan Dataset) error {
 	if ctx.Value(thisNodeKey).(string) == r.Port {
 		return fmt.Errorf("error from %s", r.Port)
 	}
-	for range inp {
+	for data := range inp {
+		out <- data
 	}
 	return nil
 }
@@ -394,3 +403,51 @@ func (r *delayedCancel) Run(ctx context.Context, inp, out chan Dataset) error {
 
 	return r.Runner.Run(internalCtx, internalInp, internalOut)
 }
+
+type drainInp struct{}
+
+func (*drainInp) Returns() []Type { return nil }
+func (r *drainInp) Run(ctx context.Context, inp, out chan Dataset) error {
+	for range inp {
+	}
+	return nil
+}
+
+type fixedData struct{}
+
+func (*fixedData) Returns() []Type { return nil }
+func (r *fixedData) Run(ctx context.Context, inp, out chan Dataset) error {
+	out <- NewDataset(str.Data(2))
+	out <- NewDataset(strs{"a", "b"})
+
+	for data := range inp {
+		out <- data
+	}
+	return nil
+}
+
+type strType struct{}
+
+func (s *strType) String() string     { return s.Name() }
+func (*strType) Name() string         { return "string" }
+func (*strType) Size() uint           { return 8 }
+func (*strType) Data(n int) Data      { return make(strs, n) }
+func (*strType) DataEmpty(n int) Data { return make(strs, 0, n) }
+
+type strs []string
+
+func (strs) Type() Type                                { return str }
+func (vs strs) Len() int                               { return len(vs) }
+func (vs strs) Less(int, int) bool                     { return false }
+func (vs strs) Swap(int, int)                          {}
+func (vs strs) LessOther(int, Data, int) bool          { return false }
+func (vs strs) Slice(int, int) Data                    { return vs }
+func (vs strs) Append(Data) Data                       { return vs }
+func (vs strs) Duplicate(t int) Data                   { return vs }
+func (vs strs) IsNull(int) bool                        { return false }
+func (vs strs) MarkNull(int)                           {}
+func (vs strs) Nulls() []bool                          { return make([]bool, vs.Len()) }
+func (vs strs) Equal(Data) bool                        { return false }
+func (vs strs) Compare(Data) ([]compare.Result, error) { return make([]compare.Result, vs.Len()), nil }
+func (vs strs) Copy(Data, int, int)                    {}
+func (vs strs) Strings() []string                      { return vs }
