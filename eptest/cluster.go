@@ -21,9 +21,8 @@ func NewPeer(t *testing.T, port string) ep.Distributer {
 // ClosePeers closes all given distributers
 func ClosePeers(t *testing.T, dists ...ep.Distributer) {
 	for _, d := range dists {
-		err := d.Close()
 		// use assert and not require to make sure all dists will be closed
-		assert.NoError(t, err)
+		assert.NoError(t, d.Close())
 	}
 }
 

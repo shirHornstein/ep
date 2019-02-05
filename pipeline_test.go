@@ -258,7 +258,7 @@ func TestPipeline_errorFromExchange(t *testing.T) {
 	runner := ep.Pipeline(
 		infinityRunner,
 		ep.Scatter(),
-		// ep.Broadcast(),
+		ep.Broadcast(),
 		ep.Project(ep.PassThrough(), ep.Pipeline(&nodeAddr{}, mightErrored)),
 		ep.Project(ep.Pipeline(ep.Scatter(), &nodeAddr{}), ep.PassThrough()),
 		ep.Gather(),

@@ -78,7 +78,7 @@ func (r *waitForCancel) Run(ctx context.Context, inp, out chan Dataset) error {
 		select {
 		case data, ok := <-inp:
 			if !ok {
-				// Null-ify inp to block it on the next select iteration
+				// nil-ify inp to block it on the next select iteration
 				inp = nil
 				continue
 			}

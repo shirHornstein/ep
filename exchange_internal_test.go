@@ -86,6 +86,7 @@ func TestExchange_error(t *testing.T) {
 
 	defer func() {
 		for _, d := range distributers {
+			// use assert and not require to make sure all dists will be closed
 			assert.NoError(t, d.Close())
 		}
 	}()

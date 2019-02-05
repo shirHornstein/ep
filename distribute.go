@@ -306,7 +306,6 @@ func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) error {
 				err, _ = data.(error)
 			}
 			if err != nil && err.Error() != io.EOF.Error() {
-				fmt.Println("error from peer", err) // TODO
 				cancel()
 				if err.Error() != errOnPeer.Error() {
 					respErrs <- err
