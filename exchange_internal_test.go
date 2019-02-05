@@ -3,23 +3,13 @@ package ep
 import (
 	"context"
 	"fmt"
-	"github.com/panoplyio/ep/compare"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"math/rand"
 	"net"
 	"testing"
 	"time"
 )
-
-var _ = Runners.
-	Register("err", &errOnPort{}).
-	Register("cancel", &waitForCancel{}).
-	Register("delayedCancel", &delayedCancel{}).
-	Register("drainInp", &drainInp{}).
-	Register("fixedData", &fixedData{})
-
-var _ = Types.Register("dummyString", str)
-var str = &strType{}
 
 var exchanges = map[string]func() Runner{
 	"gather":     Gather,
@@ -96,7 +86,7 @@ func TestExchange_error(t *testing.T) {
 
 	defer func() {
 		for _, d := range distributers {
-			require.NoError(t, d.Close())
+			assert.NoError(t, d.Close())
 		}
 	}()
 
@@ -132,7 +122,7 @@ func TestExchange_error(t *testing.T) {
 		}
 
 		exchange := ex().(*exchange)
-		runner := Pipeline(&errOnPort{cancelOnPort}, delayCancel(exchange, cancelOnPort))
+		runner := Pipeline(&errOnPort{cancelOnPort}, closeWithoutCancel(exchange, cancelOnPort))
 		runner = master.Distribute(runner, ports...)
 
 		inp := make(chan Dataset)
@@ -325,129 +315,3 @@ func TestExchange_encsMappedByNodes(t *testing.T) {
 	}
 	require.ElementsMatch(t, []string{":5551", ":5552", ":5553"}, encKeys)
 }
-
-func startCluster(t *testing.T, ports ...string) []Distributer {
-	res := make([]Distributer, len(ports))
-	for i, port := range ports {
-		ln, err := net.Listen("tcp", port)
-		require.NoError(t, err)
-		res[i] = NewDistributer(port, ln)
-	}
-	return res
-}
-
-type errOnPort struct {
-	Port string
-}
-
-func (*errOnPort) Returns() []Type { return nil }
-func (r *errOnPort) Run(ctx context.Context, inp, out chan Dataset) error {
-	if ctx.Value(thisNodeKey).(string) == r.Port {
-		return fmt.Errorf("error from %s", r.Port)
-	}
-	for data := range inp {
-		out <- data
-	}
-	return nil
-}
-
-type waitForCancel struct {
-	// Name is unused field, defined to allow gob-ing infinityRunner between peers
-	Name string
-}
-
-func (*waitForCancel) Returns() []Type { return nil }
-func (r *waitForCancel) Run(ctx context.Context, inp, out chan Dataset) error {
-	go func() {
-		for data := range inp {
-			out <- data
-		}
-	}()
-
-	// infinitely wait for cancel
-	<-ctx.Done()
-	time.Sleep(time.Second)
-	return nil
-}
-
-func delayCancel(r Runner, port string) Runner {
-	return &delayedCancel{r, port}
-}
-
-type delayedCancel struct {
-	Runner
-	Port string
-}
-
-func (r *delayedCancel) Returns() []Type { return r.Runner.Returns() }
-func (r *delayedCancel) Run(ctx context.Context, inp, out chan Dataset) error {
-	if ctx.Value(thisNodeKey).(string) != r.Port {
-		return r.Runner.Run(ctx, inp, out)
-	}
-
-	internalInp := make(chan Dataset)
-	internalOut := make(chan Dataset)
-	internalCtx, cancel := context.WithCancel(context.Background())
-	internalCtx = context.WithValue(internalCtx, distributerKey, ctx.Value(distributerKey))
-	internalCtx = context.WithValue(internalCtx, allNodesKey, ctx.Value(allNodesKey))
-	internalCtx = context.WithValue(internalCtx, masterNodeKey, ctx.Value(masterNodeKey))
-	internalCtx = context.WithValue(internalCtx, thisNodeKey, ctx.Value(thisNodeKey))
-
-	go func() {
-		<-ctx.Done()
-		close(internalInp)
-		time.Sleep(time.Second)
-
-		cancel()
-	}()
-
-	return r.Runner.Run(internalCtx, internalInp, internalOut)
-}
-
-type drainInp struct{}
-
-func (*drainInp) Returns() []Type { return nil }
-func (r *drainInp) Run(ctx context.Context, inp, out chan Dataset) error {
-	for range inp {
-	}
-	return nil
-}
-
-type fixedData struct{}
-
-func (*fixedData) Returns() []Type { return nil }
-func (r *fixedData) Run(ctx context.Context, inp, out chan Dataset) error {
-	out <- NewDataset(str.Data(2))
-	out <- NewDataset(strs{"a", "b"})
-
-	for data := range inp {
-		out <- data
-	}
-	return nil
-}
-
-type strType struct{}
-
-func (s *strType) String() string     { return s.Name() }
-func (*strType) Name() string         { return "string" }
-func (*strType) Size() uint           { return 8 }
-func (*strType) Data(n int) Data      { return make(strs, n) }
-func (*strType) DataEmpty(n int) Data { return make(strs, 0, n) }
-
-type strs []string
-
-func (strs) Type() Type                                { return str }
-func (vs strs) Len() int                               { return len(vs) }
-func (vs strs) Less(int, int) bool                     { return false }
-func (vs strs) Swap(int, int)                          {}
-func (vs strs) LessOther(int, Data, int) bool          { return false }
-func (vs strs) Slice(int, int) Data                    { return vs }
-func (vs strs) Append(Data) Data                       { return vs }
-func (vs strs) Duplicate(t int) Data                   { return vs }
-func (vs strs) IsNull(int) bool                        { return false }
-func (vs strs) MarkNull(int)                           {}
-func (vs strs) Nulls() []bool                          { return make([]bool, vs.Len()) }
-func (vs strs) Equal(Data) bool                        { return false }
-func (vs strs) Compare(Data) ([]compare.Result, error) { return make([]compare.Result, vs.Len()), nil }
-func (vs strs) Copy(Data, int, int)                    {}
-func (vs strs) Strings() []string                      { return vs }
