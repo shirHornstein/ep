@@ -487,6 +487,7 @@ func (sc *shortCircuit) Encode(e interface{}) error {
 
 func (sc *shortCircuit) Decode(e interface{}) error {
 	v, ok := <-sc.C
+	// fmt.Println("SC: Decode", v, ok)
 	if !ok || isEOFError(v) {
 		return io.EOF
 	}
