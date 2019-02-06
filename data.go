@@ -61,6 +61,24 @@ type Data interface {
 	Strings() []string
 }
 
+// DataBuilder exposes an efficient way to build Data objects by appending
+// smaller Data objects. DataBuilders should be used every time there is a need
+// to Append multiple Datas.
+//
+// The flow is:
+// - create a DataBuilder (very small allocation)
+// - Append() as many Datas as needed (allocate space to hold more pointers to Data)
+// - Finally call Data() to allocate a single Data object containing all
+//   Appended Datas (large, one time allocation)
+type DataBuilder interface {
+	// Append appends data to the data that this DataBuilder has
+	Append(data Data)
+
+	// Data allocates a new Data object and adds every appended Data object to
+	// it, keeping the order
+	Data() Data
+}
+
 // Cut the Data into several sub-segments at the provided cut-point indices. It's
 // effectively the same as calling Data.Slice() multiple times
 func Cut(data Data, cutPoints ...int) []Data {
