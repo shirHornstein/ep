@@ -4,6 +4,7 @@ import "github.com/panoplyio/ep/compare"
 
 var dummy = &dummyType{}
 var dummyData = &variadicDummies{}
+var dummyBuilder = &dummyDataBuilder{}
 var _ = registerGob(dummy, dummyData)
 
 type dummyType struct{}
@@ -13,7 +14,12 @@ func (*dummyType) Name() string             { return "dummy" }
 func (*dummyType) Size() uint               { return 0 }
 func (*dummyType) Data(int) Data            { return dummyData }
 func (*dummyType) DataEmpty(int) Data       { return dummyData }
-func (*dummyType) DataBuilder() DataBuilder { return nil }
+func (*dummyType) DataBuilder() DataBuilder { return dummyBuilder }
+
+type dummyDataBuilder struct{}
+
+func (*dummyDataBuilder) Append(data Data) {}
+func (*dummyDataBuilder) Data() Data       { return dummyData }
 
 type variadicDummies struct{}
 
