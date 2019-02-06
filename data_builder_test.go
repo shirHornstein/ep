@@ -64,6 +64,33 @@ func TestDataBuilder(t *testing.T) {
 		require.Equal(t, 67, dataset.Len())
 		require.Equal(t, 2, dataset.Width())
 	})
+
+	t.Run("records", func(t *testing.T) {
+		db := ep.NewDatasetBuilder()
+		d1 := integer.Data(7)
+		d2 := integer.Data(11)
+		d3 := integer.Data(13)
+		d4 := integer.Data(17)
+		d5 := integer.Data(19)
+
+		ds1 := ep.NewDataset(ep.NewDataset(d1), ep.NewDataset(d1))
+		ds2 := ep.NewDataset(ep.NewDataset(d2), ep.NewDataset(d2))
+		ds3 := ep.NewDataset(ep.NewDataset(d3), ep.NewDataset(d3))
+		ds4 := ep.NewDataset(ep.NewDataset(d4), ep.NewDataset(d4))
+		ds5 := ep.NewDataset(ep.NewDataset(d5), ep.NewDataset(d5))
+
+		db.Append(ds1)
+		db.Append(ds2)
+		db.Append(ds3)
+		db.Append(ds4)
+		db.Append(ds5)
+		data := db.Data()
+
+		dataset, ok := data.(ep.Dataset)
+		require.True(t, ok)
+		require.Equal(t, 67, dataset.Len())
+		require.Equal(t, 2, dataset.Width())
+	})
 }
 
 func BenchmarkDataBuilder(b *testing.B) {

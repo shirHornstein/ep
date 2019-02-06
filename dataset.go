@@ -107,7 +107,12 @@ func (db *datasetBuilder) Data() Data {
 	cols := make([]Data, firstData.Width())
 	builders := make([]DataBuilder, len(cols))
 	for i := range cols {
-		builders[i] = firstData.At(i).Type().DataBuilder()
+		typee := firstData.At(i).Type()
+		if typee.Name() == Record.Name() {
+			builders[i] = NewDatasetBuilder()
+		} else {
+			builders[i] = typee.DataBuilder()
+		}
 	}
 	for _, d := range db.ds {
 		for i := 0; i < d.Width(); i++ {
