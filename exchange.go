@@ -108,11 +108,7 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 			// close exchange might take time, so don't block preceding runner
 			go drain(inp)
 
-			eofErr := ex.encodeAll(ex.encs, errorMsg)
-			if err == nil {
-				err = eofErr
-			}
-			eofErr = ex.encodeAll(ex.encsErr, errorMsg)
+			eofErr := ex.encodeError(errorMsg)
 			if err == nil {
 				err = eofErr
 			}
@@ -144,11 +140,7 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 			if !ok {
 				// the input is exhausted. Notify peers that we're done sending
 				// data (they will use it to stop listening to data from us)
-				eofErr := ex.encodeAll(ex.encs, eofMsg)
-				if err == nil {
-					err = eofErr
-				}
-				eofErr = ex.encodeAll(ex.encsErr, eofMsg)
+				eofErr := ex.encodeError(eofMsg)
 				if err == nil {
 					err = eofErr
 				}
@@ -380,6 +372,15 @@ func (ex *exchange) encodeAll(targets []encoder, e interface{}) (err error) {
 		}
 	}
 	return err
+}
+
+func (ex *exchange) encodeError(msg *errMsg) error {
+	eofEncs := ex.encodeAll(ex.encs, msg)
+	eofEncsErr := ex.encodeAll(ex.encsErr, msg)
+	if eofEncs != nil {
+		return eofEncs
+	}
+	return eofEncsErr
 }
 
 // receive receives a dataset from next source node
