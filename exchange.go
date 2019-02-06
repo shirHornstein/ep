@@ -122,7 +122,6 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 	// send the local data to the peers, until completion or error. Also listen
 	// for the completion of the receive go-routine above. When both sending
 	// and receiving is complete, exit. Upon error, exit early
-	receiversErrsC := receiversErrs
 	for err == nil && (!rcvDone || !sndDone) {
 		// prioritize cancellation over inp to notify peers as early as possible
 		select {
@@ -154,7 +153,7 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 			err = ex.send(data)
 
 		// receive data, returns first error (or nil if receiversErrs was closed)
-		case err = <-receiversErrsC:
+		case err = <-receiversErrs:
 			rcvDone = true
 		}
 	}
@@ -362,7 +361,7 @@ func (ex *exchange) send(data Dataset) error {
 }
 
 // encodeAll encodes an object to all destination connections
-// expecting e to be either dataset or EOF error
+// expecting e to be either dataset or errMsg
 func (ex *exchange) encodeAll(targets []encoder, e interface{}) (err error) {
 	req := &req{e}
 	for _, enc := range targets {
@@ -383,7 +382,6 @@ func (ex *exchange) encodeError(msg *errMsg) error {
 	return eofEncsErr
 }
 
-// receive receives a dataset from next source node
 func (ex *exchange) receive() (Dataset, error) {
 	switch ex.Type {
 	case sortGather:
@@ -417,7 +415,6 @@ func (ex *exchange) decodeNext() (Dataset, error) {
 	return data, err
 }
 
-// decodeFrom decodes an object from the i-th source connection
 func (ex *exchange) decodeFrom(i int) (Dataset, error) {
 	req := &req{}
 	err := ex.decs[i].Decode(req)
