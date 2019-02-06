@@ -47,9 +47,9 @@ func TestExchange_dialingError(t *testing.T) {
 	port3 := ":5553"
 	peer3 := eptest.NewPeer(t, port3)
 	defer func() {
-		require.NoError(t, dist1.Close())
-		require.NoError(t, peer2.Close())
-		require.NoError(t, peer3.Close())
+		eptest.ClosePeer(t, dist1)
+		eptest.ClosePeer(t, peer2)
+		eptest.ClosePeer(t, peer3)
 	}()
 
 	runner := dist1.Distribute(ep.Scatter(), port1, port2, port3)
@@ -81,9 +81,7 @@ func TestExchange_dialingError(t *testing.T) {
 func TestScatter_singleNode(t *testing.T) {
 	port := ":5551"
 	dist := eptest.NewPeer(t, port)
-	defer func() {
-		require.NoError(t, dist.Close())
-	}()
+	defer eptest.ClosePeer(t, dist)
 
 	runner := dist.Distribute(ep.Scatter(), port)
 
@@ -96,21 +94,6 @@ func TestScatter_singleNode(t *testing.T) {
 }
 
 func TestScatter_multipleNodes(t *testing.T) {
-	port1 := ":5551"
-	peer1 := eptest.NewPeer(t, port1)
-
-	port2 := ":5552"
-	peer2 := eptest.NewPeer(t, port2)
-
-	port3 := ":5553"
-	peer3 := eptest.NewPeer(t, port3)
-
-	defer func() {
-		require.NoError(t, peer1.Close())
-		require.NoError(t, peer2.Close())
-		require.NoError(t, peer3.Close())
-	}()
-
 	t.Run("less data than peers", func(t *testing.T) {
 		col1 := strs{"a1", "b1"}
 		col2 := strs{"a2", "b2"}
@@ -121,9 +104,8 @@ func TestScatter_multipleNodes(t *testing.T) {
 
 		data := ep.NewDataset(col1, col2, col3, col4, col5, col6)
 
-		runner := ep.Pipeline(ep.Scatter(), &nodeAddr{}, ep.Gather())
-		runner = peer1.Distribute(runner, port1, port2, port3)
-		res, err := eptest.Run(runner, data)
+		runner := ep.Pipeline(ep.Scatter(), &nodeAddr{})
+		res, err := eptest.RunDist(t, 3, runner, data)
 		require.NoError(t, err)
 
 		sort.Sort(res)
@@ -146,9 +128,8 @@ func TestScatter_multipleNodes(t *testing.T) {
 
 		data := ep.NewDataset(col1, col2, col3, col4, col5, col6)
 
-		runner := ep.Pipeline(ep.Scatter(), &nodeAddr{}, ep.Gather())
-		runner = peer1.Distribute(runner, port1, port2, port3)
-		res, err := eptest.Run(runner, data)
+		runner := ep.Pipeline(ep.Scatter(), &nodeAddr{})
+		res, err := eptest.RunDist(t, 3, runner, data)
 		require.NoError(t, err)
 
 		sort.Sort(res)
@@ -175,9 +156,8 @@ func TestScatter_multipleNodes(t *testing.T) {
 
 		data := ep.NewDataset(col1, col2, col3, col4, col5, col6)
 
-		runner := ep.Pipeline(ep.Scatter(), &nodeAddr{}, ep.Gather())
-		runner = peer1.Distribute(runner, port1, port2, port3)
-		res, err := eptest.Run(runner, data)
+		runner := ep.Pipeline(ep.Scatter(), &nodeAddr{})
+		res, err := eptest.RunDist(t, 3, runner, data)
 		require.NoError(t, err)
 
 		sort.Sort(res)
@@ -194,27 +174,16 @@ func TestScatter_multipleNodes(t *testing.T) {
 	})
 }
 
-func TestScatter_and_Gather(t *testing.T) {
-	port1 := ":5551"
-	dist := eptest.NewPeer(t, port1)
-
-	port2 := ":5552"
-	peer := eptest.NewPeer(t, port2)
-	defer func() {
-		require.NoError(t, dist.Close())
-		require.NoError(t, peer.Close())
-	}()
-
-	runner := ep.Pipeline(ep.Scatter(), &nodeAddr{}, ep.Gather())
-	runner = dist.Distribute(runner, port1, port2)
+func TestScatter(t *testing.T) {
+	runner := ep.Pipeline(ep.Scatter(), &nodeAddr{})
 
 	data1 := ep.NewDataset(strs{"hello", "world"})
 	data2 := ep.NewDataset(strs{"foo", "bar"})
-	data, err := eptest.Run(runner, data1, data2)
+	data, err := eptest.RunDist(t, 3, runner, data1, data2)
 
 	require.NoError(t, err)
 	require.NotNil(t, data)
-	require.Equal(t, "[[hello world foo bar] [:5552 :5551 :5552 :5551]]", fmt.Sprintf("%v", data))
+	require.Equal(t, "[[hello world foo bar] [:5552 :5553 :5551 :5552]]", fmt.Sprintf("%v", data))
 }
 
 func TestPartition_and_Gather(t *testing.T) {
@@ -225,13 +194,11 @@ func TestPartition_and_Gather(t *testing.T) {
 
 	port1 := fmt.Sprintf(":%d", randomPort)
 	peer1 := eptest.NewPeer(t, port1)
+	defer eptest.ClosePeer(t, peer1)
 
 	port2 := fmt.Sprintf(":%d", randomPort+1)
 	peer2 := eptest.NewPeer(t, port2)
-	defer func() {
-		require.NoError(t, peer1.Close())
-		require.NoError(t, peer2.Close())
-	}()
+	defer eptest.ClosePeer(t, peer2)
 
 	runner := ep.Pipeline(ep.Partition(0), ep.PassThrough(), ep.Gather())
 	runner = peer1.Distribute(runner, port1, port2)
@@ -251,16 +218,6 @@ func TestPartition_and_Gather(t *testing.T) {
 }
 
 func TestPartition(t *testing.T) {
-	port1 := ":5551"
-	peer1 := eptest.NewPeer(t, port1)
-
-	port2 := ":5552"
-	peer2 := eptest.NewPeer(t, port2)
-	defer func() {
-		require.NoError(t, peer1.Close())
-		require.NoError(t, peer2.Close())
-	}()
-
 	t.Run("SingleColumn", func(t *testing.T) {
 		col1 := strs{"one-1", "one-1", "two-2", "two-2", "", "", "a", "a"}
 		col1.MarkNull(4)
@@ -272,9 +229,8 @@ func TestPartition(t *testing.T) {
 
 		data := ep.NewDataset(col1, col2)
 
-		runner := ep.Pipeline(ep.Partition(0), &nodeAddr{}, ep.Gather())
-		runner = peer1.Distribute(runner, port1, port2)
-		res, err := eptest.Run(runner, data)
+		runner := ep.Pipeline(ep.Partition(0), &nodeAddr{})
+		res, err := eptest.RunDist(t, 2, runner, data)
 		require.NoError(t, err)
 
 		sort.Sort(res)
@@ -315,9 +271,8 @@ func TestPartition(t *testing.T) {
 
 		data := ep.NewDataset(col1, col2, col3)
 
-		runner := ep.Pipeline(ep.Partition(0, 1), &nodeAddr{}, ep.Gather())
-		runner = peer1.Distribute(runner, port1, port2)
-		res, err := eptest.Run(runner, data)
+		runner := ep.Pipeline(ep.Partition(0, 1), &nodeAddr{})
+		res, err := eptest.RunDist(t, 2, runner, data)
 		require.NoError(t, err)
 
 		sort.Sort(res)
@@ -336,24 +291,13 @@ func TestPartition(t *testing.T) {
 }
 
 func TestPartition_sendsCompleteDatasets(t *testing.T) {
-	port1 := ":5551"
-	peer1 := eptest.NewPeer(t, port1)
-
-	port2 := ":5552"
-	peer2 := eptest.NewPeer(t, port2)
-	defer func() {
-		require.NoError(t, peer1.Close())
-		require.NoError(t, peer2.Close())
-	}()
-
 	firstColumn := strs{"foo", "bar", "meh", "nya", "shtoot", "a", "few", "more", "things"}
 	secondColumn := strs{"f", "s", "f", "f", "s", "f", "f", "f", "s"}
 
 	data := ep.NewDataset(firstColumn, secondColumn)
-	runner := ep.Pipeline(ep.Partition(1), &count{}, ep.Gather())
-	runner = peer1.Distribute(runner, port1, port2)
+	runner := ep.Pipeline(ep.Partition(1), &count{})
 
-	res, err := eptest.Run(runner, data)
+	res, err := eptest.RunDist(t, 2, runner, data)
 	require.NoError(t, err)
 
 	// there are 6 "f" and 3 "s" in second column which is used for partitioning

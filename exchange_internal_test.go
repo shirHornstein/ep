@@ -74,9 +74,9 @@ func TestExchange_init_closeAllConnectionsUponError(t *testing.T) {
 	require.Equal(t, "dial tcp :5552: connect: connection refused", err.Error())
 	require.Equal(t, 1, len(exchange.conns))
 	require.IsType(t, &shortCircuit{}, exchange.conns[0])
-	require.NoError(t, exchange.Close())
+	assert.NoError(t, exchange.Close())
 	require.True(t, (exchange.conns[0]).(*shortCircuit).closed, "open connections leak")
-	require.NoError(t, dist.Close())
+	assert.NoError(t, dist.Close())
 }
 
 func TestExchange_error(t *testing.T) {
@@ -84,12 +84,7 @@ func TestExchange_error(t *testing.T) {
 	distributers := startCluster(t, ports...)
 	master := distributers[0]
 
-	defer func() {
-		for _, d := range distributers {
-			// use assert and not require to make sure all dists will be closed
-			assert.NoError(t, d.Close())
-		}
-	}()
+	defer terminateCluster(t, distributers...)
 
 	errorWhileReadingFromInp := func(t *testing.T, ex func() Runner, cancelOnMaster bool) {
 		cancelOnPort := ports[1]
@@ -161,73 +156,43 @@ func TestExchange_error(t *testing.T) {
 }
 
 func TestPartition_addsMembersToHashRing(t *testing.T) {
-	port1 := ":5551"
-	ln, err := net.Listen("tcp", port1)
-	require.NoError(t, err)
-	peer1 := NewDistributer(port1, ln)
+	allNodes := []string{":5551", ":5552", ":5553"}
+	distributers := startCluster(t, allNodes...)
+	master := distributers[0]
 
-	port2 := ":5552"
-	ln, err = net.Listen("tcp", port2)
-	require.NoError(t, err)
-	peer2 := NewDistributer(port2, ln)
+	defer terminateCluster(t, distributers...)
 
-	port3 := ":5553"
-	ln, err = net.Listen("tcp", port3)
-	require.NoError(t, err)
-	peer3 := NewDistributer(port3, ln)
-
-	defer func() {
-		require.NoError(t, peer1.Close())
-		require.NoError(t, peer2.Close())
-		require.NoError(t, peer3.Close())
-	}()
-
-	allNodes := []string{port1, port2, port3}
-	ctx := context.WithValue(context.Background(), distributerKey, peer1)
+	ctx := context.WithValue(context.Background(), distributerKey, master)
 	ctx = context.WithValue(ctx, allNodesKey, allNodes)
-	ctx = context.WithValue(ctx, masterNodeKey, port1)
-	ctx = context.WithValue(ctx, thisNodeKey, port1)
+	ctx = context.WithValue(ctx, masterNodeKey, allNodes[0])
+	ctx = context.WithValue(ctx, thisNodeKey, allNodes[0])
 
 	partition := Partition(0).(*exchange)
-	err = partition.init(ctx)
+	err := partition.init(ctx)
 	require.NoError(t, err)
 
 	members := partition.hashRing.Members()
-	require.ElementsMatchf(t, members, allNodes, "%s != %s", members, allNodes)
+	require.ElementsMatchf(t, allNodes, members, "%s != %s", members, allNodes)
 }
 
 func TestExchange_encodePartition_failsWithoutDataset(t *testing.T) {
-	port1 := ":5551"
-	ln, err := net.Listen("tcp", port1)
-	require.NoError(t, err)
-	peer1 := NewDistributer(port1, ln)
+	ports := []string{":5551", ":5552", ":5553"}
+	distributers := startCluster(t, ports...)
+	master := distributers[0]
 
-	port2 := ":5552"
-	ln, err = net.Listen("tcp", port2)
-	require.NoError(t, err)
-	peer2 := NewDistributer(port2, ln)
+	defer terminateCluster(t, distributers...)
 
-	port3 := ":5553"
-	ln, err = net.Listen("tcp", port3)
-	require.NoError(t, err)
-	peer3 := NewDistributer(port3, ln)
-
-	defer func() {
-		require.NoError(t, peer1.Close())
-		require.NoError(t, peer2.Close())
-		require.NoError(t, peer3.Close())
-	}()
-
-	ctx := context.WithValue(context.Background(), distributerKey, peer1)
-	ctx = context.WithValue(ctx, allNodesKey, []string{port1, port2, port3})
-	ctx = context.WithValue(ctx, masterNodeKey, port1)
-	ctx = context.WithValue(ctx, thisNodeKey, port1)
+	ctx := context.WithValue(context.Background(), distributerKey, master)
+	ctx = context.WithValue(ctx, allNodesKey, ports)
+	ctx = context.WithValue(ctx, masterNodeKey, ports[0])
+	ctx = context.WithValue(ctx, thisNodeKey, ports[0])
 
 	partition := Partition(0).(*exchange)
-	err = partition.init(ctx)
+	err := partition.init(ctx)
 	require.NoError(t, err)
 
-	require.Error(t, partition.encodePartition([]int{42}))
+	err = partition.encodePartition([]int{42})
+	require.Error(t, err)
 }
 
 func TestExchange_getPartitionEncoder_consistent(t *testing.T) {
@@ -235,35 +200,23 @@ func TestExchange_getPartitionEncoder_consistent(t *testing.T) {
 	maxPort := 7000
 	minPort := 6000
 	randomPort := rand.Intn(maxPort-minPort) + minPort
-
 	port1 := fmt.Sprintf(":%d", randomPort)
-	ln, err := net.Listen("tcp", port1)
-	require.NoError(t, err)
-	peer1 := NewDistributer(port1, ln)
-
 	port2 := fmt.Sprintf(":%d", randomPort+1)
-	ln, err = net.Listen("tcp", port2)
-	require.NoError(t, err)
-	peer2 := NewDistributer(port2, ln)
-
 	port3 := fmt.Sprintf(":%d", randomPort+2)
-	ln, err = net.Listen("tcp", port3)
-	require.NoError(t, err)
-	peer3 := NewDistributer(port3, ln)
 
-	defer func() {
-		require.NoError(t, peer1.Close())
-		require.NoError(t, peer2.Close())
-		require.NoError(t, peer3.Close())
-	}()
+	ports := []string{port1, port2, port3}
+	distributers := startCluster(t, ports...)
+	master := distributers[0]
 
-	ctx := context.WithValue(context.Background(), distributerKey, peer1)
+	defer terminateCluster(t, distributers...)
+
+	ctx := context.WithValue(context.Background(), distributerKey, master)
 	ctx = context.WithValue(ctx, allNodesKey, []string{port1, port2, port3})
 	ctx = context.WithValue(ctx, masterNodeKey, port1)
 	ctx = context.WithValue(ctx, thisNodeKey, port1)
 
 	partition := Partition(0).(*exchange)
-	err = partition.init(ctx)
+	err := partition.init(ctx)
 	require.NoError(t, err)
 
 	hashKey := fmt.Sprintf("this-is-a-key-%d", rand.Intn(1e12))
@@ -279,40 +232,24 @@ func TestExchange_getPartitionEncoder_consistent(t *testing.T) {
 }
 
 func TestExchange_encsMappedByNodes(t *testing.T) {
-	port1 := ":5551"
-	ln, err := net.Listen("tcp", port1)
-	require.NoError(t, err)
-	peer1 := NewDistributer(port1, ln)
+	ports := []string{":5551", ":5552", ":5553"}
+	distributers := startCluster(t, ports...)
+	master := distributers[0]
 
-	port2 := ":5552"
-	ln, err = net.Listen("tcp", port2)
-	require.NoError(t, err)
-	peer2 := NewDistributer(port2, ln)
+	defer terminateCluster(t, distributers...)
 
-	port3 := ":5553"
-	ln, err = net.Listen("tcp", port3)
-	require.NoError(t, err)
-	peer3 := NewDistributer(port3, ln)
-
-	defer func() {
-		require.NoError(t, peer1.Close())
-		require.NoError(t, peer2.Close())
-		require.NoError(t, peer3.Close())
-	}()
-
-	allNodes := []string{port1, port2, port3}
-	ctx := context.WithValue(context.Background(), distributerKey, peer1)
-	ctx = context.WithValue(ctx, allNodesKey, allNodes)
-	ctx = context.WithValue(ctx, masterNodeKey, port1)
-	ctx = context.WithValue(ctx, thisNodeKey, port1)
+	ctx := context.WithValue(context.Background(), distributerKey, master)
+	ctx = context.WithValue(ctx, allNodesKey, ports)
+	ctx = context.WithValue(ctx, masterNodeKey, ports[0])
+	ctx = context.WithValue(ctx, thisNodeKey, ports[0])
 
 	partition := Partition(0).(*exchange)
-	err = partition.init(ctx)
+	err := partition.init(ctx)
 	require.NoError(t, err)
 
 	encKeys := make([]string, 0, len(partition.encsByKey))
 	for k := range partition.encsByKey {
 		encKeys = append(encKeys, k)
 	}
-	require.ElementsMatch(t, []string{":5551", ":5552", ":5553"}, encKeys)
+	require.ElementsMatch(t, ports, encKeys)
 }

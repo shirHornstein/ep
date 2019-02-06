@@ -18,12 +18,10 @@ func NewPeer(t *testing.T, port string) ep.Distributer {
 	return ep.NewDistributer(port, ln)
 }
 
-// ClosePeers closes all given distributers
-func ClosePeers(t *testing.T, dists ...ep.Distributer) {
-	for _, d := range dists {
-		// use assert and not require to make sure all dists will be closed
-		assert.NoError(t, d.Close())
-	}
+// ClosePeer closes all given distributers
+func ClosePeer(t *testing.T, dist ep.Distributer) {
+	// use assert and not require to make sure all dists will be closed
+	assert.NoError(t, dist.Close())
 }
 
 // NewDialingErrorPeer returns distributer that fails to .Dial()
@@ -41,4 +39,25 @@ type errDialer struct {
 
 func (e *errDialer) Dial(net, addr string) (net.Conn, error) {
 	return nil, e.Err
+}
+
+// RunDist is like Run, but first distributes the runner to n nodes, starting
+// from address ":5551"
+func RunDist(t *testing.T, n int, r ep.Runner, datasets ...ep.Dataset) (ep.Dataset, error) {
+	var master ep.Distributer
+	ports := make([]string, n)
+	for i := 0; i < n; i++ {
+		port := fmt.Sprintf(":%04d", 5551+i) // 5551, 5552, 5553, ...
+		ports[i] = port
+
+		dist := NewPeer(t, port)
+		if i == 0 {
+			master = dist
+		}
+		defer ClosePeer(t, dist)
+	}
+
+	r = ep.Pipeline(r, ep.Gather())
+	r = master.Distribute(r, ports...)
+	return Run(r, datasets...)
 }

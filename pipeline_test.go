@@ -243,18 +243,8 @@ func runVerifyError(t *testing.T, runner ep.Runner, expected error) {
 }
 
 func TestPipeline_errorFromExchange(t *testing.T) {
-	port := ":5551"
-	dist := eptest.NewPeer(t, port)
-
-	port2 := ":5552"
-	peer2 := eptest.NewPeer(t, port2)
-
-	port3 := ":5553"
-	peer3 := eptest.NewPeer(t, port3)
-	defer eptest.ClosePeers(t, dist, peer2, peer3)
-
 	infinityRunner := &waitForCancel{}
-	mightErrored := &dataRunner{Dataset: ep.NewDataset(str.Data(1)), ThrowOnData: port3}
+	mightErrored := &dataRunner{Dataset: ep.NewDataset(str.Data(1)), ThrowOnData: ":5553"}
 	runner := ep.Pipeline(
 		infinityRunner,
 		ep.Scatter(),
@@ -263,12 +253,11 @@ func TestPipeline_errorFromExchange(t *testing.T) {
 		ep.Project(ep.Pipeline(ep.Scatter(), &nodeAddr{}), ep.PassThrough()),
 		ep.Gather(),
 	)
-	runner = dist.Distribute(runner, port, port2, port3)
 
 	data := ep.NewDataset(str.Data(1))
-	_, resErr := eptest.Run(runner, data, data, data, data)
+	_, resErr := eptest.RunDist(t, 3, runner, data, data, data, data)
 
 	require.Error(t, resErr)
-	require.Equal(t, "error "+port3, resErr.Error())
+	require.Equal(t, "error :5553", resErr.Error())
 	require.False(t, infinityRunner.IsRunning(), "Infinity go-routine leak")
 }

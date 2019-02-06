@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/panoplyio/ep/compare"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"net"
 	"testing"
@@ -53,6 +54,13 @@ func startCluster(t *testing.T, ports ...string) []Distributer {
 		res[i] = NewDistributer(port, ln)
 	}
 	return res
+}
+
+func terminateCluster(t *testing.T, dists ...Distributer) {
+	for _, d := range dists {
+		// use assert and not require to make sure all dists will be closed
+		assert.NoError(t, d.Close())
+	}
 }
 
 type errOnPort struct {

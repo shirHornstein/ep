@@ -9,20 +9,9 @@ import (
 )
 
 func TestSortGather(t *testing.T) {
-	port1 := ":5551"
-	dist := eptest.NewPeer(t, port1)
-
-	port2 := ":5552"
-	peer := eptest.NewPeer(t, port2)
-	defer func() {
-		require.NoError(t, dist.Close())
-		require.NoError(t, peer.Close())
-	}()
-
 	runSortGather := func(t *testing.T, sortingCols []ep.SortingCol, expected string, datasets ...ep.Dataset) {
 		runner := ep.Pipeline(ep.Scatter(), &nodeAddr{}, &localSort{SortingCols: sortingCols}, ep.SortGather(sortingCols))
-		runner = dist.Distribute(runner, port1, port2)
-		data, err := eptest.Run(runner, datasets...)
+		data, err := eptest.RunDist(t, 2, runner, datasets...)
 		require.NoError(t, err)
 		require.NotNil(t, data)
 		require.Equal(t, 2, data.Width())
@@ -32,10 +21,9 @@ func TestSortGather(t *testing.T) {
 
 	t.Run("no data", func(t *testing.T) {
 		sortingCols := []ep.SortingCol{{Index: 0, Desc: false}}
-
 		runner := ep.Pipeline(ep.Scatter(), &nodeAddr{}, ep.SortGather(sortingCols))
-		runner = dist.Distribute(runner, port1, port2)
-		data, err := eptest.Run(runner)
+
+		data, err := eptest.RunDist(t, 4, runner)
 		require.NoError(t, err)
 		require.Nil(t, data)
 	})
@@ -72,21 +60,10 @@ func TestSortGather(t *testing.T) {
 }
 
 func TestSortGather_error(t *testing.T) {
-	port1 := ":5551"
-	dist := eptest.NewPeer(t, port1)
-
-	port2 := ":5552"
-	peer := eptest.NewPeer(t, port2)
-	defer func() {
-		require.NoError(t, dist.Close())
-		require.NoError(t, peer.Close())
-	}()
-
 	runSortGather := func(t *testing.T, sortingCols []ep.SortingCol, datasets ...ep.Dataset) {
 		var runner ep.Runner = &dataRunner{Dataset: ep.NewDataset(strs{"str"}), ThrowOnData: "failed"}
 		runner = ep.Pipeline(runner, ep.Scatter(), &nodeAddr{}, ep.SortGather(sortingCols))
-		runner = dist.Distribute(runner, port1, port2)
-		_, err := eptest.Run(runner, datasets...)
+		_, err := eptest.RunDist(t, 2, runner, datasets...)
 		require.Error(t, err)
 		require.Equal(t, "error failed", err.Error())
 	}
