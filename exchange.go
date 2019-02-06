@@ -55,14 +55,14 @@ type exchange struct {
 	UID  string
 	Type exchangeType
 
-	inited   bool        // was this runner initialized
-	encs     []encoder   // encoders to all destination connections
-	decs     []decoder   // decoders from all source connections
-	encsErr  []encoder   // encoders to all peers to propagate errors
-	decsErr  []decoder   // decoders from all peers to propagate errors
-	conns    []io.Closer // all open connections (used for closing)
-	encsNext int         // Encoders Round Robin next index
-	decsNext int         // Decoders Round Robin next index
+	inited          bool        // was this runner initialized
+	encs            []encoder   // encoders to all destination connections
+	decs            []decoder   // decoders from all source connections
+	encsTermination []encoder   // encoders to all peers to propagate termination status
+	decsTermination []decoder   // decoders from all peers to propagate termination status
+	conns           []io.Closer // all open connections (used for closing)
+	encsNext        int         // Encoders Round Robin next index
+	decsNext        int         // Decoders Round Robin next index
 
 	// partition and sortGather specific variables
 	SortingCols []SortingCol // columns to sort by
@@ -206,7 +206,7 @@ func (ex *exchange) init(ctx context.Context) error {
 	connsMap := make(map[string]net.Conn, len(allNodes))
 	var sc *shortCircuit
 
-	targetNodes, errTargetNodes := ex.getTargets(allNodes, masterNode, thisNode)
+	targetNodes, notTargetNodes := ex.getTargetPeers(allNodes, masterNode, thisNode)
 	for _, node := range targetNodes {
 		if node == thisNode {
 			sc = newShortCircuit()
@@ -230,7 +230,7 @@ func (ex *exchange) init(ctx context.Context) error {
 		ex.encsByKey[node] = enc
 	}
 	isTarget := sc != nil
-	for _, node := range errTargetNodes {
+	for _, node := range notTargetNodes {
 		if node == thisNode {
 			sc = newShortCircuit()
 			ex.conns = append(ex.conns, sc)
@@ -248,10 +248,10 @@ func (ex *exchange) init(ctx context.Context) error {
 		connsMap[node] = conn
 		ex.conns = append(ex.conns, conn)
 		enc := gob.NewEncoder(conn)
-		ex.encsErr = append(ex.encsErr, enc)
+		ex.encsTermination = append(ex.encsTermination, enc)
 	}
 
-	sourceNodes, errSourceNodes := ex.getSources(allNodes, isTarget)
+	sourceNodes, notSourceNodes := ex.getSourcePeers(allNodes, isTarget)
 	for _, node := range sourceNodes {
 		if node == thisNode {
 			ex.decs = append(ex.decs, sc)
@@ -264,9 +264,9 @@ func (ex *exchange) init(ctx context.Context) error {
 		// re-use it. We don't need 2 uni-directional connections
 		ex.decs = append(ex.decs, dbgDecoder{gob.NewDecoder(connsMap[node]), msg})
 	}
-	for _, node := range errSourceNodes {
+	for _, node := range notSourceNodes {
 		if node == thisNode {
-			ex.decsErr = append(ex.decsErr, sc)
+			ex.decsTermination = append(ex.decsTermination, sc)
 			continue
 		}
 
@@ -274,23 +274,23 @@ func (ex *exchange) init(ctx context.Context) error {
 
 		// we already established a connection to this node from the targets, so we can
 		// re-use it. We don't need 2 uni-directional connections
-		ex.decsErr = append(ex.decsErr, dbgDecoder{gob.NewDecoder(connsMap[node]), msg})
+		ex.decsTermination = append(ex.decsTermination, dbgDecoder{gob.NewDecoder(connsMap[node]), msg})
 	}
 	return nil
 }
 
-func (ex *exchange) getTargets(allNodes []string, masterNode, thisNode string) (target, errTarget []string) {
+func (ex *exchange) getTargetPeers(allNodes []string, masterNode, thisNode string) (target, notTarget []string) {
 	switch ex.Type {
 	case gather, sortGather:
 		target = []string{masterNode}
-		errTarget = remove(allNodes, masterNode)
+		notTarget = remove(allNodes, masterNode)
 	default:
 		target = allNodes
 	}
-	return target, errTarget
+	return target, notTarget
 }
 
-func (ex *exchange) getSources(allNodes []string, isDest bool) ([]string, []string) {
+func (ex *exchange) getSourcePeers(allNodes []string, isDest bool) (source, notSource []string) {
 	// if we're also a destination, listen to all nodes
 	if isDest {
 		return allNodes, nil
@@ -312,7 +312,7 @@ func remove(list []string, toRemove string) []string {
 }
 
 func (ex *exchange) passRemoteData(out chan Dataset) chan error {
-	receiversErrs := make(chan error, len(ex.decsErr)+len(ex.decs))
+	receiversErrs := make(chan error, len(ex.decsTermination)+len(ex.decs))
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
@@ -330,7 +330,7 @@ func (ex *exchange) passRemoteData(out chan Dataset) chan error {
 			out <- data
 		}
 	}()
-	for _, d := range ex.decsErr {
+	for _, d := range ex.decsTermination {
 		wg.Add(1)
 		go func(d decoder) {
 			req := &req{}
@@ -374,12 +374,12 @@ func (ex *exchange) encodeAll(targets []encoder, e interface{}) (err error) {
 }
 
 func (ex *exchange) encodeError(msg *errMsg) error {
-	eofEncs := ex.encodeAll(ex.encs, msg)
-	eofEncsErr := ex.encodeAll(ex.encsErr, msg)
-	if eofEncs != nil {
-		return eofEncs
+	errEncs := ex.encodeAll(ex.encs, msg)
+	errEncsTermination := ex.encodeAll(ex.encsTermination, msg)
+	if errEncs != nil {
+		return errEncs
 	}
-	return eofEncsErr
+	return errEncsTermination
 }
 
 func (ex *exchange) receive() (Dataset, error) {

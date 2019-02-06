@@ -35,21 +35,21 @@ func TestExchange_init_createEncsDecsToAll(t *testing.T) {
 	for name, ex := range exchanges {
 		exchange := ex().(*exchange)
 		t.Run("targets from master/"+name, func(t *testing.T) {
-			targets, errTargets := exchange.getTargets(ports, master, master)
-			require.Equal(t, len(ports), len(targets)+len(errTargets))
+			targets, rest := exchange.getTargetPeers(ports, master, master)
+			require.Equal(t, len(ports), len(targets)+len(rest))
 		})
 
 		t.Run("targets from peer/"+name, func(t *testing.T) {
-			targets, errTargets := exchange.getTargets(ports, master, peer)
-			require.Equal(t, len(ports), len(targets)+len(errTargets))
+			targets, rest := exchange.getTargetPeers(ports, master, peer)
+			require.Equal(t, len(ports), len(targets)+len(rest))
 		})
 
 		t.Run("source/"+name, func(t *testing.T) {
-			sources, errSources := exchange.getSources(ports, true)
-			require.Equal(t, len(ports), len(sources)+len(errSources))
+			sources, rest := exchange.getSourcePeers(ports, true)
+			require.Equal(t, len(ports), len(sources)+len(rest))
 
-			sources, errSources = exchange.getSources(ports, false)
-			require.Equal(t, len(ports), len(sources)+len(errSources))
+			sources, rest = exchange.getSourcePeers(ports, false)
+			require.Equal(t, len(ports), len(sources)+len(rest))
 		})
 	}
 }
@@ -79,8 +79,59 @@ func TestExchange_init_closeAllConnectionsUponError(t *testing.T) {
 	assert.NoError(t, dist.Close())
 }
 
-func TestExchange_error(t *testing.T) {
-	ports := []string{":5551", ":5552"}
+func TestExchange_errorSingleNode(t *testing.T) {
+	port := ":5551"
+	distributers := startCluster(t, port)
+	master := distributers[0]
+
+	defer terminateCluster(t, distributers...)
+
+	ctx := context.WithValue(context.Background(), distributerKey, master)
+	ctx = context.WithValue(ctx, allNodesKey, []string{port})
+	ctx = context.WithValue(ctx, masterNodeKey, port)
+	ctx = context.WithValue(ctx, thisNodeKey, port)
+
+	for name, ex := range exchanges {
+		t.Run(name+"/error while inp open", func(t *testing.T) {
+			exchange := ex().(*exchange)
+
+			inp := make(chan Dataset)
+			out := make(chan Dataset)
+			defer close(inp)
+			defer close(out)
+			ctx, cancel := context.WithCancel(ctx)
+			cancel()
+
+			err := exchange.Run(ctx, inp, out)
+			require.NoError(t, err)
+
+			require.Equal(t, 1, len(exchange.conns))
+			require.IsType(t, &shortCircuit{}, exchange.conns[0])
+			require.True(t, (exchange.conns[0]).(*shortCircuit).closed, "open connections leak")
+		})
+
+		t.Run(name+"/error on closed inp", func(t *testing.T) {
+			exchange := ex().(*exchange)
+			runner := closeWithoutCancel(exchange, port)
+			inp := make(chan Dataset)
+			out := make(chan Dataset)
+			close(inp)
+			defer close(out)
+			ctx, cancel := context.WithCancel(ctx)
+			cancel()
+
+			err := runner.Run(ctx, inp, out)
+			require.NoError(t, err)
+
+			require.Equal(t, 1, len(exchange.conns))
+			require.IsType(t, &shortCircuit{}, exchange.conns[0])
+			require.True(t, (exchange.conns[0]).(*shortCircuit).closed, "open connections leak")
+		})
+	}
+}
+
+func TestExchange_errorPropagationAmongPeers(t *testing.T) {
+	ports := []string{":5551", ":5552", ":5553"}
 	distributers := startCluster(t, ports...)
 	master := distributers[0]
 
@@ -105,7 +156,7 @@ func TestExchange_error(t *testing.T) {
 		require.Error(t, err)
 		require.Equal(t, "error from "+cancelOnPort, err.Error())
 
-		require.Equal(t, 2, len(exchange.conns))
+		require.Equal(t, len(ports), len(exchange.conns))
 		require.IsType(t, &shortCircuit{}, exchange.conns[0])
 		require.True(t, (exchange.conns[0]).(*shortCircuit).closed, "open connections leak")
 		require.Contains(t, exchange.conns[1].Close().Error(), "use of closed network connection", "open connections leak")
@@ -130,7 +181,7 @@ func TestExchange_error(t *testing.T) {
 		require.Error(t, err)
 		require.Equal(t, "error from "+cancelOnPort, err.Error())
 
-		require.Equal(t, 2, len(exchange.conns))
+		require.Equal(t, len(ports), len(exchange.conns))
 		require.IsType(t, &shortCircuit{}, exchange.conns[0])
 		require.True(t, (exchange.conns[0]).(*shortCircuit).closed, "open connections leak")
 		require.Contains(t, exchange.conns[1].Close().Error(), "use of closed network connection", "open connections leak")
