@@ -80,7 +80,7 @@ func TestDistributer_Distribute_errorFromPeer(t *testing.T) {
 	require.Equal(t, 0, data.Width())
 }
 
-func TestDistributer_Distribute_ignoreCanceledError(t *testing.T) {
+func TestDistributer_Distribute_ignoreErrIgnorable(t *testing.T) {
 	port1 := ":5551"
 	dist1 := eptest.NewPeer(t, port1)
 
@@ -95,8 +95,8 @@ func TestDistributer_Distribute_ignoreCanceledError(t *testing.T) {
 		name string
 		r    ep.Runner
 	}{
-		{name: "from peer", r: &dataRunner{Dataset: ep.NewDataset(str.Data(1)), ThrowOnData: port2, ThrowCanceled: true}},
-		{name: "from master", r: &dataRunner{Dataset: ep.NewDataset(str.Data(1)), ThrowOnData: port1, ThrowCanceled: true}},
+		{name: "from peer", r: &dataRunner{Dataset: ep.NewDataset(str.Data(1)), ThrowOnData: port2, ThrowIgnorable: true}},
+		{name: "from master", r: &dataRunner{Dataset: ep.NewDataset(str.Data(1)), ThrowOnData: port1, ThrowIgnorable: true}},
 	}
 
 	for _, tc := range tests {

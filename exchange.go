@@ -108,9 +108,13 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 			// close exchange might take time, so don't block preceding runner
 			go drain(inp)
 
-			eofErr := ex.encodeError(errorMsg)
+			terminationErr := errorMsg
+			if getError(ctx) == ErrIgnorable {
+				terminationErr = eofMsg
+			}
+			errErr := ex.encodeError(terminationErr)
 			if err == nil {
-				err = eofErr
+				err = errErr
 			}
 		}
 
@@ -138,7 +142,7 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 		case data, ok := <-inp:
 			if !ok {
 				// the input is exhausted. Notify peers that we're done sending
-				// data (they will use it to stop listening to data from us)
+				// data (they will use it to stop listening to data from this node)
 				eofErr := ex.encodeError(eofMsg)
 				if err == nil {
 					err = eofErr

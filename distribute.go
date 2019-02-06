@@ -321,7 +321,7 @@ func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) error {
 
 	var finalError error
 	for _, e := range errs {
-		if e != context.Canceled && e != errOnPeer {
+		if e != errOnPeer {
 			finalError = e
 			break
 		}

@@ -31,11 +31,11 @@ func ExamplePipeline_reverse() {
 	// [(IS HELLO?) (IS WORLD?)] <nil>
 }
 
-func TestPipeline_ignoreCanceledError(t *testing.T) {
-	runner := ep.Pipeline(&dataRunner{Dataset: ep.NewDataset(str.Data(1)), ThrowOnData: "cancel", ThrowCanceled: true}, &count{})
+func TestPipeline_ignoreErrIgnorable(t *testing.T) {
+	runner := ep.Pipeline(&dataRunner{Dataset: ep.NewDataset(str.Data(1)), ThrowOnData: "ignore error", ThrowIgnorable: true}, &count{})
 
-	data1 := ep.NewDataset(strs{"not cancel"})
-	data2 := ep.NewDataset(strs{"cancel"})
+	data1 := ep.NewDataset(strs{"data"})
+	data2 := ep.NewDataset(strs{"ignore error"})
 	res, err := eptest.Run(runner, data1, data2)
 
 	require.NoError(t, err)

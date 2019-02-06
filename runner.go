@@ -117,12 +117,13 @@ type PushRunner interface {
 func Run(ctx context.Context, r Runner, inp, out chan Dataset, cancel context.CancelFunc, err *error) {
 	// drain inp in case there are left overs in the channel.
 	// usually this will be a no-op, unless runner has exited early due to an
-	// error or some other logic (LIMIT, irrelevant inp, etc.). in such cases
-	// draining allows preceding runner to be canceled
+	// error or some other logic (irrelevant inp, etc.). in such cases draining
+	// allows preceding runner to be canceled
 	defer drain(inp)
 	defer close(out)
 	*err = r.Run(ctx, inp, out)
 	if *err != nil && cancel != nil {
+		setError(ctx, *err)
 		cancel()
 	}
 }
