@@ -85,6 +85,41 @@ func NewDatasetTypes(types []Type, size int) Dataset {
 	return NewDataset(res...)
 }
 
+// NewDatasetBuilder returns a special DataBuilder that allows to efficiently
+// append multiple Datasets together.
+func NewDatasetBuilder() DataBuilder {
+	return &datasetBuilder{}
+}
+
+type datasetBuilder struct {
+	ds []Dataset
+}
+
+func (db *datasetBuilder) Append(data Data) {
+	db.ds = append(db.ds, data.(Dataset))
+}
+
+func (db *datasetBuilder) Data() Data {
+	firstData := db.ds[0]
+	if len(db.ds) == 1 {
+		return firstData
+	}
+	cols := make([]Data, firstData.Width())
+	builders := make([]DataBuilder, len(cols))
+	for i := range cols {
+		builders[i] = firstData.At(i).Type().DataBuilder()
+	}
+	for _, d := range db.ds {
+		for i := 0; i < d.Width(); i++ {
+			builders[i].Append(d.At(i))
+		}
+	}
+	for i, b := range builders {
+		cols[i] = b.Data()
+	}
+	return NewDataset(cols...)
+}
+
 // Width of the dataset (number of columns)
 func (set dataset) Width() int {
 	if set == nil {
