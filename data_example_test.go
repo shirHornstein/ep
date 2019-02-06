@@ -22,6 +22,28 @@ func (*strType) Name() string            { return "string" }
 func (*strType) Size() uint              { return 8 }
 func (*strType) Data(n int) ep.Data      { return make(strs, n) }
 func (*strType) DataEmpty(n int) ep.Data { return make(strs, 0, n) }
+func (*strType) DataBuilder() ep.DataBuilder {
+	return &strBuilder{}
+}
+
+type strBuilder struct {
+	Ds  []strs
+	Len int
+}
+
+func (s *strBuilder) Append(data ep.Data) {
+	strData := data.(strs)
+	s.Ds = append(s.Ds, strData)
+	s.Len += strData.Len()
+}
+
+func (s *strBuilder) Data() ep.Data {
+	res := make(strs, 0, s.Len)
+	for _, d := range s.Ds {
+		res = append(res, d...)
+	}
+	return res
+}
 
 type strs []string
 
@@ -83,6 +105,28 @@ func (*integerType) Name() string            { return "integer" }
 func (*integerType) Size() uint              { return 4 }
 func (*integerType) Data(n int) ep.Data      { return make(integers, n) }
 func (*integerType) DataEmpty(n int) ep.Data { return make(integers, 0, n) }
+func (*integerType) DataBuilder() ep.DataBuilder {
+	return &integerBuilder{}
+}
+
+type integerBuilder struct {
+	Ds  []integers
+	Len int
+}
+
+func (s *integerBuilder) Append(data ep.Data) {
+	intData := data.(integers)
+	s.Ds = append(s.Ds, intData)
+	s.Len += intData.Len()
+}
+
+func (s *integerBuilder) Data() ep.Data {
+	res := make(integers, 0, s.Len)
+	for _, d := range s.Ds {
+		res = append(res, d...)
+	}
+	return res
+}
 
 type integers []int
 

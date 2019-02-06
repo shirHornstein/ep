@@ -8,11 +8,12 @@ var _ = registerGob(dummy, dummyData)
 
 type dummyType struct{}
 
-func (t *dummyType) String() string   { return t.Name() }
-func (*dummyType) Name() string       { return "dummy" }
-func (*dummyType) Size() uint         { return 0 }
-func (*dummyType) Data(int) Data      { return dummyData }
-func (*dummyType) DataEmpty(int) Data { return dummyData }
+func (t *dummyType) String() string         { return t.Name() }
+func (*dummyType) Name() string             { return "dummy" }
+func (*dummyType) Size() uint               { return 0 }
+func (*dummyType) Data(int) Data            { return dummyData }
+func (*dummyType) DataEmpty(int) Data       { return dummyData }
+func (*dummyType) DataBuilder() DataBuilder { return nil }
 
 type variadicDummies struct{}
 
