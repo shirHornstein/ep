@@ -139,10 +139,7 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 			if !ok {
 				// the input is exhausted. Notify peers that we're done sending
 				// data (they will use it to stop listening to data from us)
-				eofErr := ex.encodeError(eofMsg)
-				if err == nil {
-					err = eofErr
-				}
+				err = ex.encodeError(eofMsg)
 				sndDone = true
 
 				// inp is closed. If we keep iterating, it will infinitely resolve
@@ -314,12 +311,14 @@ func remove(list []string, toRemove string) []string {
 func (ex *exchange) passRemoteData(out chan Dataset) chan error {
 	receiversErrs := make(chan error, len(ex.decsTermination)+len(ex.decs))
 	var wg sync.WaitGroup
+
+	// first go routine listens to all ex.decs and stream the data to out channel
 	wg.Add(1)
 	go func() {
-		defer wg.Done()
 		for {
 			data, recErr := ex.receive()
 			if recErr == io.EOF {
+				wg.Done()
 				return
 			}
 
@@ -330,11 +329,13 @@ func (ex *exchange) passRemoteData(out chan Dataset) chan error {
 			out <- data
 		}
 	}()
+
+	// next go routines listen to all ex.decsTermination to collect termaination
+	// statuses from all peers
+	wg.Add(len(ex.decsTermination))
 	for _, d := range ex.decsTermination {
-		wg.Add(1)
 		go func(d decoder) {
-			req := &req{}
-			err := d.Decode(req)
+			_, err := decode(d)
 			if err != nil && err != io.EOF {
 				receiversErrs <- err
 			}
@@ -416,8 +417,12 @@ func (ex *exchange) decodeNext() (Dataset, error) {
 }
 
 func (ex *exchange) decodeFrom(i int) (Dataset, error) {
+	return decode(ex.decs[i])
+}
+
+func decode(d decoder) (Dataset, error) {
 	req := &req{}
-	err := ex.decs[i].Decode(req)
+	err := d.Decode(req)
 	if err != nil {
 		return nil, err
 	}
