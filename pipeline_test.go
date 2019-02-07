@@ -243,21 +243,30 @@ func runVerifyError(t *testing.T, runner ep.Runner, expected error) {
 }
 
 func TestPipeline_errorFromExchange(t *testing.T) {
-	infinityRunner := &waitForCancel{}
-	mightErrored := &dataRunner{Dataset: ep.NewDataset(str.Data(1)), ThrowOnData: ":5553"}
-	runner := ep.Pipeline(
-		infinityRunner,
-		ep.Scatter(),
-		ep.Broadcast(),
-		ep.Project(ep.PassThrough(), ep.Pipeline(&nodeAddr{}, mightErrored)),
-		ep.Project(ep.Pipeline(ep.Scatter(), &nodeAddr{}), ep.PassThrough()),
-		ep.Gather(),
-	)
+	exchangeError := func(t *testing.T, port string) {
+		infinityRunner := &waitForCancel{}
+		mightErrored := &dataRunner{Dataset: ep.NewDataset(str.Data(1)), ThrowOnData: port}
+		runner := ep.Pipeline(
+			infinityRunner,
+			ep.Scatter(),
+			ep.Broadcast(),
+			ep.Project(ep.PassThrough(), ep.Pipeline(&nodeAddr{}, mightErrored)),
+			ep.Project(ep.Pipeline(ep.Scatter(), &nodeAddr{}), ep.PassThrough()),
+			ep.Gather(),
+		)
 
-	data := ep.NewDataset(str.Data(1))
-	_, resErr := eptest.RunDist(t, 3, runner, data, data, data, data)
+		data := ep.NewDataset(str.Data(1))
+		_, resErr := eptest.RunDist(t, 3, runner, data, data, data, data)
 
-	require.Error(t, resErr)
-	require.Equal(t, "error :5553", resErr.Error())
-	require.False(t, infinityRunner.IsRunning(), "Infinity go-routine leak")
+		require.Error(t, resErr)
+		require.Equal(t, "error "+port, resErr.Error())
+		require.False(t, infinityRunner.IsRunning(), "Infinity go-routine leak")
+	}
+
+	t.Run("error on master", func(t *testing.T) {
+		exchangeError(t, ":5551")
+	})
+	t.Run("error on peer", func(t *testing.T) {
+		exchangeError(t, ":5553")
+	})
 }
