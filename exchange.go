@@ -330,7 +330,7 @@ func (ex *exchange) passRemoteData(out chan Dataset) chan error {
 		}
 	}()
 
-	// next go routines listen to all ex.decsTermination to collect termaination
+	// next go routines listen to all ex.decsTermination to collect termination
 	// statuses from all peers
 	wg.Add(len(ex.decsTermination))
 	for _, d := range ex.decsTermination {

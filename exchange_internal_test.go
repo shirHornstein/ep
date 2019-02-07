@@ -144,7 +144,7 @@ func TestExchange_errorPropagationAmongPeers(t *testing.T) {
 		}
 
 		exchange := ex().(*exchange)
-		runner := Pipeline(&fixedData{}, &errOnPort{cancelOnPort}, &waitForCancel{}, exchange, &drainInp{})
+		runner := Pipeline(&fixedData{}, &errOnPort{cancelOnPort}, cancelWithoutClose(exchange, cancelOnPort), &drainInp{})
 		runner = master.Distribute(runner, ports...)
 
 		inp := make(chan Dataset)
@@ -169,7 +169,7 @@ func TestExchange_errorPropagationAmongPeers(t *testing.T) {
 		}
 
 		exchange := ex().(*exchange)
-		runner := Pipeline(&errOnPort{cancelOnPort}, closeWithoutCancel(exchange, cancelOnPort))
+		runner := Pipeline(&errOnPort{cancelOnPort}, closeWithoutCancel(exchange, cancelOnPort), &drainInp{})
 		runner = master.Distribute(runner, ports...)
 
 		inp := make(chan Dataset)

@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"net"
+	"sync"
 	"testing"
 )
 
@@ -14,6 +15,7 @@ var _ = Runners.
 	Register("err", &errOnPort{}).
 	Register("cancel", &waitForCancel{}).
 	Register("dontCancel", &dontCancel{}).
+	Register("dontCloseInp", &dontCloseInp{}).
 	Register("drainInp", &drainInp{}).
 	Register("fixedData", &fixedData{})
 
@@ -84,12 +86,7 @@ func (*waitForCancel) Returns() []Type { return nil }
 func (r *waitForCancel) Run(ctx context.Context, inp, out chan Dataset) error {
 	for {
 		select {
-		case data, ok := <-inp:
-			if !ok {
-				// nil-ify inp to block it on the next select iteration
-				inp = nil
-				continue
-			}
+		case data := <-inp:
 			out <- data
 		case <-ctx.Done(): // infinitely wait for cancel
 			return nil
@@ -114,6 +111,8 @@ func (r *dontCancel) Run(ctx context.Context, inp, out chan Dataset) error {
 
 	internalInp := make(chan Dataset)
 	internalOut := make(chan Dataset)
+
+	// to verify ctx will not cancel r.Runner, copy relevant content to new context
 	internalCtx := context.Background()
 	internalCtx = context.WithValue(internalCtx, distributerKey, ctx.Value(distributerKey))
 	internalCtx = context.WithValue(internalCtx, allNodesKey, ctx.Value(allNodesKey))
@@ -126,6 +125,41 @@ func (r *dontCancel) Run(ctx context.Context, inp, out chan Dataset) error {
 	}()
 
 	return r.Runner.Run(internalCtx, internalInp, internalOut)
+}
+
+func cancelWithoutClose(r Runner, port string) Runner {
+	return &dontCloseInp{r, port}
+}
+
+type dontCloseInp struct {
+	Runner
+	Port string
+}
+
+func (r *dontCloseInp) Returns() []Type { return r.Runner.Returns() }
+func (r *dontCloseInp) Run(ctx context.Context, inp, out chan Dataset) (err error) {
+	var wg sync.WaitGroup
+	internalInp := make(chan Dataset)
+	internalOut := make(chan Dataset)
+
+	go Run(ctx, r.Runner, internalInp, internalOut, nil, &err)
+
+	wg.Add(1)
+	go func() {
+		for data := range inp {
+			internalInp <- data
+		}
+		wg.Done()
+	}()
+
+	for data := range internalOut {
+		out <- data
+	}
+	// only when internalOut is closed and internal runner exited without waiting
+	// for inp, we can return and close inp
+	wg.Wait()
+	close(internalInp)
+	return
 }
 
 type drainInp struct{}
