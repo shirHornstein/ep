@@ -102,6 +102,22 @@ func TestPipeline_Args_noArgs(t *testing.T) {
 	require.Equal(t, []ep.Type{ep.Wildcard}, args)
 }
 
+func TestPipeline_ApproxSize(t *testing.T) {
+	t.Run("known size", func(t *testing.T) {
+		r := ep.Pipeline(&upper{}, &runnerWithSize{size: 42})
+		sizer, ok := r.(ep.ApproxSizer)
+		require.True(t, ok)
+		require.Equal(t, 42, sizer.ApproxSize())
+	})
+
+	t.Run("unknown size", func(t *testing.T) {
+		r := ep.Pipeline(&upper{}, &runnerWithSize{size: 42}, &question{})
+		sizer, ok := r.(ep.ApproxSizer)
+		require.True(t, ok)
+		require.Equal(t, ep.UnknownSize, sizer.ApproxSize())
+	})
+}
+
 type tailCutter struct {
 	CutFromTail int
 }
@@ -243,32 +259,74 @@ func runVerifyError(t *testing.T, runner ep.Runner, expected error) {
 }
 
 func TestPipeline_errorFromExchange(t *testing.T) {
-	port := ":5551"
-	dist := eptest.NewPeer(t, port)
+	verifyExchangeError := func(t *testing.T, port string) {
+		infinityRunner := &waitForCancel{}
+		mightErrored := &dataRunner{Dataset: ep.NewDataset(str.Data(1)), ThrowOnData: port}
+		runner := ep.Pipeline(
+			infinityRunner,
+			ep.Scatter(),
+			ep.Broadcast(),
+			ep.Project(ep.PassThrough(), ep.Pipeline(&nodeAddr{}, mightErrored)),
+			ep.Partition(0),
+			ep.SortGather(nil),
+			ep.Project(ep.Pipeline(ep.Scatter(), &nodeAddr{}), ep.PassThrough()),
+			ep.Gather(),
+		)
 
-	port2 := ":5552"
-	peer2 := eptest.NewPeer(t, port2)
+		data := ep.NewDataset(str.Data(1))
+		_, resErr := eptest.RunDist(t, 3, runner, data, data, data, data)
 
-	port3 := ":5553"
-	peer3 := eptest.NewPeer(t, port3)
-	defer eptest.ClosePeers(t, dist, peer2, peer3)
+		require.Error(t, resErr)
+		require.Equal(t, "error "+port, resErr.Error())
+		require.False(t, infinityRunner.IsRunning(), "Infinity go-routine leak")
+	}
 
-	infinityRunner := &waitForCancel{}
-	mightErrored := &dataRunner{Dataset: ep.NewDataset(str.Data(1)), ThrowOnData: port3}
-	runner := ep.Pipeline(
-		infinityRunner,
-		ep.Scatter(),
-		ep.Broadcast(),
-		ep.Project(ep.PassThrough(), ep.Pipeline(&nodeAddr{}, mightErrored)),
-		ep.Project(ep.Pipeline(ep.Scatter(), &nodeAddr{}), ep.PassThrough()),
-		ep.Gather(),
-	)
-	runner = dist.Distribute(runner, port, port2, port3)
+	t.Run("error on master", func(t *testing.T) {
+		verifyExchangeError(t, ":5551")
+	})
+	t.Run("error on peer", func(t *testing.T) {
+		verifyExchangeError(t, ":5553")
+	})
+}
 
-	data := ep.NewDataset(str.Data(1))
-	_, resErr := eptest.Run(runner, data, data, data, data)
+func TestPipeline_multipleErrorsFromExchange(t *testing.T) {
+	verifyExchangeErrors := func(t *testing.T, port1, port2 string) {
+		infinityRunner1 := &waitForCancel{}
+		infinityRunner2 := &waitForCancel{}
+		err1 := &dataRunner{Dataset: ep.NewDataset(str.Data(1)), ThrowOnData: port1}
+		err2 := &dataRunner{Dataset: ep.NewDataset(str.Data(1)), ThrowOnData: port2}
+		runner := ep.Pipeline(
+			ep.Project(ep.PassThrough(), ep.Pipeline(&nodeAddr{}, err2)),
+			infinityRunner1,
+			ep.Scatter(),
+			ep.Broadcast(),
+			ep.Project(ep.PassThrough(), ep.Pipeline(&nodeAddr{}, err1)),
+			infinityRunner2,
+			ep.Partition(0),
+			ep.SortGather(nil),
+			ep.Project(ep.Pipeline(ep.Scatter(), &nodeAddr{}), ep.PassThrough()),
+			ep.Gather(),
+		)
 
-	require.Error(t, resErr)
-	require.Equal(t, "error "+port3, resErr.Error())
-	require.False(t, infinityRunner.IsRunning(), "Infinity go-routine leak")
+		data := ep.NewDataset(str.Data(1))
+		_, resErr := eptest.RunDist(t, 4, runner, data, data, data, data)
+
+		require.Error(t, resErr)
+		require.Equal(t, "error "+port1, resErr.Error())
+		require.False(t, infinityRunner1.IsRunning(), "Infinity go-routine leak")
+		require.False(t, infinityRunner2.IsRunning(), "Infinity go-routine leak")
+	}
+
+	t.Run("error on master and peers", func(t *testing.T) {
+		verifyExchangeErrors(t, ":5551", ":5553")
+	})
+	t.Run("error on two peers", func(t *testing.T) {
+		verifyExchangeErrors(t, ":5553", ":5554")
+	})
+	t.Run("two errors on same peer", func(t *testing.T) {
+		verifyExchangeErrors(t, ":5554", ":5554")
+	})
+	t.Run("two errors on master", func(t *testing.T) {
+		verifyExchangeErrors(t, ":5551", ":5551")
+	})
 }
