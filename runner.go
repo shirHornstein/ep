@@ -6,6 +6,10 @@ import (
 
 var _ = registerGob(&passThrough{}, &pick{})
 
+// SizeUnknown is a special value that should be returned by ApproxSizers when
+// they cannot give an estimation.
+const SizeUnknown = -1
+
 // Runner represents objects that can receive a stream of input datasets,
 // manipulate them in some way (filter, mapping, reduction, expansion, etc.) and
 // and produce a new stream of the formatted values.

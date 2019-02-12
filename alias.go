@@ -112,7 +112,7 @@ func (s *scope) ApproxSize() int {
 	if sizer, ok := s.Runner.(ApproxSizer); ok {
 		return sizer.ApproxSize()
 	}
-	return 0
+	return SizeUnknown
 }
 
 // SetScope sets a scope for the given columns
