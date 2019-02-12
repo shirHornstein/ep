@@ -108,11 +108,7 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 			// close exchange might take time, so don't block preceding runner
 			go drain(inp)
 
-			terminationErr := errorMsg
-			if getError(ctx) == ErrIgnorable {
-				terminationErr = eofMsg
-			}
-			encodeErr := ex.encodeError(terminationErr)
+			encodeErr := ex.notifyTermination(ctx, errorMsg)
 			if err == nil {
 				err = encodeErr
 			}
@@ -143,7 +139,7 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 			if !ok {
 				// the input is exhausted. Notify peers that we're done sending
 				// data (they will use it to stop listening to data from this node)
-				err = ex.encodeError(eofMsg)
+				err = ex.notifyTermination(ctx, eofMsg)
 				sndDone = true
 
 				// inp is closed. If we keep iterating, it will infinitely resolve
@@ -378,7 +374,14 @@ func (ex *exchange) encodeAll(targets []encoder, e interface{}) (err error) {
 	return err
 }
 
-func (ex *exchange) encodeError(msg *errMsg) error {
+func (ex *exchange) notifyTermination(ctx context.Context, msg *errMsg) error {
+	errOnCtx := getError(ctx)
+	if errOnCtx == ErrIgnorable {
+		msg = eofMsg
+	} else if errOnCtx != nil {
+		msg = errorMsg
+	}
+
 	errEncs := ex.encodeAll(ex.encs, msg)
 	errEncsTermination := ex.encodeAll(ex.encsTermination, msg)
 	if errEncs != nil {
