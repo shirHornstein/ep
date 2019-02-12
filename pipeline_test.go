@@ -102,6 +102,22 @@ func TestPipeline_Args_noArgs(t *testing.T) {
 	require.Equal(t, []ep.Type{ep.Wildcard}, args)
 }
 
+func TestPipeline_ApproxSize(t *testing.T) {
+	t.Run("known size", func(t *testing.T) {
+		r := ep.Pipeline(&upper{}, &runnerWithSize{size: 42})
+		sizer, ok := r.(ep.ApproxSizer)
+		require.True(t, ok)
+		require.Equal(t, 42, sizer.ApproxSize())
+	})
+
+	t.Run("unknown size", func(t *testing.T) {
+		r := ep.Pipeline(&upper{}, &runnerWithSize{size: 42}, &question{})
+		sizer, ok := r.(ep.ApproxSizer)
+		require.True(t, ok)
+		require.Equal(t, ep.UnknownSize, sizer.ApproxSize())
+	})
+}
+
 type tailCutter struct {
 	CutFromTail int
 }

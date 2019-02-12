@@ -192,6 +192,22 @@ func (rs project) Scopes() StringsSet {
 	return scopes
 }
 
+func (rs project) ApproxSize() int {
+	totalSize := 0
+	for _, r := range rs {
+		sizer, ok := r.(ApproxSizer)
+		if !ok {
+			return UnknownSize
+		}
+		size := sizer.ApproxSize()
+		if size == UnknownSize {
+			return UnknownSize
+		}
+		totalSize += size
+	}
+	return totalSize
+}
+
 // useDummySingleton replaces all dummies with pre-defined singleton to allow addresses comparison
 // instead of casting for each batch.
 // required for distribute runner that creates new dummy instances instead of using singleton
