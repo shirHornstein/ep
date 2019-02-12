@@ -103,10 +103,19 @@ func TestPipeline_Args_noArgs(t *testing.T) {
 }
 
 func TestPipeline_ApproxSize(t *testing.T) {
-	r := ep.Pipeline(&upper{}, &runnerWithSize{size: 42})
-	sizer, ok := r.(ep.ApproxSizer)
-	require.True(t, ok)
-	require.Equal(t, 42, sizer.ApproxSize())
+	t.Run("known size", func(t *testing.T) {
+		r := ep.Pipeline(&upper{}, &runnerWithSize{size: 42})
+		sizer, ok := r.(ep.ApproxSizer)
+		require.True(t, ok)
+		require.Equal(t, 42, sizer.ApproxSize())
+	})
+
+	t.Run("unknown size", func(t *testing.T) {
+		r := ep.Pipeline(&upper{}, &runnerWithSize{size: 42}, &question{})
+		sizer, ok := r.(ep.ApproxSizer)
+		require.True(t, ok)
+		require.Equal(t, ep.SizeUnknown, sizer.ApproxSize())
+	})
 }
 
 type tailCutter struct {
