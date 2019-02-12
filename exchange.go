@@ -108,9 +108,9 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 			// close exchange might take time, so don't block preceding runner
 			go drain(inp)
 
-			eofErr := ex.encodeError(errorMsg)
+			encodeErr := ex.encodeError(errorMsg)
 			if err == nil {
-				err = eofErr
+				err = encodeErr
 			}
 		}
 
