@@ -6,6 +6,9 @@ import (
 
 var _ = registerGob(&passThrough{}, &pick{})
 
+// UnknownSize is used when size cannot be estimated
+const UnknownSize = -1
+
 // Runner represents objects that can receive a stream of input datasets,
 // manipulate them in some way (filter, mapping, reduction, expansion, etc.) and
 // and produce a new stream of the formatted values.
@@ -110,6 +113,14 @@ type PushRunner interface {
 
 	// Push tries to push a given runner into internal runner and returns true if succeeded
 	Push(toPush ScopesRunner) bool
+}
+
+// ApproxSizer is a Runner that can roughly predict the size of its output
+type ApproxSizer interface {
+	Runner
+
+	// ApproxSize returns a roughly estimated size of the output produced by this Runner
+	ApproxSize() int
 }
 
 // Run runs given runner and takes care of channels management involved in runner execution

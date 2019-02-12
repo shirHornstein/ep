@@ -108,6 +108,13 @@ func (s *scope) Push(toPush ScopesRunner) bool {
 	return false
 }
 
+func (s *scope) ApproxSize() int {
+	if sizer, ok := s.Runner.(ApproxSizer); ok {
+		return sizer.ApproxSize()
+	}
+	return UnknownSize
+}
+
 // SetScope sets a scope for the given columns
 func SetScope(cols []Type, scope string) []Type {
 	if scope == "" {
