@@ -105,7 +105,7 @@ type dontCancel struct {
 
 func (r *dontCancel) Returns() []Type { return r.Runner.Returns() }
 func (r *dontCancel) Run(ctx context.Context, inp, out chan Dataset) error {
-	if ctx.Value(thisNodeKey).(string) != r.Port && r.Port != "all" {
+	if ctx.Value(thisNodeKey).(string) != r.Port {
 		return r.Runner.Run(ctx, inp, out)
 	}
 

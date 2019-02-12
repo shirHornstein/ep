@@ -170,7 +170,7 @@ func TestExchange_errorPropagationAmongPeers(t *testing.T) {
 		runner := Pipeline(
 			&fixedData{},
 			&errOnPort{port1}, cancelWithoutClose(exchange1),
-			Project(&fixedData{}, PassThrough()),
+			Project(PassThrough(), PassThrough()),
 			&errOnPort{port2}, cancelWithoutClose(exchange2),
 			&drainInp{},
 		)
@@ -191,9 +191,9 @@ func TestExchange_errorPropagationAmongPeers(t *testing.T) {
 		exchange2 := ex().(*exchange)
 		runner := Pipeline(
 			&fixedData{},
-			&errOnPort{port1}, closeWithoutCancel(exchange1, "all"),
-			Project(&fixedData{}, PassThrough()),
-			&errOnPort{port2}, closeWithoutCancel(exchange2, "all"),
+			&errOnPort{port1}, closeWithoutCancel(exchange1, port1),
+			Project(PassThrough(), PassThrough()),
+			&errOnPort{port2}, closeWithoutCancel(exchange2, port2),
 			&drainInp{},
 		)
 		runner = master.Distribute(runner, ports...)
@@ -211,17 +211,14 @@ func TestExchange_errorPropagationAmongPeers(t *testing.T) {
 		})
 
 		t.Run(name+"/two errors on master/inp open", func(t *testing.T) {
-			t.Skip()
 			errorsWhileReadingFromInp(t, ex, ports[0], ports[0])
 		})
 
 		t.Run(name+"/errors on master and peer/inp open", func(t *testing.T) {
-			t.Skip()
 			errorsWhileReadingFromInp(t, ex, ports[2], ports[0])
 		})
 
 		t.Run(name+"/errors on two peers/inp open", func(t *testing.T) {
-			t.Skip()
 			errorsWhileReadingFromInp(t, ex, ports[1], ports[2])
 		})
 
@@ -234,17 +231,14 @@ func TestExchange_errorPropagationAmongPeers(t *testing.T) {
 		})
 
 		t.Run(name+"/two errors on master/inp close", func(t *testing.T) {
-			t.Skip()
 			errorsAfterReadingFromInpDone(t, ex, ports[0], ports[0])
 		})
 
 		t.Run(name+"/errors on master and peer/inp close", func(t *testing.T) {
-			t.Skip()
 			errorsAfterReadingFromInpDone(t, ex, ports[2], ports[0])
 		})
 
 		t.Run(name+"/errors on two peers/inp close", func(t *testing.T) {
-			t.Skip()
 			errorsAfterReadingFromInpDone(t, ex, ports[1], ports[2])
 		})
 	}
