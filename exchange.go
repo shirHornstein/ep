@@ -3,9 +3,9 @@ package ep
 import (
 	"context"
 	"encoding/gob"
+	"errors"
 	"fmt"
 	"github.com/panoplyio/go-consistent"
-	"github.com/pkg/errors"
 	"github.com/satori/go.uuid"
 	"io"
 	"net"
