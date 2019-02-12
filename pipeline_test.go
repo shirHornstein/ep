@@ -243,7 +243,7 @@ func runVerifyError(t *testing.T, runner ep.Runner, expected error) {
 }
 
 func TestPipeline_errorFromExchange(t *testing.T) {
-	exchangeError := func(t *testing.T, port string) {
+	verifyExchangeError := func(t *testing.T, port string) {
 		infinityRunner := &waitForCancel{}
 		mightErrored := &dataRunner{Dataset: ep.NewDataset(str.Data(1)), ThrowOnData: port}
 		runner := ep.Pipeline(
@@ -251,6 +251,8 @@ func TestPipeline_errorFromExchange(t *testing.T) {
 			ep.Scatter(),
 			ep.Broadcast(),
 			ep.Project(ep.PassThrough(), ep.Pipeline(&nodeAddr{}, mightErrored)),
+			ep.Partition(0),
+			ep.SortGather(nil),
 			ep.Project(ep.Pipeline(ep.Scatter(), &nodeAddr{}), ep.PassThrough()),
 			ep.Gather(),
 		)
@@ -264,9 +266,51 @@ func TestPipeline_errorFromExchange(t *testing.T) {
 	}
 
 	t.Run("error on master", func(t *testing.T) {
-		exchangeError(t, ":5551")
+		verifyExchangeError(t, ":5551")
 	})
 	t.Run("error on peer", func(t *testing.T) {
-		exchangeError(t, ":5553")
+		verifyExchangeError(t, ":5553")
+	})
+}
+
+func TestPipeline_multipleErrorsFromExchange(t *testing.T) {
+	verifyExchangeErrors := func(t *testing.T, port1, port2 string) {
+		infinityRunner1 := &waitForCancel{}
+		infinityRunner2 := &waitForCancel{}
+		err1 := &dataRunner{Dataset: ep.NewDataset(str.Data(1)), ThrowOnData: port1}
+		err2 := &dataRunner{Dataset: ep.NewDataset(str.Data(1)), ThrowOnData: port2}
+		runner := ep.Pipeline(
+			ep.Project(ep.PassThrough(), ep.Pipeline(&nodeAddr{}, err2)),
+			infinityRunner1,
+			ep.Scatter(),
+			ep.Broadcast(),
+			ep.Project(ep.PassThrough(), ep.Pipeline(&nodeAddr{}, err1)),
+			infinityRunner2,
+			ep.Partition(0),
+			ep.SortGather(nil),
+			ep.Project(ep.Pipeline(ep.Scatter(), &nodeAddr{}), ep.PassThrough()),
+			ep.Gather(),
+		)
+
+		data := ep.NewDataset(str.Data(1))
+		_, resErr := eptest.RunDist(t, 4, runner, data, data, data, data)
+
+		require.Error(t, resErr)
+		require.Equal(t, "error "+port1, resErr.Error())
+		require.False(t, infinityRunner1.IsRunning(), "Infinity go-routine leak")
+		require.False(t, infinityRunner2.IsRunning(), "Infinity go-routine leak")
+	}
+
+	t.Run("error on master and peers", func(t *testing.T) {
+		verifyExchangeErrors(t, ":5551", ":5553")
+	})
+	t.Run("error on two peers", func(t *testing.T) {
+		verifyExchangeErrors(t, ":5553", ":5554")
+	})
+	t.Run("two errors on same peer", func(t *testing.T) {
+		verifyExchangeErrors(t, ":5554", ":5554")
+	})
+	t.Run("two errors on master", func(t *testing.T) {
+		verifyExchangeErrors(t, ":5551", ":5551")
 	})
 }
