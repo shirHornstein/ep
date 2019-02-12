@@ -137,71 +137,115 @@ func TestExchange_errorPropagationAmongPeers(t *testing.T) {
 
 	defer terminateCluster(t, distributers...)
 
-	errorWhileReadingFromInp := func(t *testing.T, ex func() Runner, cancelOnMaster bool) {
-		cancelOnPort := ports[1]
-		if cancelOnMaster {
-			cancelOnPort = ports[0]
-		}
-
-		exchange := ex().(*exchange)
-		runner := Pipeline(&fixedData{}, &errOnPort{cancelOnPort}, cancelWithoutClose(exchange, cancelOnPort), &drainInp{})
-		runner = master.Distribute(runner, ports...)
-
-		inp := make(chan Dataset)
+	runAndVerify := func(t *testing.T, runner Runner, errors []string, exchanges ...*exchange) {
+		inp := make(chan Dataset, 2)
 		out := make(chan Dataset)
+		inp <- NewDataset(strs{"a", "b"})
+		inp <- NewDataset(strs{"c", "d"})
 		close(inp)
 		defer close(out)
 
 		err := runner.Run(context.Background(), inp, out)
 		require.Error(t, err)
-		require.Equal(t, "error from "+cancelOnPort, err.Error())
+		require.Contains(t, errors, err.Error())
 
-		require.Equal(t, len(ports), len(exchange.conns))
-		require.IsType(t, &shortCircuit{}, exchange.conns[0])
-		require.True(t, (exchange.conns[0]).(*shortCircuit).closed, "open connections leak")
-		require.Contains(t, exchange.conns[1].Close().Error(), "use of closed network connection", "open connections leak")
+		for _, exchange := range exchanges {
+			require.Equal(t, len(ports), len(exchange.conns))
+			require.IsType(t, &shortCircuit{}, exchange.conns[0])
+			require.True(t, (exchange.conns[0]).(*shortCircuit).closed, "open connections leak")
+			require.Contains(t, exchange.conns[1].Close().Error(), "use of closed network connection", "open connections leak")
+		}
 	}
 
-	errorAfterReadingFromInpDone := func(t *testing.T, ex func() Runner, cancelOnMaster bool) {
-		cancelOnPort := ports[1]
-		if cancelOnMaster {
-			cancelOnPort = ports[0]
-		}
-
+	errorWhileReadingFromInp := func(t *testing.T, ex func() Runner, cancelOnPort string) {
 		exchange := ex().(*exchange)
-		runner := Pipeline(&errOnPort{cancelOnPort}, closeWithoutCancel(exchange, cancelOnPort), &drainInp{})
+		runner := Pipeline(&fixedData{}, &errOnPort{cancelOnPort}, cancelWithoutClose(exchange), &drainInp{})
 		runner = master.Distribute(runner, ports...)
 
-		inp := make(chan Dataset)
-		out := make(chan Dataset)
-		close(inp)
-		defer close(out)
+		runAndVerify(t, runner, []string{"error from " + cancelOnPort}, exchange)
+	}
+	errorsWhileReadingFromInp := func(t *testing.T, ex func() Runner, port1, port2 string) {
+		exchange1 := ex().(*exchange)
+		exchange2 := ex().(*exchange)
+		runner := Pipeline(
+			&fixedData{},
+			&errOnPort{port1}, cancelWithoutClose(exchange1),
+			Project(&fixedData{}, PassThrough()),
+			&errOnPort{port2}, cancelWithoutClose(exchange2),
+			&drainInp{},
+		)
+		runner = master.Distribute(runner, ports...)
 
-		err := runner.Run(context.Background(), inp, out)
-		require.Error(t, err)
-		require.Equal(t, "error from "+cancelOnPort, err.Error())
+		runAndVerify(t, runner, []string{"error from " + port1, "error from " + port2}, exchange1, exchange2)
+	}
 
-		require.Equal(t, len(ports), len(exchange.conns))
-		require.IsType(t, &shortCircuit{}, exchange.conns[0])
-		require.True(t, (exchange.conns[0]).(*shortCircuit).closed, "open connections leak")
-		require.Contains(t, exchange.conns[1].Close().Error(), "use of closed network connection", "open connections leak")
+	errorAfterReadingFromInpDone := func(t *testing.T, ex func() Runner, cancelOnPort string) {
+		exchange := ex().(*exchange)
+		runner := Pipeline(&fixedData{}, &errOnPort{cancelOnPort}, closeWithoutCancel(exchange, cancelOnPort), &drainInp{})
+		runner = master.Distribute(runner, ports...)
+
+		runAndVerify(t, runner, []string{"error from " + cancelOnPort}, exchange)
+	}
+	errorsAfterReadingFromInpDone := func(t *testing.T, ex func() Runner, port1, port2 string) {
+		exchange1 := ex().(*exchange)
+		exchange2 := ex().(*exchange)
+		runner := Pipeline(
+			&fixedData{},
+			&errOnPort{port1}, closeWithoutCancel(exchange1, "all"),
+			Project(&fixedData{}, PassThrough()),
+			&errOnPort{port2}, closeWithoutCancel(exchange2, "all"),
+			&drainInp{},
+		)
+		runner = master.Distribute(runner, ports...)
+
+		runAndVerify(t, runner, []string{"error from " + port1, "error from " + port2}, exchange1, exchange2)
 	}
 
 	for name, ex := range exchanges {
 		t.Run(name+"/error on master/inp open", func(t *testing.T) {
-			errorWhileReadingFromInp(t, ex, true)
+			errorWhileReadingFromInp(t, ex, ports[0])
 		})
 
 		t.Run(name+"/error on peer/inp open", func(t *testing.T) {
-			errorWhileReadingFromInp(t, ex, false)
+			errorWhileReadingFromInp(t, ex, ports[1])
+		})
+
+		t.Run(name+"/two errors on master/inp open", func(t *testing.T) {
+			t.Skip()
+			errorsWhileReadingFromInp(t, ex, ports[0], ports[0])
+		})
+
+		t.Run(name+"/errors on master and peer/inp open", func(t *testing.T) {
+			t.Skip()
+			errorsWhileReadingFromInp(t, ex, ports[2], ports[0])
+		})
+
+		t.Run(name+"/errors on two peers/inp open", func(t *testing.T) {
+			t.Skip()
+			errorsWhileReadingFromInp(t, ex, ports[1], ports[2])
 		})
 
 		t.Run(name+"/error on master/inp close", func(t *testing.T) {
-			errorAfterReadingFromInpDone(t, ex, true)
+			errorAfterReadingFromInpDone(t, ex, ports[0])
 		})
 
 		t.Run(name+"/error on peer/inp close", func(t *testing.T) {
-			errorAfterReadingFromInpDone(t, ex, false)
+			errorAfterReadingFromInpDone(t, ex, ports[1])
+		})
+
+		t.Run(name+"/two errors on master/inp close", func(t *testing.T) {
+			t.Skip()
+			errorsAfterReadingFromInpDone(t, ex, ports[0], ports[0])
+		})
+
+		t.Run(name+"/errors on master and peer/inp close", func(t *testing.T) {
+			t.Skip()
+			errorsAfterReadingFromInpDone(t, ex, ports[2], ports[0])
+		})
+
+		t.Run(name+"/errors on two peers/inp close", func(t *testing.T) {
+			t.Skip()
+			errorsAfterReadingFromInpDone(t, ex, ports[1], ports[2])
 		})
 	}
 }

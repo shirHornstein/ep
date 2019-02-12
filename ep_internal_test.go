@@ -71,11 +71,11 @@ type errOnPort struct {
 
 func (*errOnPort) Returns() []Type { return nil }
 func (r *errOnPort) Run(ctx context.Context, inp, out chan Dataset) error {
-	if ctx.Value(thisNodeKey).(string) == r.Port {
-		return fmt.Errorf("error from %s", r.Port)
-	}
 	for data := range inp {
 		out <- data
+		if ctx.Value(thisNodeKey).(string) == r.Port {
+			return fmt.Errorf("error from %s", r.Port)
+		}
 	}
 	return nil
 }
@@ -105,12 +105,19 @@ type dontCancel struct {
 
 func (r *dontCancel) Returns() []Type { return r.Runner.Returns() }
 func (r *dontCancel) Run(ctx context.Context, inp, out chan Dataset) error {
-	if ctx.Value(thisNodeKey).(string) != r.Port {
+	if ctx.Value(thisNodeKey).(string) != r.Port && r.Port != "all" {
 		return r.Runner.Run(ctx, inp, out)
 	}
 
+	var wg sync.WaitGroup
 	internalInp := make(chan Dataset)
-	internalOut := make(chan Dataset)
+	wg.Add(1)
+	go func() {
+		for data := range inp {
+			internalInp <- data
+		}
+		wg.Done()
+	}()
 
 	// to verify ctx will not cancel r.Runner, copy relevant content to new context
 	internalCtx := context.Background()
@@ -121,20 +128,18 @@ func (r *dontCancel) Run(ctx context.Context, inp, out chan Dataset) error {
 
 	go func() {
 		<-ctx.Done()
+		wg.Wait()
 		close(internalInp)
 	}()
 
-	return r.Runner.Run(internalCtx, internalInp, internalOut)
+	return r.Runner.Run(internalCtx, internalInp, out)
 }
 
-func cancelWithoutClose(r Runner, port string) Runner {
-	return &dontCloseInp{r, port}
+func cancelWithoutClose(r Runner) Runner {
+	return &dontCloseInp{r}
 }
 
-type dontCloseInp struct {
-	Runner
-	Port string
-}
+type dontCloseInp struct{ Runner }
 
 func (r *dontCloseInp) Returns() []Type { return r.Runner.Returns() }
 func (r *dontCloseInp) Run(ctx context.Context, inp, out chan Dataset) (err error) {
