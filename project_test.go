@@ -87,7 +87,8 @@ func TestProject_errorInPipeline(t *testing.T) {
 	require.False(t, infinityRunner3.IsRunning(), "Infinity 3 go-routine leak")
 }
 
-func _TestProject_errorWithExchange(t *testing.T) {
+func TestProject_errorWithExchange(t *testing.T) {
+	t.Skip()
 	port := ":5551"
 	dist := eptest.NewPeer(t, port)
 
