@@ -114,7 +114,7 @@ func TestPipeline_ApproxSize(t *testing.T) {
 		r := ep.Pipeline(&upper{}, &runnerWithSize{size: 42}, &question{})
 		sizer, ok := r.(ep.ApproxSizer)
 		require.True(t, ok)
-		require.Equal(t, ep.SizeUnknown, sizer.ApproxSize())
+		require.Equal(t, ep.UnknownSize, sizer.ApproxSize())
 	})
 }
 

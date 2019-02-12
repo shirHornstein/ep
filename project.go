@@ -197,11 +197,11 @@ func (rs project) ApproxSize() int {
 	for _, r := range rs {
 		sizer, ok := r.(ApproxSizer)
 		if !ok {
-			return SizeUnknown
+			return UnknownSize
 		}
 		size := sizer.ApproxSize()
-		if size == SizeUnknown {
-			return SizeUnknown
+		if size == UnknownSize {
+			return UnknownSize
 		}
 		totalSize += size
 	}

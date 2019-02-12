@@ -198,5 +198,5 @@ func (rs pipeline) ApproxSize() int {
 	if approxSizer, ok := last.(ApproxSizer); ok {
 		return approxSizer.ApproxSize()
 	}
-	return SizeUnknown
+	return UnknownSize
 }

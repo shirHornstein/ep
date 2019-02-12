@@ -264,7 +264,7 @@ func TestProject_ApproxSize(t *testing.T) {
 		p := ep.Project(r1, r2)
 		sizer, ok := p.(ep.ApproxSizer)
 		require.True(t, ok)
-		require.Equal(t, ep.SizeUnknown, sizer.ApproxSize())
+		require.Equal(t, ep.UnknownSize, sizer.ApproxSize())
 	})
 
 	t.Run("part is ApproxSizer", func(t *testing.T) {
@@ -274,7 +274,7 @@ func TestProject_ApproxSize(t *testing.T) {
 		p := ep.Project(r1, r2)
 		sizer, ok := p.(ep.ApproxSizer)
 		require.True(t, ok)
-		require.Equal(t, ep.SizeUnknown, sizer.ApproxSize())
+		require.Equal(t, ep.UnknownSize, sizer.ApproxSize())
 	})
 
 	t.Run("all are ApproxSizer", func(t *testing.T) {
