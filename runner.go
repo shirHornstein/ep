@@ -6,8 +6,7 @@ import (
 
 var _ = registerGob(&passThrough{}, &pick{})
 
-// UnknownSize is a special value that should be returned by ApproxSizers when
-// they cannot give an estimation.
+// UnknownSize is used when size cannot be estimated
 const UnknownSize = -1
 
 // Runner represents objects that can receive a stream of input datasets,
