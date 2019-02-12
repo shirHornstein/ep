@@ -103,7 +103,7 @@ func TestPipeline_Args_noArgs(t *testing.T) {
 }
 
 func TestPipeline_ApproxSize(t *testing.T) {
-	r := ep.Pipeline(ep.PassThrough(), &runnerWithSize{size: 42})
+	r := ep.Pipeline(&upper{}, &runnerWithSize{size: 42})
 	sizer, ok := r.(ep.ApproxSizer)
 	require.True(t, ok)
 	require.Equal(t, 42, sizer.ApproxSize())
