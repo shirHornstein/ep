@@ -11,7 +11,7 @@ const UnnamedColumn = "?column?"
 // see Aliasing and Scoping
 func Alias(r Runner, label string) Runner {
 	if cmp, ok := r.(*compose); ok {
-		cmp.Ts[0] = SetAlias(cmp.Ts[0], label)
+		cmp.ReturnTs[0] = SetAlias(cmp.ReturnTs[0], label)
 		return r
 	}
 	return &alias{r, label}
@@ -73,7 +73,7 @@ func GetAlias(col Type) string {
 // see Aliasing and Scoping
 func Scope(r Runner, label string) Runner {
 	if cmp, ok := r.(*compose); ok {
-		cmp.Ts = SetScope(cmp.Ts, label)
+		cmp.ReturnTs = SetScope(cmp.ReturnTs, label)
 		return r
 	}
 	return &scope{r, label}

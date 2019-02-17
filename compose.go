@@ -27,11 +27,11 @@ func Compose(returns []Type, cmps ...Composable) Runner {
 }
 
 type compose struct {
-	Ts   []Type
-	Cmps []Composable
+	ReturnTs []Type
+	Cmps     []Composable
 }
 
-func (c *compose) Returns() []Type { return c.Ts }
+func (c *compose) Returns() []Type { return c.ReturnTs }
 func (c *compose) Run(ctx context.Context, inp, out chan Dataset) error {
 	batchFunction := c.BatchFunction()
 
@@ -76,13 +76,18 @@ func (c *compose) Scopes() StringsSet {
 // to every Composable's BatchFunction, combining their outputs into a single
 // Dataset. It is a functional implementation of ep.Project.
 func ComposeProject(cmps ...Composable) Composable {
-	return &composeProject{cmps}
+	return &composeProject{nil, cmps}
 }
 
 type composeProject struct {
+	Runner
 	Cmps []Composable
 }
 
+func (p *composeProject) Returns() []Type { return p.Runner.Returns() }
+func (p *composeProject) Run(ctx context.Context, inp, out chan Dataset) error {
+	return p.Runner.Run(ctx, inp, out)
+}
 func (p *composeProject) BatchFunction() BatchFunction {
 	funcs := make([]BatchFunction, len(p.Cmps))
 	for i := 0; i < len(p.Cmps); i++ {
@@ -103,4 +108,14 @@ func (p *composeProject) BatchFunction() BatchFunction {
 		}
 		return result, nil
 	}
+}
+
+func (p *composeProject) Scopes() StringsSet {
+	scopes := make(StringsSet)
+	for _, r := range p.Cmps {
+		if s, ok := r.(ScopesRunner); ok {
+			scopes.AddAll(s.Scopes())
+		}
+	}
+	return scopes
 }
