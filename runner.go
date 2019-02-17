@@ -4,7 +4,7 @@ import (
 	"context"
 )
 
-var _ = registerGob(&passThrough{}, &pick{})
+var _ = registerGob(&passThrough{}, &pick{}, &tail{})
 
 // UnknownSize is used when size cannot be estimated
 const UnknownSize = -1
@@ -205,16 +205,15 @@ func drain(c chan Dataset) {
 }
 
 // Tail returns a runner that split data and returns only last tailWidth columns
-func Tail(returnTypes []Type, tailWidth int) Runner {
-	return &tail{returnTypes, tailWidth}
+func Tail(tailWidth int) Runner {
+	return &tail{tailWidth}
 }
 
 type tail struct {
-	Types     []Type
 	TailWidth int
 }
 
-func (r *tail) Returns() []Type { return r.Types }
+func (r *tail) Returns() []Type { return []Type{WildcardMinusTail(r.TailWidth)} }
 
 func (r *tail) Run(_ context.Context, inp, out chan Dataset) error {
 	for data := range inp {
