@@ -135,7 +135,7 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 		// send data
 		case data, open := <-inp:
 			err = getError(ctx)
-			if err != nil {
+			if err != nil && err != ErrIgnorable {
 				return nil
 			}
 			if !open {
