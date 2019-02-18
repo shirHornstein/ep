@@ -176,5 +176,7 @@ func setError(ctx context.Context, err error) {
 	defer mutex.Unlock()
 
 	errPtr := ctx.Value(errorKey).(*error)
-	*errPtr = err
+	if *errPtr == nil || *errPtr == errOnPeer {
+		*errPtr = err
+	}
 }

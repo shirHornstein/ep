@@ -135,8 +135,8 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 			return nil
 
 		// send data
-		case data, ok := <-inp:
-			if !ok {
+		case data, open := <-inp:
+			if !open || getError(ctx) != nil {
 				// the input is exhausted. Notify peers that we're done sending
 				// data (they will use it to stop listening to data from this node)
 				err = ex.notifyTermination(ctx, eofMsg)

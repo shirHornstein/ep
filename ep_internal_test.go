@@ -74,8 +74,11 @@ func (r *errOnPort) Run(ctx context.Context, inp, out chan Dataset) error {
 	for data := range inp {
 		out <- data
 		if ctx.Value(thisNodeKey).(string) == r.Port {
-			return fmt.Errorf("error from %s", r.Port)
+			break
 		}
+	}
+	if ctx.Value(thisNodeKey).(string) == r.Port {
+		return fmt.Errorf("error from %s", r.Port)
 	}
 	return nil
 }
@@ -125,6 +128,8 @@ func (r *dontCancel) Run(ctx context.Context, inp, out chan Dataset) error {
 	internalCtx = context.WithValue(internalCtx, allNodesKey, ctx.Value(allNodesKey))
 	internalCtx = context.WithValue(internalCtx, masterNodeKey, ctx.Value(masterNodeKey))
 	internalCtx = context.WithValue(internalCtx, thisNodeKey, ctx.Value(thisNodeKey))
+	internalCtx = context.WithValue(internalCtx, lockErrorKey, ctx.Value(lockErrorKey))
+	internalCtx = context.WithValue(internalCtx, errorKey, ctx.Value(errorKey))
 
 	go func() {
 		<-ctx.Done()
