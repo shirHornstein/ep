@@ -40,12 +40,12 @@ var Record = &datasetType{}
 
 type datasetType struct{}
 
-func (sett *datasetType) String() string      { return sett.Name() }
-func (*datasetType) Name() string             { return "record" }
-func (*datasetType) Size() uint               { panic("call Size on each Data") }
-func (sett *datasetType) Data(n int) Data     { return sett.DataEmpty(n) }
-func (*datasetType) DataEmpty(int) Data       { panic("use NewDataset function") }
-func (*datasetType) DataBuilder() DataBuilder { panic("use NewDatasetBuilder function") }
+func (sett *datasetType) String() string  { return sett.Name() }
+func (*datasetType) Name() string         { return "record" }
+func (*datasetType) Size() uint           { panic("call Size on each Data") }
+func (sett *datasetType) Data(n int) Data { return sett.DataEmpty(n) }
+func (*datasetType) DataEmpty(int) Data   { panic("use NewDataset function") }
+func (*datasetType) Builder() DataBuilder { panic("use NewDatasetBuilder function") }
 
 type dataset []Data
 
@@ -111,7 +111,7 @@ func (db *datasetBuilder) Data() Data {
 		if typee.Name() == Record.Name() {
 			builders[i] = NewDatasetBuilder()
 		} else {
-			builders[i] = typee.DataBuilder()
+			builders[i] = typee.Builder()
 		}
 	}
 	for _, d := range db.ds {

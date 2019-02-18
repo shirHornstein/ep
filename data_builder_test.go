@@ -8,14 +8,14 @@ import (
 
 func TestDataBuilder(t *testing.T) {
 	t.Run("one data", func(t *testing.T) {
-		db := integer.DataBuilder()
+		db := integer.Builder()
 		db.Append(integer.Data(10))
 		data := db.Data()
 		require.Equal(t, 10, data.Len())
 	})
 
 	t.Run("many datas", func(t *testing.T) {
-		db := integer.DataBuilder()
+		db := integer.Builder()
 		db.Append(integer.Data(7))
 		db.Append(integer.Data(11))
 		db.Append(integer.Data(13))
@@ -106,7 +106,7 @@ func BenchmarkDataBuilder(b *testing.B) {
 	b.Run("integer", func(b *testing.B) {
 		b.Run("DataBuilder", func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				db := integer.DataBuilder()
+				db := integer.Builder()
 				for j := 0; j < len(dataInts); j++ {
 					db.Append(dataInts[j])
 				}
@@ -129,7 +129,7 @@ func BenchmarkDataBuilder(b *testing.B) {
 	b.Run("string", func(b *testing.B) {
 		b.Run("DataBuilder", func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				db := str.DataBuilder()
+				db := str.Builder()
 				for j := 0; j < len(dataStrs); j++ {
 					db.Append(dataStrs[j])
 				}
