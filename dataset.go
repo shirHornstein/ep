@@ -105,8 +105,8 @@ func (db *datasetBuilder) Append(data Data) {
 		}
 	}
 
-	for i := range db.builders {
-		db.builders[i].Append(ds.At(i))
+	for i, b := range db.builders {
+		b.Append(ds.At(i))
 	}
 }
 
