@@ -87,7 +87,8 @@ func TestProject_errorInPipeline(t *testing.T) {
 	require.False(t, infinityRunner3.IsRunning(), "Infinity 3 go-routine leak")
 }
 
-func _TestProject_errorWithExchange(t *testing.T) {
+func TestProject_errorWithExchange(t *testing.T) {
+	t.Skip()
 	port := ":5551"
 	dist := eptest.NewPeer(t, port)
 
@@ -253,4 +254,36 @@ func TestProject_Filter_nestedWithInternalAll(t *testing.T) {
 	require.False(t, q1.called)
 	require.True(t, q2.called)
 	require.Equal(t, "[(is hello?) (is world?)]", fmt.Sprintf("%+v", data.Strings()))
+}
+
+func TestProject_ApproxSize(t *testing.T) {
+	t.Run("none is ApproxSizer", func(t *testing.T) {
+		r1 := ep.PassThrough()
+		r2 := &question{}
+
+		p := ep.Project(r1, r2)
+		sizer, ok := p.(ep.ApproxSizer)
+		require.True(t, ok)
+		require.Equal(t, ep.UnknownSize, sizer.ApproxSize())
+	})
+
+	t.Run("part is ApproxSizer", func(t *testing.T) {
+		r1 := ep.PassThrough()
+		r2 := &runnerWithSize{size: 42}
+
+		p := ep.Project(r1, r2)
+		sizer, ok := p.(ep.ApproxSizer)
+		require.True(t, ok)
+		require.Equal(t, ep.UnknownSize, sizer.ApproxSize())
+	})
+
+	t.Run("all are ApproxSizer", func(t *testing.T) {
+		r1 := &runnerWithSize{size: 42}
+		r2 := &runnerWithSize{size: 11}
+
+		p := ep.Project(r1, r2)
+		sizer, ok := p.(ep.ApproxSizer)
+		require.True(t, ok)
+		require.Equal(t, 42+11, sizer.ApproxSize())
+	})
 }
