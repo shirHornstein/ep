@@ -14,7 +14,7 @@ func TestDataBuilder(t *testing.T) {
 		require.Equal(t, 10, data.Len())
 	})
 
-	t.Run("many datas", func(t *testing.T) {
+	t.Run("multiple Data objects", func(t *testing.T) {
 		db := integer.Builder()
 		db.Append(integer.Data(7))
 		db.Append(integer.Data(11))
