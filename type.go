@@ -75,8 +75,8 @@ func (*wildcardType) Name() string               { return "*" }
 func (*wildcardType) Size() uint                 { panic("wildcard has no concrete type") }
 func (*wildcardType) Data(int) Data              { panic("wildcard has no concrete type") }
 func (*wildcardType) DataEmpty(int) Data         { panic("wildcard has no concrete type") }
-func (w *wildcardType) At(idx int) *wildcardType { return &wildcardType{&idx, w.CutFromTail} }
 func (w *wildcardType) DataBuilder() DataBuilder { panic("wildcard has no concrete type") }
+func (w *wildcardType) At(idx int) *wildcardType { return &wildcardType{&idx, w.CutFromTail} }
 
 type anyType struct{}
 
