@@ -27,19 +27,19 @@ func (*strType) Builder() ep.DataBuilder {
 }
 
 type strBuilder struct {
-	Ds  []strs
-	Len int
+	ds  []strs
+	len int
 }
 
 func (s *strBuilder) Append(data ep.Data) {
 	strData := data.(strs)
-	s.Ds = append(s.Ds, strData)
-	s.Len += strData.Len()
+	s.ds = append(s.ds, strData)
+	s.len += strData.Len()
 }
 
 func (s *strBuilder) Data() ep.Data {
-	res := make(strs, 0, s.Len)
-	for _, d := range s.Ds {
+	res := make(strs, 0, s.len)
+	for _, d := range s.ds {
 		res = append(res, d...)
 	}
 	return res
@@ -110,19 +110,19 @@ func (*integerType) Builder() ep.DataBuilder {
 }
 
 type integerBuilder struct {
-	Ds  []integers
-	Len int
+	ds  []integers
+	len int
 }
 
 func (s *integerBuilder) Append(data ep.Data) {
 	intData := data.(integers)
-	s.Ds = append(s.Ds, intData)
-	s.Len += intData.Len()
+	s.ds = append(s.ds, intData)
+	s.len += intData.Len()
 }
 
 func (s *integerBuilder) Data() ep.Data {
-	res := make(integers, 0, s.Len)
-	for _, d := range s.Ds {
+	res := make(integers, 0, s.len)
+	for _, d := range s.ds {
 		res = append(res, d...)
 	}
 	return res
