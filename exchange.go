@@ -108,7 +108,12 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 			// close exchange might take time, so don't block preceding runner
 			go drain(inp)
 
-			encodeErr := ex.notifyTermination(ctx, errorMsg)
+			msg := errorMsg
+			errOnCtx := getError(ctx)
+			if errOnCtx == ErrIgnorable {
+				msg = eofMsg
+			}
+			encodeErr := ex.notifyTermination(ctx, msg)
 			if err == nil {
 				err = encodeErr
 			}
@@ -123,20 +128,17 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 	// for the completion of the receive go-routine above. When both sending
 	// and receiving is complete, exit. Upon error, exit early
 	for err == nil && (!rcvDone || !sndDone) {
-		// prioritize cancellation over inp to notify peers as early as possible
-		select {
-		case <-ctx.Done():
-			return nil
-		default:
-		}
-
 		select {
 		case <-ctx.Done():
 			return nil
 
 		// send data
 		case data, open := <-inp:
-			if !open || getError(ctx) != nil {
+			err = getError(ctx)
+			if err != nil {
+				return nil
+			}
+			if !open {
 				// the input is exhausted. Notify peers that we're done sending
 				// data (they will use it to stop listening to data from this node)
 				err = ex.notifyTermination(ctx, eofMsg)
@@ -375,13 +377,6 @@ func (ex *exchange) encodeAll(targets []encoder, e interface{}) (err error) {
 }
 
 func (ex *exchange) notifyTermination(ctx context.Context, msg *errMsg) error {
-	errOnCtx := getError(ctx)
-	if errOnCtx == ErrIgnorable {
-		msg = eofMsg
-	} else if errOnCtx != nil {
-		msg = errorMsg
-	}
-
 	errEncs := ex.encodeAll(ex.encs, msg)
 	errEncsTermination := ex.encodeAll(ex.encsTermination, msg)
 	if errEncs != nil {

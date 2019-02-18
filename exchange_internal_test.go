@@ -159,7 +159,7 @@ func TestExchange_errorPropagationAmongPeers(t *testing.T) {
 
 	errorWhileReadingFromInp := func(t *testing.T, ex func() Runner, cancelOnPort string) {
 		exchange := ex().(*exchange)
-		runner := Pipeline(&fixedData{}, &errOnPort{cancelOnPort}, cancelWithoutClose(exchange), &drainInp{})
+		runner := Pipeline(&fixedData{}, &errOnPort{cancelOnPort}, cancelWithoutClose(exchange, cancelOnPort), &drainInp{})
 		runner = master.Distribute(runner, ports...)
 
 		runAndVerify(t, runner, []string{"error from " + cancelOnPort}, exchange)
@@ -169,9 +169,9 @@ func TestExchange_errorPropagationAmongPeers(t *testing.T) {
 		exchange2 := ex().(*exchange)
 		runner := Pipeline(
 			&fixedData{},
-			&errOnPort{port1}, cancelWithoutClose(exchange1),
+			&errOnPort{port1}, cancelWithoutClose(exchange1, port1),
 			Project(PassThrough(), PassThrough()),
-			&errOnPort{port2}, cancelWithoutClose(exchange2),
+			&errOnPort{port2}, cancelWithoutClose(exchange2, port2),
 			&drainInp{},
 		)
 		runner = master.Distribute(runner, ports...)

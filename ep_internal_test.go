@@ -140,11 +140,14 @@ func (r *dontCancel) Run(ctx context.Context, inp, out chan Dataset) error {
 	return r.Runner.Run(internalCtx, internalInp, out)
 }
 
-func cancelWithoutClose(r Runner) Runner {
-	return &dontCloseInp{r}
+func cancelWithoutClose(r Runner, cancelOnPort string) Runner {
+	return &dontCloseInp{r, cancelOnPort}
 }
 
-type dontCloseInp struct{ Runner }
+type dontCloseInp struct {
+	Runner
+	Port string
+}
 
 func (r *dontCloseInp) Returns() []Type { return r.Runner.Returns() }
 func (r *dontCloseInp) Run(ctx context.Context, inp, out chan Dataset) (err error) {
@@ -156,8 +159,17 @@ func (r *dontCloseInp) Run(ctx context.Context, inp, out chan Dataset) (err erro
 
 	wg.Add(1)
 	go func() {
-		for data := range inp {
+		var data Dataset
+		for data = range inp {
 			internalInp <- data
+		}
+
+		// for non failed peer, write some more data and close input
+		if ctx.Value(thisNodeKey).(string) != r.Port {
+			internalInp <- data
+			internalInp <- data
+			internalInp <- data
+			close(internalInp)
 		}
 		wg.Done()
 	}()
@@ -168,7 +180,9 @@ func (r *dontCloseInp) Run(ctx context.Context, inp, out chan Dataset) (err erro
 	// only when internalOut is closed and internal runner exited without waiting
 	// for inp, we can return and close inp
 	wg.Wait()
-	close(internalInp)
+	if ctx.Value(thisNodeKey).(string) == r.Port {
+		close(internalInp)
+	}
 	return
 }
 
