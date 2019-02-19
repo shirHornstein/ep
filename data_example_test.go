@@ -31,15 +31,15 @@ type strBuilder struct {
 	len int
 }
 
-func (sb *strBuilder) Append(data ep.Data) {
+func (b *strBuilder) Append(data ep.Data) {
 	strData := data.(strs)
-	sb.ds = append(sb.ds, strData)
-	sb.len += strData.Len()
+	b.ds = append(b.ds, strData)
+	b.len += strData.Len()
 }
 
-func (sb *strBuilder) Data() ep.Data {
-	res := make(strs, 0, sb.len)
-	for _, d := range sb.ds {
+func (b *strBuilder) Data() ep.Data {
+	res := make(strs, 0, b.len)
+	for _, d := range b.ds {
 		res = append(res, d...)
 	}
 	return res
@@ -114,15 +114,15 @@ type integerBuilder struct {
 	len int
 }
 
-func (ib *integerBuilder) Append(data ep.Data) {
+func (b *integerBuilder) Append(data ep.Data) {
 	intData := data.(integers)
-	ib.ds = append(ib.ds, intData)
-	ib.len += intData.Len()
+	b.ds = append(b.ds, intData)
+	b.len += intData.Len()
 }
 
-func (ib *integerBuilder) Data() ep.Data {
-	res := make(integers, 0, ib.len)
-	for _, d := range ib.ds {
+func (b *integerBuilder) Data() ep.Data {
+	res := make(integers, 0, b.len)
+	for _, d := range b.ds {
 		res = append(res, d...)
 	}
 	return res
