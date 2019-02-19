@@ -273,7 +273,7 @@ func (set dataset) Duplicate(t int) Data {
 
 // see Data.IsNull
 func (set dataset) IsNull(i int) bool {
-	// i-th row considered to be null iff it contains only nulls
+	// i-th row considered to be null if it contains only nulls
 	for _, d := range set {
 		if !d.IsNull(i) {
 			return false

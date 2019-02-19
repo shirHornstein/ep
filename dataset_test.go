@@ -184,18 +184,3 @@ func TestDataset_Compare_mixTypes(t *testing.T) {
 	results, _ = d1Dataset.Compare(d2Dataset)
 	require.Equal(t, expected, results)
 }
-
-func TestDataset_Builder(t *testing.T) {
-	ds1 := ep.NewDataset(
-		integers{1, 2, 3},
-		strs{"a", "b", "c"},
-	)
-	ds2 := ep.NewDataset(
-		integers{4, 5},
-		strs{"d", "e"},
-	)
-
-	ds1.MarkNull(1)
-	ds2.MarkNull(0)
-	eptest.VerifyDataBuilder(t, ds1, ds2)
-}

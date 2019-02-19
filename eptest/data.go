@@ -199,27 +199,20 @@ func VerifyDataNullsHandling(t *testing.T, data ep.Data, expectedNullString stri
 }
 
 // VerifyDataBuilder makes sure DataBuilder works on a given type
-func VerifyDataBuilder(t *testing.T, datas ...ep.Data) {
-	typee := datas[0].Type()
+func VerifyDataBuilder(t *testing.T, data ep.Data) {
+	typee := data.Type()
+	builder := typee.Builder()
+	data.MarkNull(0)
 
-	t.Run("TestDataBuilder_"+typee.String(), func(t *testing.T) {
-		builder := typee.Builder()
+	builder.Append(data)
+	res := builder.Data()
+	require.Equal(t, data.Strings(), res.Strings())
+	require.True(t, res.IsNull(0), "first row should be null")
 
-		for _, d := range datas {
-			builder.Append(d)
-		}
-
-		res := builder.Data()
-
-		var expected ep.Data
-		for _, d := range datas {
-			if expected == nil {
-				expected = d
-			} else {
-				expected = expected.Append(d)
-			}
-		}
-
-		require.Equal(t, expected.Strings(), res.Strings())
-	})
+	builder.Append(data)
+	res = builder.Data()
+	require.Equal(t, data.Len()*2, res.Len())
+	require.True(t, res.IsNull(0))
+	require.True(t, res.IsNull(data.Len()))
+	require.Equal(t, append(data.Strings(), data.Strings()...), res.Strings())
 }
