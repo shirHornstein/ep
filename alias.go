@@ -6,12 +6,17 @@ var _ = registerGob(&scope{})
 // UnnamedColumn used as default name for columns without an alias
 const UnnamedColumn = "?column?"
 
+// AliasSetter interface allows to set alias on returned column within the runner
+type AliasSetter interface {
+	SetAlias(name string)
+}
+
 // Alias wraps given runner's single return type with given alias.
 // Useful for planners that need to externally wrap a runner with alias
 // see Aliasing and Scoping
 func Alias(r Runner, label string) Runner {
-	if cmp, ok := r.(*compose); ok {
-		cmp.ReturnTs[0] = SetAlias(cmp.ReturnTs[0], label)
+	if setter, ok := r.(AliasSetter); ok {
+		setter.SetAlias(label)
 		return r
 	}
 	return &alias{r, label}
