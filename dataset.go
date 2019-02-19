@@ -92,27 +92,27 @@ func NewDatasetBuilder() DataBuilder {
 }
 
 type datasetBuilder struct {
-	builders []DataBuilder
+	cols []DataBuilder
 }
 
-func (db *datasetBuilder) Append(data Data) {
+func (b *datasetBuilder) Append(data Data) {
 	ds := data.(Dataset)
-	if len(db.builders) == 0 {
-		db.builders = make([]DataBuilder, ds.Width())
-		for i := range db.builders {
+	if len(b.cols) == 0 {
+		b.cols = make([]DataBuilder, ds.Width())
+		for i := range b.cols {
 			typee := ds.At(i).Type()
-			db.builders[i] = typee.Builder()
+			b.cols[i] = typee.Builder()
 		}
 	}
 
-	for i, b := range db.builders {
+	for i, b := range b.cols {
 		b.Append(ds.At(i))
 	}
 }
 
-func (db *datasetBuilder) Data() Data {
-	cols := make([]Data, len(db.builders))
-	for i, b := range db.builders {
+func (b *datasetBuilder) Data() Data {
+	cols := make([]Data, len(b.cols))
+	for i, b := range b.cols {
 		cols[i] = b.Data()
 	}
 	return NewDataset(cols...)
