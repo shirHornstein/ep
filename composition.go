@@ -73,6 +73,9 @@ func (c *compose) Scopes() StringsSet {
 }
 
 func (c *compose) SetAlias(name string) {
+	if len(c.Ts) > 1 {
+		panic("Invalid usage of alias. Consider use scope")
+	}
 	c.Ts[0] = SetAlias(c.Ts[0], name)
 }
 
