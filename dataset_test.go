@@ -185,7 +185,7 @@ func TestDataset_Compare_mixTypes(t *testing.T) {
 	require.Equal(t, expected, results)
 }
 
-func TestDataset_DataBuilder(t *testing.T) {
+func TestDataset_Builder(t *testing.T) {
 	ds1 := ep.NewDataset(
 		integers{1, 2, 3},
 		strs{"a", "b", "c"},
