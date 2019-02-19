@@ -72,6 +72,10 @@ func (c *compose) Scopes() StringsSet {
 	return scopes
 }
 
+func (c *compose) SetAlias(name string) {
+	c.Ts[0] = SetAlias(c.Ts[0], name)
+}
+
 // ComposeProject returns a special Composable which forwards its input as-is
 // to every Composable's BatchFunction, combining their outputs into a single
 // Dataset. It is a functional implementation of ep.Project.

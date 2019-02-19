@@ -15,8 +15,8 @@ type AliasSetter interface {
 // Useful for planners that need to externally wrap a runner with alias
 // see Aliasing and Scoping
 func Alias(r Runner, label string) Runner {
-	if cmp, ok := r.(*compose); ok {
-		cmp.Ts[0] = SetAlias(cmp.Ts[0], label)
+	if setter, ok := r.(AliasSetter); ok {
+		setter.SetAlias(label)
 		return r
 	}
 	return &alias{r, label}
