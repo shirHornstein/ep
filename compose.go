@@ -84,10 +84,16 @@ type composeProject struct {
 	Cmps []Composable
 }
 
-func (p *composeProject) Returns() []Type { return p.Runner.Returns() }
-func (p *composeProject) Run(ctx context.Context, inp, out chan Dataset) error {
-	return p.Runner.Run(ctx, inp, out)
+func (p *composeProject) Returns() []Type {
+	var types []Type
+	for _, r := range p.Cmps {
+		if s, ok := r.(Runner); ok {
+			types = append(types, s.Returns()...)
+		}
+	}
+	return types
 }
+
 func (p *composeProject) BatchFunction() BatchFunction {
 	funcs := make([]BatchFunction, len(p.Cmps))
 	for i := 0; i < len(p.Cmps); i++ {
