@@ -21,13 +21,13 @@ type batch struct {
 
 func (b *batch) Returns() []Type { return []Type{Wildcard} }
 func (b *batch) Run(ctx context.Context, inp, out chan Dataset) error {
-	buffer := NewDataset()
+	buffer := NewDatasetBuilder()
+	var bufferLen int
 
 	for data := range inp {
 		var sliceStart, sliceEnd int
 		dataLen := data.Len()
 		for dataLen > sliceEnd {
-			bufferLen := buffer.Len()
 			rowsLeft := b.Size - bufferLen
 			sliceEnd = sliceStart + rowsLeft
 			if sliceEnd > dataLen {
@@ -38,21 +38,24 @@ func (b *batch) Run(ctx context.Context, inp, out chan Dataset) error {
 				delta = data.Slice(sliceStart, sliceEnd).(Dataset)
 			}
 
-			if delta.Len() == b.Size {
+			deltaLen := delta.Len()
+			if deltaLen == b.Size {
 				out <- delta
 			} else {
-				buffer = buffer.Append(delta).(Dataset)
-				if buffer.Len() == b.Size {
-					out <- buffer
-					buffer = NewDataset()
+				buffer.Append(delta)
+				bufferLen += deltaLen
+				if bufferLen == b.Size {
+					out <- buffer.Data().(Dataset)
+					buffer = NewDatasetBuilder()
+					bufferLen = 0
 				}
 			}
 			sliceStart = sliceEnd
 		}
 	}
 	// leftover buffer can be less than Size
-	if buffer.Len() > 0 {
-		out <- buffer
+	if bufferLen > 0 {
+		out <- buffer.Data().(Dataset)
 	}
 	return nil
 }
