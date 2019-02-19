@@ -6,6 +6,7 @@ var _ = registerGob(&scope{})
 // UnnamedColumn used as default name for columns without an alias
 const UnnamedColumn = "?column?"
 
+// AliasSetter interface for adding alias inside runner
 type AliasSetter interface {
 	SetAlias(name string)
 }
