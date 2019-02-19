@@ -22,24 +22,24 @@ func (*strType) Name() string            { return "string" }
 func (*strType) Size() uint              { return 8 }
 func (*strType) Data(n int) ep.Data      { return make(strs, n) }
 func (*strType) DataEmpty(n int) ep.Data { return make(strs, 0, n) }
-func (*strType) DataBuilder() ep.DataBuilder {
+func (*strType) Builder() ep.DataBuilder {
 	return &strBuilder{}
 }
 
 type strBuilder struct {
-	Ds  []strs
-	Len int
+	ds  []strs
+	len int
 }
 
-func (s *strBuilder) Append(data ep.Data) {
+func (b *strBuilder) Append(data ep.Data) {
 	strData := data.(strs)
-	s.Ds = append(s.Ds, strData)
-	s.Len += strData.Len()
+	b.ds = append(b.ds, strData)
+	b.len += strData.Len()
 }
 
-func (s *strBuilder) Data() ep.Data {
-	res := make(strs, 0, s.Len)
-	for _, d := range s.Ds {
+func (b *strBuilder) Data() ep.Data {
+	res := make(strs, 0, b.len)
+	for _, d := range b.ds {
 		res = append(res, d...)
 	}
 	return res
@@ -105,24 +105,24 @@ func (*integerType) Name() string            { return "integer" }
 func (*integerType) Size() uint              { return 4 }
 func (*integerType) Data(n int) ep.Data      { return make(integers, n) }
 func (*integerType) DataEmpty(n int) ep.Data { return make(integers, 0, n) }
-func (*integerType) DataBuilder() ep.DataBuilder {
+func (*integerType) Builder() ep.DataBuilder {
 	return &integerBuilder{}
 }
 
 type integerBuilder struct {
-	Ds  []integers
-	Len int
+	ds  []integers
+	len int
 }
 
-func (s *integerBuilder) Append(data ep.Data) {
+func (b *integerBuilder) Append(data ep.Data) {
 	intData := data.(integers)
-	s.Ds = append(s.Ds, intData)
-	s.Len += intData.Len()
+	b.ds = append(b.ds, intData)
+	b.len += intData.Len()
 }
 
-func (s *integerBuilder) Data() ep.Data {
-	res := make(integers, 0, s.Len)
-	for _, d := range s.Ds {
+func (b *integerBuilder) Data() ep.Data {
+	res := make(integers, 0, b.len)
+	for _, d := range b.ds {
 		res = append(res, d...)
 	}
 	return res

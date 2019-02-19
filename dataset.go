@@ -40,12 +40,12 @@ var Record = &datasetType{}
 
 type datasetType struct{}
 
-func (sett *datasetType) String() string      { return sett.Name() }
-func (*datasetType) Name() string             { return "record" }
-func (*datasetType) Size() uint               { panic("call Size on each Data") }
-func (sett *datasetType) Data(n int) Data     { return sett.DataEmpty(n) }
-func (*datasetType) DataEmpty(int) Data       { panic("use NewDataset function") }
-func (*datasetType) DataBuilder() DataBuilder { panic("use NewDatasetBuilder function") }
+func (sett *datasetType) String() string  { return sett.Name() }
+func (*datasetType) Name() string         { return "record" }
+func (*datasetType) Size() uint           { panic("call Size on each Data") }
+func (sett *datasetType) Data(n int) Data { return sett.DataEmpty(n) }
+func (*datasetType) DataEmpty(int) Data   { panic("use NewDataset function") }
+func (*datasetType) Builder() DataBuilder { return NewDatasetBuilder() }
 
 type dataset []Data
 
@@ -92,34 +92,27 @@ func NewDatasetBuilder() DataBuilder {
 }
 
 type datasetBuilder struct {
-	ds []Dataset
+	cols []DataBuilder
 }
 
-func (db *datasetBuilder) Append(data Data) {
-	db.ds = append(db.ds, data.(Dataset))
+func (b *datasetBuilder) Append(data Data) {
+	ds := data.(Dataset)
+	if len(b.cols) == 0 {
+		b.cols = make([]DataBuilder, ds.Width())
+		for i := range b.cols {
+			typee := ds.At(i).Type()
+			b.cols[i] = typee.Builder()
+		}
+	}
+
+	for i, b := range b.cols {
+		b.Append(ds.At(i))
+	}
 }
 
-func (db *datasetBuilder) Data() Data {
-	firstData := db.ds[0]
-	if len(db.ds) == 1 {
-		return firstData
-	}
-	cols := make([]Data, firstData.Width())
-	builders := make([]DataBuilder, len(cols))
-	for i := range cols {
-		typee := firstData.At(i).Type()
-		if typee.Name() == Record.Name() {
-			builders[i] = NewDatasetBuilder()
-		} else {
-			builders[i] = typee.DataBuilder()
-		}
-	}
-	for _, d := range db.ds {
-		for i := 0; i < d.Width(); i++ {
-			builders[i].Append(d.At(i))
-		}
-	}
-	for i, b := range builders {
+func (b *datasetBuilder) Data() Data {
+	cols := make([]Data, len(b.cols))
+	for i, b := range b.cols {
 		cols[i] = b.Data()
 	}
 	return NewDataset(cols...)
@@ -280,7 +273,7 @@ func (set dataset) Duplicate(t int) Data {
 
 // see Data.IsNull
 func (set dataset) IsNull(i int) bool {
-	// i-th row considered to be null iff it contains only nulls
+	// i-th row considered to be null if it contains only nulls
 	for _, d := range set {
 		if !d.IsNull(i) {
 			return false

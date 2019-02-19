@@ -1,96 +1,29 @@
 package ep_test
 
 import (
+	"fmt"
 	"github.com/panoplyio/ep"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
 
-func TestDataBuilder(t *testing.T) {
-	t.Run("one data", func(t *testing.T) {
-		db := integer.DataBuilder()
-		db.Append(integer.Data(10))
-		data := db.Data()
-		require.Equal(t, 10, data.Len())
-	})
+func ExampleDataBuilder() {
+	data1 := ep.NewDataset(
+		integers{1, 2, 3},
+		strs{"a", "b", "c"},
+	)
+	data2 := ep.NewDataset(
+		integers{4, 5, 6, 7},
+		strs{"d", "e", "f", "g"},
+	)
 
-	t.Run("many datas", func(t *testing.T) {
-		db := integer.DataBuilder()
-		db.Append(integer.Data(7))
-		db.Append(integer.Data(11))
-		db.Append(integer.Data(13))
-		db.Append(integer.Data(17))
-		db.Append(integer.Data(19))
-		data := db.Data()
-		require.Equal(t, 67, data.Len())
-	})
+	builder := ep.NewDatasetBuilder()
+	builder.Append(data1)
+	builder.Append(data2)
+	fmt.Println(builder.Data().Strings())
 
-	t.Run("one dataset", func(t *testing.T) {
-		db := ep.NewDatasetBuilder()
-		d := integer.Data(10)
-		ds := ep.NewDataset(d, d)
-		db.Append(ds)
-		data := db.Data()
-
-		dataset, ok := data.(ep.Dataset)
-		require.True(t, ok)
-		require.Equal(t, 10, dataset.Len())
-		require.Equal(t, 2, dataset.Width())
-	})
-
-	t.Run("many datasets", func(t *testing.T) {
-		db := ep.NewDatasetBuilder()
-		d1 := integer.Data(7)
-		d2 := integer.Data(11)
-		d3 := integer.Data(13)
-		d4 := integer.Data(17)
-		d5 := integer.Data(19)
-
-		ds1 := ep.NewDataset(d1, d1)
-		ds2 := ep.NewDataset(d2, d2)
-		ds3 := ep.NewDataset(d3, d3)
-		ds4 := ep.NewDataset(d4, d4)
-		ds5 := ep.NewDataset(d5, d5)
-
-		db.Append(ds1)
-		db.Append(ds2)
-		db.Append(ds3)
-		db.Append(ds4)
-		db.Append(ds5)
-		data := db.Data()
-
-		dataset, ok := data.(ep.Dataset)
-		require.True(t, ok)
-		require.Equal(t, 67, dataset.Len())
-		require.Equal(t, 2, dataset.Width())
-	})
-
-	t.Run("records", func(t *testing.T) {
-		db := ep.NewDatasetBuilder()
-		d1 := integer.Data(7)
-		d2 := integer.Data(11)
-		d3 := integer.Data(13)
-		d4 := integer.Data(17)
-		d5 := integer.Data(19)
-
-		ds1 := ep.NewDataset(ep.NewDataset(d1), ep.NewDataset(d1))
-		ds2 := ep.NewDataset(ep.NewDataset(d2), ep.NewDataset(d2))
-		ds3 := ep.NewDataset(ep.NewDataset(d3), ep.NewDataset(d3))
-		ds4 := ep.NewDataset(ep.NewDataset(d4), ep.NewDataset(d4))
-		ds5 := ep.NewDataset(ep.NewDataset(d5), ep.NewDataset(d5))
-
-		db.Append(ds1)
-		db.Append(ds2)
-		db.Append(ds3)
-		db.Append(ds4)
-		db.Append(ds5)
-		data := db.Data()
-
-		dataset, ok := data.(ep.Dataset)
-		require.True(t, ok)
-		require.Equal(t, 67, dataset.Len())
-		require.Equal(t, 2, dataset.Width())
-	})
+	// Output:
+	// [(1,a) (2,b) (3,c) (4,d) (5,e) (6,f) (7,g)]
 }
 
 func BenchmarkDataBuilder(b *testing.B) {
@@ -106,7 +39,7 @@ func BenchmarkDataBuilder(b *testing.B) {
 	b.Run("integer", func(b *testing.B) {
 		b.Run("DataBuilder", func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				db := integer.DataBuilder()
+				db := integer.Builder()
 				for j := 0; j < len(dataInts); j++ {
 					db.Append(dataInts[j])
 				}
@@ -129,7 +62,7 @@ func BenchmarkDataBuilder(b *testing.B) {
 	b.Run("string", func(b *testing.B) {
 		b.Run("DataBuilder", func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				db := str.DataBuilder()
+				db := str.Builder()
 				for j := 0; j < len(dataStrs); j++ {
 					db.Append(dataStrs[j])
 				}

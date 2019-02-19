@@ -63,19 +63,20 @@ type Data interface {
 
 // DataBuilder exposes an efficient way to build Data objects by appending
 // smaller Data objects. DataBuilders should be used every time there is a need
-// to Append multiple Datas.
+// to Append multiple Data objects.
 //
-// The flow is:
-// - create a DataBuilder (very small allocation)
-// - Append() as many Datas as needed (allocate space to hold more pointers to Data)
-// - Finally call Data() to allocate a single Data object containing all
-//   Appended Datas (large, one time allocation)
+// Append() method can be called multiple times without significant
+// allocations. Calling Data() will return a new Data object containing all
+// appended Data objects.
 type DataBuilder interface {
 	// Append appends data to the data that this DataBuilder has
 	Append(data Data)
 
-	// Data allocates a new Data object and adds every appended Data object to
-	// it, keeping the order
+	// Data returns a new Data object containing all appended Data objects in
+	// the same order. Subsequent Append() calls on this builder do not affect
+	// the returned Data object. Calling Data() on DataBuilder objects without
+	// preceding Append() calls is not allowed, and the behavior in such cases
+	// is undefined
 	Data() Data
 }
 
