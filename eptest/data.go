@@ -201,10 +201,11 @@ func VerifyDataNullsHandling(t *testing.T, data ep.Data, expectedNullString stri
 // VerifyDataBuilder makes sure DataBuilder works on a given type
 func VerifyDataBuilder(t *testing.T, data ep.Data) {
 	typee := data.Type()
-	builder := typee.Builder()
-	data.MarkNull(0)
 
 	t.Run("single append", func(t *testing.T) {
+		builder := typee.Builder()
+		data.MarkNull(0)
+
 		builder.Append(data)
 		res := builder.Data()
 		require.Equal(t, typee, res.Type())
@@ -213,8 +214,17 @@ func VerifyDataBuilder(t *testing.T, data ep.Data) {
 	})
 
 	t.Run("multiple appends", func(t *testing.T) {
+		builder := typee.Builder()
+		data.MarkNull(0)
+
 		builder.Append(data)
 		res := builder.Data()
+		require.Equal(t, typee, res.Type())
+		require.Equal(t, data.Strings(), res.Strings())
+		require.True(t, res.IsNull(0))
+
+		builder.Append(data)
+		res = builder.Data()
 		require.Equal(t, typee, res.Type())
 		require.Equal(t, data.Len()*2, res.Len())
 		require.True(t, res.IsNull(0))
