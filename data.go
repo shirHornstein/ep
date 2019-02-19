@@ -74,7 +74,9 @@ type DataBuilder interface {
 
 	// Data returns a new Data object containing all appended Data objects in
 	// the same order. Subsequent Append() calls on this builder do not affect
-	// the returned Data object.
+	// the returned Data object. Calling Data() on DataBuilder objects without
+	// preceding Append() calls is not allowed, and the behavior in such cases
+	// is undefined
 	Data() Data
 }
 
