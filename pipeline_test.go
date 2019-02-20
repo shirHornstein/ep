@@ -36,13 +36,14 @@ func TestPipeline_ignoreErrIgnorable(t *testing.T) {
 
 	data1 := ep.NewDataset(strs{"data"})
 	data2 := ep.NewDataset(strs{"ignore error"})
-	res, err := eptest.Run(runner, data1, data2)
+	data3 := ep.NewDataset(strs{"other data"})
+	res, err := eptest.Run(runner, data1, data2, data3)
 
 	require.NoError(t, err)
 	require.NotNil(t, res)
 	require.Equal(t, 1, res.Width())
-	require.Equal(t, 1, res.Len())
-	require.Equal(t, []string{"(1)"}, res.Strings())
+	require.Equal(t, 2, res.Len())
+	require.Equal(t, []string{"(1)", "(1)"}, res.Strings())
 }
 
 func TestPipeline_Returns_wildcard(t *testing.T) {

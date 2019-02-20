@@ -43,6 +43,10 @@ type Type interface {
 
 	// DataEmpty returns a new empty Data object of this type, with allocated size 'n'
 	DataEmpty(n int) Data
+
+	// Builder returns a new Builder object to efficiently append Data
+	// of this Type
+	Builder() DataBuilder
 }
 
 // AreEqualTypes compares types and returns true if types arrays are deep equal
@@ -71,15 +75,17 @@ func (*wildcardType) Name() string               { return "*" }
 func (*wildcardType) Size() uint                 { panic("wildcard has no concrete type") }
 func (*wildcardType) Data(int) Data              { panic("wildcard has no concrete type") }
 func (*wildcardType) DataEmpty(int) Data         { panic("wildcard has no concrete type") }
+func (w *wildcardType) Builder() DataBuilder     { panic("wildcard has no concrete type") }
 func (w *wildcardType) At(idx int) *wildcardType { return &wildcardType{&idx, w.CutFromTail} }
 
 type anyType struct{}
 
-func (*anyType) String() string     { return "?" }
-func (*anyType) Name() string       { return "?" }
-func (*anyType) Size() uint         { panic("any has no concrete type") }
-func (*anyType) Data(int) Data      { panic("any has no concrete type") }
-func (*anyType) DataEmpty(int) Data { panic("any has no concrete type") }
+func (*anyType) String() string       { return "?" }
+func (*anyType) Name() string         { return "?" }
+func (*anyType) Size() uint           { panic("any has no concrete type") }
+func (*anyType) Data(int) Data        { panic("any has no concrete type") }
+func (*anyType) DataEmpty(int) Data   { panic("any has no concrete type") }
+func (*anyType) Builder() DataBuilder { panic("any has no concrete type") }
 func isAny(t Type) bool {
 	return t.Name() == "?"
 }
