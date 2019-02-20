@@ -29,6 +29,7 @@ func (*strType) Name() string         { return "string" }
 func (*strType) Size() uint           { return 8 }
 func (*strType) Data(n int) Data      { return make(strs, n) }
 func (*strType) DataEmpty(n int) Data { return make(strs, 0, n) }
+func (*strType) Builder() DataBuilder { return nil }
 
 type strs []string
 
