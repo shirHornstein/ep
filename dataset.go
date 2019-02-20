@@ -45,6 +45,7 @@ func (*datasetType) Name() string         { return "record" }
 func (*datasetType) Size() uint           { panic("call Size on each Data") }
 func (sett *datasetType) Data(n int) Data { return sett.DataEmpty(n) }
 func (*datasetType) DataEmpty(int) Data   { panic("use NewDataset function") }
+func (*datasetType) Builder() DataBuilder { return NewDatasetBuilder() }
 
 type dataset []Data
 
@@ -82,6 +83,39 @@ func NewDatasetTypes(types []Type, size int) Dataset {
 		res[i] = t.Data(size)
 	}
 	return NewDataset(res...)
+}
+
+// NewDatasetBuilder returns a special DataBuilder that allows to efficiently
+// append multiple Datasets together.
+func NewDatasetBuilder() DataBuilder {
+	return &datasetBuilder{}
+}
+
+type datasetBuilder struct {
+	cols []DataBuilder
+}
+
+func (b *datasetBuilder) Append(data Data) {
+	ds := data.(Dataset)
+	if len(b.cols) == 0 {
+		b.cols = make([]DataBuilder, ds.Width())
+		for i := range b.cols {
+			typee := ds.At(i).Type()
+			b.cols[i] = typee.Builder()
+		}
+	}
+
+	for i, b := range b.cols {
+		b.Append(ds.At(i))
+	}
+}
+
+func (b *datasetBuilder) Data() Data {
+	cols := make([]Data, len(b.cols))
+	for i, b := range b.cols {
+		cols[i] = b.Data()
+	}
+	return NewDataset(cols...)
 }
 
 // Width of the dataset (number of columns)
@@ -239,7 +273,7 @@ func (set dataset) Duplicate(t int) Data {
 
 // see Data.IsNull
 func (set dataset) IsNull(i int) bool {
-	// i-th row considered to be null iff it contains only nulls
+	// i-th row considered to be null if it contains only nulls
 	for _, d := range set {
 		if !d.IsNull(i) {
 			return false
