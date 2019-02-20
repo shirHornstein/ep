@@ -152,6 +152,16 @@ type passThrough struct {
 	ReturnTypes []Type
 }
 
+func (r *passThrough) Scopes() StringsSet {
+	scopes := make(StringsSet)
+	for _, t := range r.ReturnTypes {
+		if s := GetScope(t); s != "" {
+			scopes[s] = struct{}{}
+		}
+	}
+	return scopes
+}
+
 func (*passThrough) Args() []Type { return []Type{Wildcard} }
 func (r *passThrough) Returns() []Type {
 	if len(r.ReturnTypes) == 0 {
