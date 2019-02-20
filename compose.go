@@ -22,12 +22,13 @@ type Composable interface {
 // every following BatchFunction receives the output of the previous one. This
 // Runner is also a Composable, which means that its BatchFunction can be
 // retrieved and used in another Compose call.
-func Compose(returns []Type, cmps ...Composable) Runner {
-	return &compose{returns, cmps}
+func Compose(returns []Type, scopes StringsSet, cmps ...Composable) Runner {
+	return &compose{returns, scopes, cmps}
 }
 
 type compose struct {
 	ReturnTs []Type
+	Scps     StringsSet
 	Cmps     []Composable
 }
 
@@ -63,13 +64,7 @@ func (c *compose) BatchFunction() BatchFunction {
 }
 
 func (c *compose) Scopes() StringsSet {
-	scopes := make(StringsSet)
-	for _, r := range c.Cmps {
-		if s, ok := r.(ScopesRunner); ok {
-			scopes.AddAll(s.Scopes())
-		}
-	}
-	return scopes
+	return c.Scps
 }
 
 func (c *compose) SetAlias(name string) {
@@ -83,22 +78,11 @@ func (c *compose) SetAlias(name string) {
 // to every Composable's BatchFunction, combining their outputs into a single
 // Dataset. It is a functional implementation of ep.Project.
 func ComposeProject(cmps ...Composable) Composable {
-	return &composeProject{nil, cmps}
+	return &composeProject{cmps}
 }
 
 type composeProject struct {
-	Runner
 	Cmps []Composable
-}
-
-func (p *composeProject) Returns() []Type {
-	var types []Type
-	for _, r := range p.Cmps {
-		if s, ok := r.(Runner); ok {
-			types = append(types, s.Returns()...)
-		}
-	}
-	return types
 }
 
 func (p *composeProject) BatchFunction() BatchFunction {
@@ -121,14 +105,4 @@ func (p *composeProject) BatchFunction() BatchFunction {
 		}
 		return result, nil
 	}
-}
-
-func (p *composeProject) Scopes() StringsSet {
-	scopes := make(StringsSet)
-	for _, r := range p.Cmps {
-		if s, ok := r.(ScopesRunner); ok {
-			scopes.AddAll(s.Scopes())
-		}
-	}
-	return scopes
 }

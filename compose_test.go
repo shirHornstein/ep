@@ -15,6 +15,7 @@ func TestCompose(t *testing.T) {
 	t.Run("single Composable", func(t *testing.T) {
 		runner := ep.Compose(
 			[]ep.Type{integer},
+			nil,
 			&addInts{},
 		)
 		expected := []string{"11", "22", "33", "44", "55"}
@@ -29,6 +30,7 @@ func TestCompose(t *testing.T) {
 	t.Run("multiple Composables", func(t *testing.T) {
 		runner := ep.Compose(
 			[]ep.Type{integer},
+			nil,
 			&addInts{}, &negateInt{},
 		)
 		expected := []string{"-11", "-22", "-33", "-44", "-55"}
