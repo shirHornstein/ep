@@ -17,11 +17,12 @@ type Composable interface {
 	BatchFunction() BatchFunction
 }
 
-// Compose returns a Runner with the provided return types. This Runner passes
-// its input through every Composable's BatchFunction implementation, where
-// every following BatchFunction receives the output of the previous one. This
-// Runner is also a Composable, which means that its BatchFunction can be
-// retrieved and used in another Compose call.
+// Compose returns a Runner with the provided return types & the provided scopes.
+// Note: The caller's responsibility to maintain a valid set of scopes.
+// This Runner passes its input through every Composable's BatchFunction
+// implementation, where every following BatchFunction receives the output
+// of the previous one. This Runner is also a Composable, which means that
+// its BatchFunction can be retrieved and used in another Compose call.
 func Compose(returns []Type, scopes StringsSet, cmps ...Composable) Runner {
 	return &compose{returns, scopes, cmps}
 }
