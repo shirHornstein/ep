@@ -3,11 +3,13 @@ package ep
 import (
 	"context"
 	"encoding/gob"
+	"errors"
 	"fmt"
 	"github.com/panoplyio/go-consistent"
 	"github.com/satori/go.uuid"
 	"io"
 	"net"
+	"sync"
 )
 
 var _ = registerGob(&exchange{}, &req{}, &errMsg{})
@@ -28,6 +30,8 @@ type errMsg struct{ Msg string }
 
 func (err *errMsg) Error() string { return err.Msg }
 
+var errOnPeer = errors.New("E")
+var errorMsg = &errMsg{errOnPeer.Error()}
 var eofMsg = &errMsg{io.EOF.Error()}
 
 // Gather returns an exchange Runner that gathers all of its input into a
@@ -51,12 +55,14 @@ type exchange struct {
 	UID  string
 	Type exchangeType
 
-	inited   bool        // was this runner initialized
-	encs     []encoder   // encoders to all destination connections
-	decs     []decoder   // decoders from all source connections
-	conns    []io.Closer // all open connections (used for closing)
-	encsNext int         // Encoders Round Robin next index
-	decsNext int         // Decoders Round Robin next index
+	inited          bool        // was this runner initialized
+	encs            []encoder   // encoders to all destination connections
+	decs            []decoder   // decoders from all source connections
+	encsTermination []encoder   // encoders to all peers to propagate termination status
+	decsTermination []decoder   // decoders from all peers to propagate termination status
+	conns           []io.Closer // all open connections (used for closing)
+	encsNext        int         // Encoders Round Robin next index
+	decsNext        int         // Decoders Round Robin next index
 
 	// partition and sortGather specific variables
 	SortingCols []SortingCol // columns to sort by
@@ -87,69 +93,67 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 		return err
 	}
 
-	// receive remote data from peers in a go-routine. Write the final error (or
-	// nil) to the channel when done.
-	errs := make(chan error)
-	go func() {
-		defer close(errs)
-		for {
-			data, recErr := ex.receive()
-			if recErr == io.EOF {
-				errs <- nil
-				break
+	// receive remote data from peers in a go-routine and pass to out channel. Write
+	// all errors to receiversErrs channel when done
+	receiversErrs := ex.passRemoteData(out)
+
+	rcvDone := false
+	sndDone := false
+	defer func() {
+		// in case of cancellation, for loop below stops without sending EOF message
+		// to all peers. Therefore other peers will not close connections, hence ex.receive
+		// will be blocked forever. This will lead to deadlock as current exchange waits on
+		// receiversErrs channel that will not be closed
+		if !sndDone {
+			// close exchange might take time, so don't block preceding runner
+			go drain(inp)
+
+			msg := errorMsg
+			errOnCtx := getError(ctx)
+			if errOnCtx == ErrIgnorable {
+				msg = eofMsg
 			}
-			if recErr != nil {
-				errs <- recErr
-				return
+			encodeErr := ex.notifyTermination(ctx, msg)
+			if err == nil {
+				err = encodeErr
 			}
-			out <- data
+		}
+
+		// wait for all receivers to finish
+		for range receiversErrs {
 		}
 	}()
 
 	// send the local data to the peers, until completion or error. Also listen
-	// for the completion of the received go-routine above. When both sending
-	// and receiving is complete, exit. Upon error, exit early.
-	rcvDone := false
-	sndDone := false
-	defer func() {
-		// in case of cancellation, select below stops without sending EOF message
-		// to all peers. Therefore other peers will not close connections, hence ex.receive
-		// will be blocked forever. This will lead to deadlock as current exchange waits on
-		// errs channel that will not be closed
-		if !sndDone {
-			ex.encodeAll(eofMsg)
-		}
-
-		// wait for all receivers to finish
-		for range errs {
-		}
-	}()
+	// for the completion of the receive go-routine above. When both sending
+	// and receiving is complete, exit. Upon error, exit early
 	for err == nil && (!rcvDone || !sndDone) {
 		select {
-		case data, ok := <-inp:
-			if !ok {
+		case <-ctx.Done():
+			return nil
+
+		// send data
+		case data, open := <-inp:
+			err = getError(ctx)
+			if err != nil && err != ErrIgnorable {
+				return nil
+			}
+			if !open {
 				// the input is exhausted. Notify peers that we're done sending
-				// data (they will use it to stop listening to data from us).
-				ex.encodeAll(eofMsg)
+				// data (they will use it to stop listening to data from this node)
+				err = ex.notifyTermination(ctx, eofMsg)
 				sndDone = true
 
-				// inp is closed. If we keep iterating, it will infinitely
-				// resolve to (nil, true). Null-ify it to block it on the next
-				// iteration.
+				// inp is closed. If we keep iterating, it will infinitely resolve
+				// to (nil, true). Null-ify it to block it on the next iteration
 				inp = nil
 				continue
 			}
-
 			err = ex.send(data)
-		case err = <-errs:
-			rcvDone = true // errors (or nil) from the receive go-routine
-		case <-ctx.Done(): // context timeout or cancel
-			err = ctx.Err()
-			// as all other runners - in case of cancellation, runner should stop
-			// without effecting final error
-			if err == context.Canceled {
-				return nil
-			}
+
+		// receive data, returns first error (or nil if receiversErrs was closed)
+		case err = <-receiversErrs:
+			rcvDone = true
 		}
 	}
 	return err
@@ -167,7 +171,7 @@ func (ex *exchange) Close() (err error) {
 }
 
 // init initializes the connections, encoders & decoders
-func (ex *exchange) init(ctx context.Context) (err error) {
+func (ex *exchange) init(ctx context.Context) error {
 	if ex.inited {
 		// exchanged uses a predefined UID and connection listeners on all of
 		// the nodes. Running it again would conflict with the existing UID,
@@ -180,12 +184,6 @@ func (ex *exchange) init(ctx context.Context) (err error) {
 		return fmt.Errorf("exhcnage cannot be Run() more than once")
 	}
 	ex.inited = true
-
-	// Partitioning assigns datasets to string addresses of nodes,
-	// while only encoders can actually send data.
-	// By using a map we can find an encoder for every address
-	ex.encsByKey = make(map[string]encoder)
-	ex.hashRing = consistent.New()
 
 	allNodes, _ := ctx.Value(allNodesKey).([]string)
 	thisNode, _ := ctx.Value(thisNodeKey).(string)
@@ -200,32 +198,25 @@ func (ex *exchange) init(ctx context.Context) (err error) {
 		allNodes = []string{thisNode}
 	}
 
-	targetNodes := allNodes
-	if ex.Type == gather || ex.Type == sortGather {
-		targetNodes = []string{masterNode}
-	}
+	ex.encsByKey = make(map[string]encoder)
+	ex.hashRing = consistent.New()
 
-	// open a connection to all target nodes
-	connsMap := map[string]net.Conn{}
-	var shortCircuit *shortCircuit
-	defer func() {
-		if err != nil {
-			// in case of error in one connection. close all other connections
-			ex.Close()
-		}
-	}()
-	var conn net.Conn
+	// open a connection to all nodes
+	connsMap := make(map[string]net.Conn, len(allNodes))
+	var sc *shortCircuit
+
+	targetNodes, notTargetNodes := ex.getTargetPeers(allNodes, masterNode, thisNode)
 	for _, node := range targetNodes {
 		if node == thisNode {
-			shortCircuit = newShortCircuit()
-			ex.conns = append(ex.conns, shortCircuit)
-			ex.encs = append(ex.encs, shortCircuit)
+			sc = newShortCircuit()
+			ex.conns = append(ex.conns, sc)
+			ex.encs = append(ex.encs, sc)
 			ex.hashRing.Add(node)
-			ex.encsByKey[node] = shortCircuit
+			ex.encsByKey[node] = sc
 			continue
 		}
 
-		conn, err = dist.Connect(node, ex.UID)
+		conn, err := dist.Connect(node, ex.UID)
 		if err != nil {
 			return err
 		}
@@ -237,34 +228,127 @@ func (ex *exchange) init(ctx context.Context) (err error) {
 		ex.hashRing.Add(node)
 		ex.encsByKey[node] = enc
 	}
-
-	// if we're also a destination, listen to all nodes
-	for i := 0; shortCircuit != nil && i < len(allNodes); i++ {
-		n := allNodes[i]
-
-		if n == thisNode {
-			ex.decs = append(ex.decs, shortCircuit)
+	isTarget := sc != nil
+	for _, node := range notTargetNodes {
+		if node == thisNode {
+			sc = newShortCircuit()
+			ex.conns = append(ex.conns, sc)
+			ex.encs = append(ex.encs, sc)
+			ex.hashRing.Add(node)
+			ex.encsByKey[node] = sc
 			continue
 		}
 
-		msg := "THIS " + thisNode + " OTHER " + n
-
-		// if we already established a connection to this node from the targets,
-		// re-use it. We don't need 2 uni-directional connections.
-		if connsMap[n] != nil {
-			ex.decs = append(ex.decs, dbgDecoder{gob.NewDecoder(connsMap[n]), msg})
-			continue
-		}
-
-		conn, err = dist.Connect(n, ex.UID)
+		conn, err := dist.Connect(node, ex.UID)
 		if err != nil {
 			return err
 		}
 
+		connsMap[node] = conn
 		ex.conns = append(ex.conns, conn)
-		ex.decs = append(ex.decs, dbgDecoder{gob.NewDecoder(conn), msg})
+		enc := gob.NewEncoder(conn)
+		ex.encsTermination = append(ex.encsTermination, enc)
+	}
+
+	sourceNodes, notSourceNodes := ex.getSourcePeers(allNodes, isTarget)
+	for _, node := range sourceNodes {
+		if node == thisNode {
+			ex.decs = append(ex.decs, sc)
+			continue
+		}
+
+		msg := "THIS " + thisNode + " OTHER " + node
+
+		// we already established a connection to this node from the targets, so we can
+		// re-use it. We don't need 2 uni-directional connections
+		ex.decs = append(ex.decs, dbgDecoder{gob.NewDecoder(connsMap[node]), msg})
+	}
+	for _, node := range notSourceNodes {
+		if node == thisNode {
+			ex.decsTermination = append(ex.decsTermination, sc)
+			continue
+		}
+
+		msg := "ERR THIS " + thisNode + " OTHER " + node
+
+		// we already established a connection to this node from the targets, so we can
+		// re-use it. We don't need 2 uni-directional connections
+		ex.decsTermination = append(ex.decsTermination, dbgDecoder{gob.NewDecoder(connsMap[node]), msg})
 	}
 	return nil
+}
+
+func (ex *exchange) getTargetPeers(allNodes []string, masterNode, thisNode string) (target, notTarget []string) {
+	switch ex.Type {
+	case gather, sortGather:
+		target = []string{masterNode}
+		notTarget = remove(allNodes, masterNode)
+	default:
+		target = allNodes
+	}
+	return target, notTarget
+}
+
+func (ex *exchange) getSourcePeers(allNodes []string, isDest bool) (source, notSource []string) {
+	// if we're also a destination, listen to all nodes
+	if isDest {
+		return allNodes, nil
+	}
+	// otherwise - listen only to errors from all nodes
+	return nil, allNodes
+}
+
+func remove(list []string, toRemove string) []string {
+	for i, s := range list {
+		if s == toRemove {
+			res := make([]string, len(list)-1)
+			copy(res, list[:i])
+			copy(res[i:], list[i+1:])
+			return res
+		}
+	}
+	return list
+}
+
+func (ex *exchange) passRemoteData(out chan Dataset) chan error {
+	receiversErrs := make(chan error, len(ex.decsTermination)+len(ex.decs))
+	var wg sync.WaitGroup
+
+	// first go routine listens to all ex.decs and stream the data to out channel
+	wg.Add(1)
+	go func() {
+		for {
+			data, recErr := ex.receive()
+			if recErr == io.EOF {
+				wg.Done()
+				return
+			}
+
+			if recErr != nil {
+				receiversErrs <- recErr
+				continue
+			}
+			out <- data
+		}
+	}()
+
+	// next go routines listen to all ex.decsTermination to collect termination
+	// statuses from all peers
+	wg.Add(len(ex.decsTermination))
+	for _, d := range ex.decsTermination {
+		go func(d decoder) {
+			_, err := decode(d)
+			if err != nil && err != io.EOF {
+				receiversErrs <- err
+			}
+			wg.Done()
+		}(d)
+	}
+	go func() {
+		wg.Wait()
+		close(receiversErrs)
+	}()
+	return receiversErrs
 }
 
 // send sends a dataset to destination nodes
@@ -275,15 +359,15 @@ func (ex *exchange) send(data Dataset) error {
 	case partition:
 		return ex.encodePartition(data)
 	default:
-		return ex.encodeAll(data)
+		return ex.encodeAll(ex.encs, data)
 	}
 }
 
 // encodeAll encodes an object to all destination connections
-// expecting e to be either dataset or EOF error
-func (ex *exchange) encodeAll(e interface{}) (err error) {
+// expecting e to be either dataset or errMsg
+func (ex *exchange) encodeAll(targets []encoder, e interface{}) (err error) {
 	req := &req{e}
-	for _, enc := range ex.encs {
+	for _, enc := range targets {
 		err1 := enc.Encode(req)
 		if err1 != nil {
 			err = err1
@@ -292,7 +376,15 @@ func (ex *exchange) encodeAll(e interface{}) (err error) {
 	return err
 }
 
-// receive receives a dataset from next source node
+func (ex *exchange) notifyTermination(ctx context.Context, msg *errMsg) error {
+	errEncs := ex.encodeAll(ex.encs, msg)
+	errEncsTermination := ex.encodeAll(ex.encsTermination, msg)
+	if errEncs != nil {
+		return errEncs
+	}
+	return errEncsTermination
+}
+
 func (ex *exchange) receive() (Dataset, error) {
 	switch ex.Type {
 	case sortGather:
@@ -312,27 +404,34 @@ func (ex *exchange) decodeNext() (Dataset, error) {
 	i := (ex.decsNext + 1) % len(ex.decs)
 
 	data, err := ex.decodeFrom(i)
-	if err == io.EOF {
-		// remove the current decoder and try again
+	if err != nil {
+		// remove the current decoder
 		ex.decs = append(ex.decs[:i], ex.decs[i+1:]...)
-		return ex.receive()
+	} else {
+		ex.decsNext = i
 	}
 
-	ex.decsNext = i
+	if err == io.EOF {
+		// try again from next decoder
+		return ex.decodeNext()
+	}
 	return data, err
 }
 
-// decodeFrom decodes an object from the i-th source connection
 func (ex *exchange) decodeFrom(i int) (Dataset, error) {
+	return decode(ex.decs[i])
+}
+
+func decode(d decoder) (Dataset, error) {
 	req := &req{}
-	err := ex.decs[i].Decode(req)
+	err := d.Decode(req)
 	if err != nil {
 		return nil, err
 	}
 	return req.Payload.(Dataset), nil
 }
 
-// interfaces for gob.Encoder/Decoder. Used to also implement the short-circuit
+// interfaces for gob.Encoder/Decoder. Used to also implement the short-circuit.
 type encoder interface {
 	Encode(interface{}) error
 }
@@ -348,10 +447,13 @@ type dbgDecoder struct {
 func (dec dbgDecoder) Decode(e interface{}) error {
 	// fmt.Println("DECODE", dec.msg)
 	err := dec.decoder.Decode(e)
-	if err == nil && isEOFError(e) {
+	// fmt.Println("DECODE DONE", dec.msg, e, err)
+	if isEOFError(e) {
 		return io.EOF
 	}
-	// fmt.Println("DECODE DONE", dec.msg, e, err)
+	if isPeerError(e) {
+		return errOnPeer
+	}
 	return err
 }
 
@@ -361,7 +463,6 @@ func (dec dbgDecoder) Decode(e interface{}) error {
 type shortCircuit struct {
 	C      chan interface{}
 	closed bool
-	all    []interface{}
 }
 
 func newShortCircuit() *shortCircuit {
@@ -391,8 +492,12 @@ func (sc *shortCircuit) Encode(e interface{}) error {
 
 func (sc *shortCircuit) Decode(e interface{}) error {
 	v, ok := <-sc.C
+	// fmt.Println("SC: Decode", v, ok)
 	if !ok || isEOFError(v) {
 		return io.EOF
+	}
+	if isPeerError(v) {
+		return errOnPeer
 	}
 	*e.(*req) = *v.(*req)
 	return nil
@@ -401,4 +506,9 @@ func (sc *shortCircuit) Decode(e interface{}) error {
 func isEOFError(data interface{}) bool {
 	err, isErr := data.(*req).Payload.(error)
 	return isErr && err.Error() == eofMsg.Error()
+}
+
+func isPeerError(data interface{}) bool {
+	err, isErr := data.(*req).Payload.(error)
+	return isErr && err.Error() == errorMsg.Error()
 }
