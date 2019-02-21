@@ -149,7 +149,7 @@ func PassThrough(types ...Type) Runner {
 // PassThroughWithScopes returns a runner that lets all of its input through as-is
 func PassThroughWithScopes(scopes StringsSet, types ...Type) Runner {
 	if len(types) == 0 {
-		return passThroughSingleton
+		panic("scopes without types are not allowed")
 	}
 	return &passThrough{types, scopes}
 }
