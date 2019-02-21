@@ -144,13 +144,26 @@ func PassThrough(types ...Type) Runner {
 	if len(types) == 0 {
 		return passThroughSingleton
 	}
-	return &passThrough{types}
+	return &passThrough{ReturnTypes: types}
+}
+
+// PassThroughWithScopes returns a runner that lets all of its input through as-is
+func PassThroughWithScopes(scopes StringsSet, types ...Type) Runner {
+	if len(types) == 0 {
+		panic("scopes without types are not allowed")
+	}
+	return &passThrough{types, scopes}
 }
 
 var passThroughSingleton = &passThrough{}
 
 type passThrough struct {
 	ReturnTypes []Type
+	scopes      StringsSet
+}
+
+func (r *passThrough) Scopes() StringsSet {
+	return r.scopes
 }
 
 func (*passThrough) Args() []Type { return []Type{Wildcard} }
