@@ -143,7 +143,7 @@ func PassThrough(types ...Type) Runner {
 	if len(types) == 0 {
 		return passThroughSingleton
 	}
-	return &passThrough{types, StringsSet{}}
+	return &passThrough{ReturnTypes: types}
 }
 
 // PassThroughWithScopes returns a runner that lets all of its input through as-is
