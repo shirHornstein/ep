@@ -307,8 +307,9 @@ func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) error {
 			}
 			if err != nil && err.Error() != io.EOF.Error() {
 				cancel()
-				// TODO cancelQuery()
-				respErrs <- err
+				if err.Error() != errOnPeer.Error() {
+					respErrs <- err
+				}
 			}
 		}(dec)
 	}
@@ -320,7 +321,7 @@ func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) error {
 
 	var finalError error
 	for _, e := range errs {
-		if e != context.Canceled {
+		if e != errOnPeer {
 			finalError = e
 			break
 		}

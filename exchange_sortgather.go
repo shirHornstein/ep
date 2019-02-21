@@ -63,8 +63,11 @@ func (ex *exchange) decodeNextSort() (Dataset, error) {
 			// consumed entire i-th batch. fetch next one from i-th peer
 			ex.batchesNextIdx[i] = 0
 			ex.batches[i], err = ex.decodeFrom(i)
-			if err == io.EOF {
+			if err != nil {
 				ex.batchesNextIdx[i] = -1 // mark as done
+				if err != io.EOF {
+					return nil, err
+				}
 			}
 		}
 
@@ -76,17 +79,18 @@ func (ex *exchange) decodeNextSort() (Dataset, error) {
 }
 
 func (ex *exchange) gatherFirstBatches() ([]Dataset, error) {
-	var err error
+	var finalErr, err error
 	batches := make([]Dataset, len(ex.decs))
 	for i := 0; i < len(ex.decs); i++ {
 		batches[i], err = ex.decodeFrom(i)
-		if err == io.EOF {
+		if err != nil {
 			ex.batchesNextIdx[i] = -1
-		} else if err != nil {
-			return nil, err
+			if err != io.EOF {
+				finalErr = err
+			}
 		}
 	}
-	return batches, nil
+	return batches, finalErr
 }
 
 func (ex *exchange) pickSample() int {
