@@ -11,7 +11,7 @@ func TestCompose(t *testing.T) {
 	c1 := integers{1, 2, 3, 4, 5}
 	c2 := integers{10, 20, 30, 40, 50}
 	input := ep.NewDataset(c1, c2)
-	expectedScopes := map[string]struct{}{
+	expectedScopes := ep.StringsSet{
 		"a": {},
 	}
 
@@ -28,13 +28,13 @@ func TestCompose(t *testing.T) {
 		require.Equal(t, 1, res.Width())
 		require.Equal(t, input.Len(), res.Len())
 		require.Equal(t, expected, res.At(0).Strings())
-		require.Equal(t, expectedScopes["a"], runner.(ep.ScopesRunner).Scopes()["a"])
+		require.Equal(t, expectedScopes, runner.(ep.ScopesRunner).Scopes())
 	})
 
 	t.Run("multiple Composables", func(t *testing.T) {
 		runner := ep.Compose(
 			[]ep.Type{integer},
-			ep.StringsSet{"a": struct{}{}},
+			ep.StringsSet{"b": struct{}{}},
 			&addInts{}, &negateInt{},
 		)
 		expected := []string{"-11", "-22", "-33", "-44", "-55"}
@@ -44,7 +44,7 @@ func TestCompose(t *testing.T) {
 		require.Equal(t, 1, res.Width())
 		require.Equal(t, input.Len(), res.Len())
 		require.Equal(t, expected, res.At(0).Strings())
-		require.NotEqual(t, expectedScopes["a"], runner.(ep.ScopesRunner).Scopes()["b"])
+		require.NotEqual(t, expectedScopes, runner.(ep.ScopesRunner).Scopes())
 	})
 }
 
