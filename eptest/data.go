@@ -44,12 +44,6 @@ func VerifyDataInterfaceInvariant(t *testing.T, data ep.Data) {
 		require.Equal(t, dataString, fmt.Sprintf("%+v", data))
 	})
 
-	t.Run("TestData_Append_invariant_"+data.Type().String(), func(t *testing.T) {
-		data.Append(data)
-		require.Equal(t, oldLen, data.Len())
-		require.Equal(t, dataString, fmt.Sprintf("%+v", data))
-	})
-
 	t.Run("TestData_Duplicate_invariant_"+data.Type().String(), func(t *testing.T) {
 		data.Duplicate(5)
 		require.Equal(t, oldLen, data.Len())
@@ -151,12 +145,6 @@ func VerifyDataNullsHandling(t *testing.T, data ep.Data, expectedNullString stri
 	t.Run("TestData_Slice_withNulls_"+data.Type().String(), func(t *testing.T) {
 		slicedData := data.Slice(0, data.Len()/2)
 		require.True(t, slicedData.IsNull(nullIdx))
-	})
-
-	t.Run("TestData_Append_withNulls_"+data.Type().String(), func(t *testing.T) {
-		appendedData := data.Append(data)
-		require.True(t, appendedData.IsNull(nullIdx))
-		require.True(t, appendedData.IsNull(nullIdx+dataLength))
 	})
 
 	t.Run("TestData_Duplicate_withNulls_"+data.Type().String(), func(t *testing.T) {

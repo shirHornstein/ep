@@ -225,10 +225,16 @@ type localSort struct {
 
 func (*localSort) Returns() []ep.Type { return []ep.Type{ep.Wildcard, str} }
 func (ls *localSort) Run(ctx context.Context, inp, out chan ep.Dataset) error {
-	var selfData ep.Data = ep.NewDataset()
+	builder := ep.NewDatasetBuilder()
+	hasData := false
 	// consume entire local input before sorting all together
 	for data := range inp {
-		selfData = selfData.Append(data)
+		builder.Append(data)
+		hasData = true
+	}
+	var selfData ep.Data
+	if hasData {
+		selfData = builder.Data()
 	}
 	size := selfData.Len()
 	if size > 0 {

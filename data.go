@@ -27,11 +27,6 @@ type Data interface {
 	// to end indices
 	Slice(start, end int) Data
 
-	// Append takes another data object and appends it to this one.
-	// It can be assumed that the type of the input data is similar
-	// to the current one, otherwise it's safe to panic
-	Append(other Data) Data
-
 	// Duplicate returns new data object containing this object t
 	// times. returned value has Len() * t rows
 	Duplicate(t int) Data
