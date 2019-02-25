@@ -86,8 +86,8 @@ type dataRunner struct {
 	ep.Dataset
 	// ThrowOnData is a condition for throwing error. in case the last column
 	// contains exactly this string in first row - fail with error
-	ThrowOnData   string
-	ThrowCanceled bool
+	ThrowOnData    string
+	ThrowIgnorable bool
 }
 
 func (r *dataRunner) Returns() []ep.Type {
@@ -98,16 +98,16 @@ func (r *dataRunner) Returns() []ep.Type {
 	return types
 }
 func (r *dataRunner) Run(ctx context.Context, inp, out chan ep.Dataset) (err error) {
-	if r.ThrowCanceled {
-		err = context.Canceled
+	if r.ThrowIgnorable {
+		err = ep.ErrIgnorable
 	} else {
 		err = fmt.Errorf("error %s", r.ThrowOnData)
 	}
 	for data := range inp {
+		out <- r.Dataset
 		if r.ThrowOnData == data.At(data.Width() - 1).Strings()[0] {
 			return err
 		}
-		out <- r.Dataset
 	}
 	return nil
 }

@@ -37,8 +37,8 @@ func (ex *exchange) encodePartition(e interface{}) error {
 
 	lastSeenHash := ex.getRowHash(stringValues, 0)
 	lastSlicedRow := 0
-	len := data.Len()
-	for row := 1; row < len; row++ {
+	dataLen := data.Len()
+	for row := 1; row < dataLen; row++ {
 		hash := ex.getRowHash(stringValues, row)
 		if hash == lastSeenHash {
 			continue
@@ -55,7 +55,7 @@ func (ex *exchange) encodePartition(e interface{}) error {
 	}
 
 	// leftover
-	dataToEncode := data.Slice(lastSlicedRow, len)
+	dataToEncode := data.Slice(lastSlicedRow, dataLen)
 	return ex.partitionData(dataToEncode, lastSeenHash)
 }
 

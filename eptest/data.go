@@ -80,7 +80,8 @@ func VerifyDataInterfaceInvariant(t *testing.T, data ep.Data) {
 	})
 
 	t.Run("TestData_Compare_invariant_"+data.Type().String(), func(t *testing.T) {
-		data.Compare(data)
+		_, err := data.Compare(data)
+		require.NoError(t, err)
 		require.Equal(t, oldLen, data.Len())
 		require.Equal(t, dataString, fmt.Sprintf("%+v", data))
 	})

@@ -46,6 +46,7 @@ func Pipeline(runners ...Runner) Runner {
 type pipeline []Runner
 
 func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
+	ctx = initError(ctx)
 	// choose first error out from all errors
 	errs := make([]error, len(rs))
 	var wg sync.WaitGroup
@@ -53,7 +54,7 @@ func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 	defer func() {
 		wg.Wait()
 		for _, e := range errs {
-			if e != nil && e != context.Canceled {
+			if e != nil && e != ErrIgnorable && e != errOnPeer {
 				err = e
 				break
 			}

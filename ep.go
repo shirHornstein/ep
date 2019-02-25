@@ -97,7 +97,9 @@ package ep
 import (
 	"context"
 	"encoding/gob"
+	"errors"
 	"github.com/davecgh/go-spew/spew"
+	"sync"
 )
 
 func registerGob(es ...interface{}) bool {
@@ -113,13 +115,15 @@ func Spew(r Runner) string {
 }
 
 // general cluster constants to manage cluster info
-type ctxKey string
+type ctxKey int
 
 const (
-	allNodesKey    ctxKey = "ep.AllNodes"
-	masterNodeKey  ctxKey = "ep.MasterNode"
-	thisNodeKey    ctxKey = "ep.ThisNode"
-	distributerKey ctxKey = "ep.Distributer"
+	allNodesKey ctxKey = iota
+	masterNodeKey
+	thisNodeKey
+	distributerKey
+	lockErrorKey
+	errorKey
 )
 
 // NodeAddress returns the current node address as saved in given context
@@ -138,4 +142,41 @@ func MasterNodeAddress(ctx context.Context) string {
 func AllNodeAddresses(ctx context.Context) []string {
 	res, _ := ctx.Value(allNodesKey).([]string)
 	return res
+}
+
+// ErrIgnorable useful to stop execution of wrapping pipeline without
+// propagating error by the wrapping pipeline or to other peers.
+// for example when runner has exited early due to irrelevant inp, filled
+// pipeline work, etc.
+var ErrIgnorable = errors.New("ignore")
+
+func initError(ctx context.Context) context.Context {
+	ctx = context.WithValue(ctx, lockErrorKey, &sync.Mutex{})
+	var err error
+	return context.WithValue(ctx, errorKey, &err)
+}
+
+func getError(ctx context.Context) error {
+	mutex, ok := ctx.Value(lockErrorKey).(*sync.Mutex)
+	if !ok {
+		return nil
+	}
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	return *ctx.Value(errorKey).(*error)
+}
+
+func setError(ctx context.Context, err error) {
+	mutex, ok := ctx.Value(lockErrorKey).(*sync.Mutex)
+	if !ok {
+		return
+	}
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	errPtr := ctx.Value(errorKey).(*error)
+	if *errPtr == nil || *errPtr == errOnPeer {
+		*errPtr = err
+	}
 }
