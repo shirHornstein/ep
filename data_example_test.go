@@ -55,8 +55,7 @@ func (vs strs) LessOther(thisRow int, other ep.Data, otherRow int) bool {
 	data := other.(strs)
 	return vs[thisRow] < data[otherRow]
 }
-func (vs strs) Slice(s, e int) ep.Data       { return vs[s:e] }
-func (vs strs) Append(other ep.Data) ep.Data { return append(vs, other.(strs)...) }
+func (vs strs) Slice(s, e int) ep.Data { return vs[s:e] }
 func (vs strs) Duplicate(t int) ep.Data {
 	ans := make(strs, 0, vs.Len()*t)
 	for i := 0; i < t; i++ {
@@ -138,8 +137,7 @@ func (vs integers) LessOther(thisRow int, other ep.Data, otherRow int) bool {
 	data := other.(integers)
 	return vs[thisRow] < data[otherRow]
 }
-func (vs integers) Slice(s, e int) ep.Data       { return vs[s:e] }
-func (vs integers) Append(other ep.Data) ep.Data { return append(vs, other.(integers)...) }
+func (vs integers) Slice(s, e int) ep.Data { return vs[s:e] }
 func (vs integers) Duplicate(t int) ep.Data {
 	ans := make(integers, 0, vs.Len()*t)
 	for i := 0; i < t; i++ {
