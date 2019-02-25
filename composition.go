@@ -17,23 +17,21 @@ type Composable interface {
 	BatchFunction() BatchFunction
 }
 
-// Compose returns a Runner with the provided return types & the provided scopes.
-// Note: The caller's responsibility to maintain a valid set of scopes.
-// This Runner passes its input through every Composable's BatchFunction
-// implementation, where every following BatchFunction receives the output
-// of the previous one. This Runner is also a Composable, which means that
-// its BatchFunction can be retrieved and used in another Compose call.
-func Compose(returns []Type, scopes StringsSet, cmps ...Composable) Runner {
-	return &compose{returns, scopes, cmps}
+// Compose returns a Runner with the provided return types. This Runner passes
+// its input through every Composable's BatchFunction implementation, where
+// every following BatchFunction receives the output of the previous one. This
+// Runner is also a Composable, which means that its BatchFunction can be
+// retrieved and used in another Compose call.
+func Compose(returns []Type, cmps ...Composable) Runner {
+	return &compose{returns, cmps}
 }
 
 type compose struct {
-	ReturnTs []Type
-	Scps     StringsSet
-	Cmps     []Composable
+	Ts   []Type
+	Cmps []Composable
 }
 
-func (c *compose) Returns() []Type { return c.ReturnTs }
+func (c *compose) Returns() []Type { return c.Ts }
 func (c *compose) Run(ctx context.Context, inp, out chan Dataset) error {
 	batchFunction := c.BatchFunction()
 
@@ -65,14 +63,20 @@ func (c *compose) BatchFunction() BatchFunction {
 }
 
 func (c *compose) Scopes() StringsSet {
-	return c.Scps
+	scopes := make(StringsSet)
+	for _, r := range c.Cmps {
+		if s, ok := r.(ScopesRunner); ok {
+			scopes.AddAll(s.Scopes())
+		}
+	}
+	return scopes
 }
 
 func (c *compose) SetAlias(name string) {
-	if len(c.ReturnTs) > 1 {
+	if len(c.Ts) > 1 {
 		panic("Invalid usage of alias. Consider use scope")
 	}
-	c.ReturnTs[0] = SetAlias(c.ReturnTs[0], name)
+	c.Ts[0] = SetAlias(c.Ts[0], name)
 }
 
 // ComposeProject returns a special Composable which forwards its input as-is
