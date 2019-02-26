@@ -122,8 +122,11 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 		}
 
 		// wait for all receivers to finish
+		fmt.Println("exhange before receiversErrs ", ex.Type)
 		for range receiversErrs {
 		}
+		fmt.Println("exhange after receiversErrs ", ex.Type)
+
 	}()
 
 	// send the local data to the peers, until completion or error. Also listen
@@ -323,14 +326,14 @@ func (ex *exchange) passRemoteData(out chan Dataset) chan error {
 			data, recErr := ex.receive()
 			if recErr == io.EOF { // todo
 				fmt.Println("***********************0 recive")
-				log.Error("exchange", "", recErr)
+				log.Error("exchange", fmt.Sprintf("exchange type %v", ex.Type), recErr)
 				wg.Done()
 				return
 			}
 
 			if recErr != nil {
 				fmt.Println("***********************1 recive")
-				log.Error("exchange", "", recErr)
+				log.Error("exchange", fmt.Sprintf("exchange type %v", ex.Type), recErr)
 				receiversErrs <- recErr
 				continue
 			}
@@ -348,7 +351,7 @@ func (ex *exchange) passRemoteData(out chan Dataset) chan error {
 				receiversErrs <- err
 			}
 			fmt.Println("***********************2 recive")
-			log.Error("exchange", fmt.Sprintf("error in peer %d", i), err)
+			log.Error("exchange", fmt.Sprintf("error in peer %d exchange type %v", i, ex.Type), err)
 			wg.Done()
 		}(d, i)
 	}
@@ -385,14 +388,13 @@ func (ex *exchange) encodeAll(targets []encoder, e interface{}) (err error) {
 }
 
 func (ex *exchange) notifyTermination(ctx context.Context, msg *errMsg) error {
-	fmt.Println("*********************** notify")
-	log.Error("exchange", "notify termination", msg)
-
 	errEncs := ex.encodeAll(ex.encs, msg)
 	errEncsTermination := ex.encodeAll(ex.encsTermination, msg)
 	if errEncs != nil {
 		return errEncs
 	}
+	fmt.Println("*********************** notify")
+	log.Error("exchange", fmt.Sprintf("notify termination in exchange type %v", ex.Type), msg)
 	return errEncsTermination
 }
 
