@@ -82,6 +82,7 @@ type exchange struct {
 func (ex *exchange) Returns() []Type { return []Type{Wildcard} }
 func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 	defer func() {
+		fmt.Println("************ exit exchange ", ex.Type)
 		closeErr := ex.Close()
 		// prefer real existing error over close error
 		if err == nil {
