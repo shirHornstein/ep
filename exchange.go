@@ -5,6 +5,7 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
+	"github.com/panoplyio/epsilon/log"
 	"github.com/panoplyio/go-consistent"
 	"github.com/satori/go.uuid"
 	"io"
@@ -319,12 +320,16 @@ func (ex *exchange) passRemoteData(out chan Dataset) chan error {
 	go func() {
 		for {
 			data, recErr := ex.receive()
-			if recErr == io.EOF {
+			if recErr == io.EOF { // todo
+				fmt.Println("***********************0 recive")
+				log.Error("exchange", "", recErr)
 				wg.Done()
 				return
 			}
 
 			if recErr != nil {
+				fmt.Println("***********************1 recive")
+				log.Error("exchange", "", recErr)
 				receiversErrs <- recErr
 				continue
 			}
@@ -335,14 +340,16 @@ func (ex *exchange) passRemoteData(out chan Dataset) chan error {
 	// next go routines listen to all ex.decsTermination to collect termination
 	// statuses from all peers
 	wg.Add(len(ex.decsTermination))
-	for _, d := range ex.decsTermination {
-		go func(d decoder) {
+	for i, d := range ex.decsTermination {
+		go func(d decoder, i int) {
 			_, err := decode(d)
 			if err != nil && err != io.EOF {
 				receiversErrs <- err
 			}
+			fmt.Println("***********************2 recive")
+			log.Error("exchange", fmt.Sprintf("error in peer %d", i), err)
 			wg.Done()
-		}(d)
+		}(d, i)
 	}
 	go func() {
 		wg.Wait()
@@ -377,6 +384,9 @@ func (ex *exchange) encodeAll(targets []encoder, e interface{}) (err error) {
 }
 
 func (ex *exchange) notifyTermination(ctx context.Context, msg *errMsg) error {
+	fmt.Println("*********************** notify")
+	log.Error("exchange", "notify termination", msg)
+
 	errEncs := ex.encodeAll(ex.encs, msg)
 	errEncsTermination := ex.encodeAll(ex.encsTermination, msg)
 	if errEncs != nil {
