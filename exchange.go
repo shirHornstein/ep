@@ -457,11 +457,12 @@ type dbgDecoder struct {
 func (dec dbgDecoder) Decode(e interface{}) error {
 	// fmt.Println("DECODE", dec.msg)
 	err := dec.decoder.Decode(e)
-	// fmt.Println("DECODE DONE", dec.msg, e, err)
 	if isEOFError(e) {
+		fmt.Println("DECODE DONE", dec.msg, "EOF")
 		return io.EOF
 	}
 	if isPeerError(e) {
+		fmt.Println("DECODE DONE", dec.msg, "E")
 		return errOnPeer
 	}
 	return err
@@ -502,11 +503,12 @@ func (sc *shortCircuit) Encode(e interface{}) error {
 
 func (sc *shortCircuit) Decode(e interface{}) error {
 	v, ok := <-sc.C
-	// fmt.Println("SC: Decode", v, ok)
 	if !ok || isEOFError(v) {
+		fmt.Println("SC: Decode EOF")
 		return io.EOF
 	}
 	if isPeerError(v) {
+		fmt.Println("SC: Decode E")
 		return errOnPeer
 	}
 	*e.(*req) = *v.(*req)
