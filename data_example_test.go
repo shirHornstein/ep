@@ -17,11 +17,10 @@ var integer = &integerType{}
 
 type strType struct{}
 
-func (s *strType) String() string        { return s.Name() }
-func (*strType) Name() string            { return "string" }
-func (*strType) Size() uint              { return 8 }
-func (*strType) Data(n int) ep.Data      { return make(strs, n) }
-func (*strType) DataEmpty(n int) ep.Data { return make(strs, 0, n) }
+func (s *strType) String() string   { return s.Name() }
+func (*strType) Name() string       { return "string" }
+func (*strType) Size() uint         { return 8 }
+func (*strType) Data(n int) ep.Data { return make(strs, n) }
 func (*strType) Builder() ep.DataBuilder {
 	return &strBuilder{}
 }
@@ -55,8 +54,7 @@ func (vs strs) LessOther(thisRow int, other ep.Data, otherRow int) bool {
 	data := other.(strs)
 	return vs[thisRow] < data[otherRow]
 }
-func (vs strs) Slice(s, e int) ep.Data       { return vs[s:e] }
-func (vs strs) Append(other ep.Data) ep.Data { return append(vs, other.(strs)...) }
+func (vs strs) Slice(s, e int) ep.Data { return vs[s:e] }
 func (vs strs) Duplicate(t int) ep.Data {
 	ans := make(strs, 0, vs.Len()*t)
 	for i := 0; i < t; i++ {
@@ -100,11 +98,10 @@ func (vs strs) Strings() []string { return vs }
 
 type integerType struct{}
 
-func (s *integerType) String() string        { return s.Name() }
-func (*integerType) Name() string            { return "integer" }
-func (*integerType) Size() uint              { return 4 }
-func (*integerType) Data(n int) ep.Data      { return make(integers, n) }
-func (*integerType) DataEmpty(n int) ep.Data { return make(integers, 0, n) }
+func (s *integerType) String() string   { return s.Name() }
+func (*integerType) Name() string       { return "integer" }
+func (*integerType) Size() uint         { return 4 }
+func (*integerType) Data(n int) ep.Data { return make(integers, n) }
 func (*integerType) Builder() ep.DataBuilder {
 	return &integerBuilder{}
 }
@@ -138,8 +135,7 @@ func (vs integers) LessOther(thisRow int, other ep.Data, otherRow int) bool {
 	data := other.(integers)
 	return vs[thisRow] < data[otherRow]
 }
-func (vs integers) Slice(s, e int) ep.Data       { return vs[s:e] }
-func (vs integers) Append(other ep.Data) ep.Data { return append(vs, other.(integers)...) }
+func (vs integers) Slice(s, e int) ep.Data { return vs[s:e] }
 func (vs integers) Duplicate(t int) ep.Data {
 	ans := make(integers, 0, vs.Len()*t)
 	for i := 0; i < t; i++ {

@@ -13,7 +13,6 @@ func (t *dummyType) String() string     { return t.Name() }
 func (*dummyType) Name() string         { return "dummy" }
 func (*dummyType) Size() uint           { return 0 }
 func (*dummyType) Data(int) Data        { return dummyData }
-func (*dummyType) DataEmpty(int) Data   { return dummyData }
 func (*dummyType) Builder() DataBuilder { return dummyBuilder }
 
 type dummyDataBuilder struct{}
@@ -29,7 +28,6 @@ func (*variadicDummies) Less(int, int) bool            { return false }
 func (*variadicDummies) Swap(int, int)                 {}
 func (*variadicDummies) LessOther(int, Data, int) bool { return false }
 func (vs *variadicDummies) Slice(int, int) Data        { return vs }
-func (vs *variadicDummies) Append(Data) Data           { return vs }
 func (vs *variadicDummies) Duplicate(int) Data         { return vs }
 func (*variadicDummies) IsNull(int) bool               { return true }
 func (*variadicDummies) MarkNull(int)                  {}

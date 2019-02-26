@@ -37,71 +37,35 @@ func BenchmarkDataBuilder(b *testing.B) {
 	}
 
 	b.Run("integer", func(b *testing.B) {
-		b.Run("DataBuilder", func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
-				db := integer.Builder()
-				for j := 0; j < len(dataInts); j++ {
-					db.Append(dataInts[j])
-				}
-				data := db.Data()
-				require.Equal(b, 100*1000, data.Len())
+		for i := 0; i < b.N; i++ {
+			db := integer.Builder()
+			for j := 0; j < len(dataInts); j++ {
+				db.Append(dataInts[j])
 			}
-		})
-
-		b.Run("Append", func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
-				data := dataInts[0].Type().Data(0)
-				for j := 0; j < len(dataInts); j++ {
-					data = data.Append(dataInts[j])
-				}
-				require.Equal(b, 100*1000, data.Len())
-			}
-		})
+			data := db.Data()
+			require.Equal(b, 100*1000, data.Len())
+		}
 	})
 
 	b.Run("string", func(b *testing.B) {
-		b.Run("DataBuilder", func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
-				db := str.Builder()
-				for j := 0; j < len(dataStrs); j++ {
-					db.Append(dataStrs[j])
-				}
-				data := db.Data()
-				require.Equal(b, 100*1000, data.Len())
+		for i := 0; i < b.N; i++ {
+			db := str.Builder()
+			for j := 0; j < len(dataStrs); j++ {
+				db.Append(dataStrs[j])
 			}
-		})
-
-		b.Run("Append", func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
-				data := dataStrs[0].Type().Data(0)
-				for j := 0; j < len(dataStrs); j++ {
-					data = data.Append(dataStrs[j])
-				}
-				require.Equal(b, 100*1000, data.Len())
-			}
-		})
+			data := db.Data()
+			require.Equal(b, 100*1000, data.Len())
+		}
 	})
 
 	b.Run("both", func(b *testing.B) {
-		b.Run("DataBuilder", func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
-				db := ep.NewDatasetBuilder()
-				for j := 0; j < len(dataBoth); j++ {
-					db.Append(dataBoth[j])
-				}
-				data := db.Data()
-				require.Equal(b, 100*1000, data.Len())
+		for i := 0; i < b.N; i++ {
+			db := ep.NewDatasetBuilder()
+			for j := 0; j < len(dataBoth); j++ {
+				db.Append(dataBoth[j])
 			}
-		})
-
-		b.Run("Append", func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
-				var data ep.Data = ep.NewDataset()
-				for j := 0; j < len(dataBoth); j++ {
-					data = data.Append(dataBoth[j])
-				}
-				require.Equal(b, 100*1000, data.Len())
-			}
-		})
+			data := db.Data()
+			require.Equal(b, 100*1000, data.Len())
+		}
 	})
 }
