@@ -41,9 +41,6 @@ type Type interface {
 	// Data returns a new Data object of this type, containing `n` zero-values
 	Data(n int) Data
 
-	// DataEmpty returns a new empty Data object of this type, with allocated size 'n'
-	DataEmpty(n int) Data
-
 	// Builder returns a new Builder object to efficiently append Data
 	// of this Type
 	Builder() DataBuilder
@@ -74,7 +71,6 @@ func (*wildcardType) String() string             { return "*" }
 func (*wildcardType) Name() string               { return "*" }
 func (*wildcardType) Size() uint                 { panic("wildcard has no concrete type") }
 func (*wildcardType) Data(int) Data              { panic("wildcard has no concrete type") }
-func (*wildcardType) DataEmpty(int) Data         { panic("wildcard has no concrete type") }
 func (w *wildcardType) Builder() DataBuilder     { panic("wildcard has no concrete type") }
 func (w *wildcardType) At(idx int) *wildcardType { return &wildcardType{&idx, w.CutFromTail} }
 
@@ -84,7 +80,6 @@ func (*anyType) String() string       { return "?" }
 func (*anyType) Name() string         { return "?" }
 func (*anyType) Size() uint           { panic("any has no concrete type") }
 func (*anyType) Data(int) Data        { panic("any has no concrete type") }
-func (*anyType) DataEmpty(int) Data   { panic("any has no concrete type") }
 func (*anyType) Builder() DataBuilder { panic("any has no concrete type") }
 func isAny(t Type) bool {
 	return t.Name() == "?"

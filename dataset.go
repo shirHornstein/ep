@@ -43,8 +43,7 @@ type datasetType struct{}
 func (sett *datasetType) String() string  { return sett.Name() }
 func (*datasetType) Name() string         { return "record" }
 func (*datasetType) Size() uint           { panic("call Size on each Data") }
-func (sett *datasetType) Data(n int) Data { return sett.DataEmpty(n) }
-func (*datasetType) DataEmpty(int) Data   { panic("use NewDataset function") }
+func (sett *datasetType) Data(n int) Data { panic("use NewDataset function") }
 func (*datasetType) Builder() DataBuilder { return NewDatasetBuilder() }
 
 type dataset []Data

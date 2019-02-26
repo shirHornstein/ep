@@ -17,11 +17,10 @@ var integer = &integerType{}
 
 type strType struct{}
 
-func (s *strType) String() string        { return s.Name() }
-func (*strType) Name() string            { return "string" }
-func (*strType) Size() uint              { return 8 }
-func (*strType) Data(n int) ep.Data      { return make(strs, n) }
-func (*strType) DataEmpty(n int) ep.Data { return make(strs, 0, n) }
+func (s *strType) String() string   { return s.Name() }
+func (*strType) Name() string       { return "string" }
+func (*strType) Size() uint         { return 8 }
+func (*strType) Data(n int) ep.Data { return make(strs, n) }
 func (*strType) Builder() ep.DataBuilder {
 	return &strBuilder{}
 }
@@ -99,11 +98,10 @@ func (vs strs) Strings() []string { return vs }
 
 type integerType struct{}
 
-func (s *integerType) String() string        { return s.Name() }
-func (*integerType) Name() string            { return "integer" }
-func (*integerType) Size() uint              { return 4 }
-func (*integerType) Data(n int) ep.Data      { return make(integers, n) }
-func (*integerType) DataEmpty(n int) ep.Data { return make(integers, 0, n) }
+func (s *integerType) String() string   { return s.Name() }
+func (*integerType) Name() string       { return "integer" }
+func (*integerType) Size() uint         { return 4 }
+func (*integerType) Data(n int) ep.Data { return make(integers, n) }
 func (*integerType) Builder() ep.DataBuilder {
 	return &integerBuilder{}
 }
