@@ -125,7 +125,7 @@ func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) 
 		fmt.Println("exhange before receiversErrs ", ex.Type)
 		for range receiversErrs {
 		}
-		fmt.Println("exhange after receiversErrs ", ex.Type)
+		fmt.Println("exhange after receiversErrs ", ex.Type) // TODO not reched in the canceled node in partition
 
 	}()
 
@@ -323,6 +323,7 @@ func (ex *exchange) passRemoteData(out chan Dataset) chan error {
 	wg.Add(1)
 	go func() {
 		for {
+			fmt.Printf(" ****** passRemoteData ex %+v \n", ex)
 			data, recErr := ex.receive()
 			if recErr == io.EOF { // todo
 				fmt.Println("***********************0 recive")
@@ -332,7 +333,7 @@ func (ex *exchange) passRemoteData(out chan Dataset) chan error {
 			}
 
 			if recErr != nil {
-				fmt.Println("***********************1 recive")
+				fmt.Println("***********************1 recive") // todo print ex.decs len
 				log.Error("exchange", fmt.Sprintf("exchange type %v", ex.Type), recErr)
 				receiversErrs <- recErr
 				continue
@@ -393,7 +394,8 @@ func (ex *exchange) notifyTermination(ctx context.Context, msg *errMsg) error {
 	if errEncs != nil {
 		return errEncs
 	}
-	fmt.Println("*********************** notify")
+	fmt.Println("*********************** notify") // todo print ex.encs and ex.encsT len
+	fmt.Printf(" ****** ex %+v \n", ex)
 	log.Error("exchange", fmt.Sprintf("notify termination in exchange type %v", ex.Type), msg)
 	return errEncsTermination
 }
@@ -417,6 +419,9 @@ func (ex *exchange) decodeNext() (Dataset, error) {
 	i := (ex.decsNext + 1) % len(ex.decs)
 
 	data, err := ex.decodeFrom(i)
+	if err != nil {
+		fmt.Printf(" ****** ****** ****** err: %+v ****** ****** ex %+v \n", err, ex)
+	}
 	if err != nil {
 		// remove the current decoder
 		ex.decs = append(ex.decs[:i], ex.decs[i+1:]...)
