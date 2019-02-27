@@ -507,13 +507,14 @@ func (sc *shortCircuit) Encode(e interface{}) error {
 	sc.C <- e
 	v := e.(*req)
 	if _, isErr := v.Payload.(*errMsg); isErr {
-		fmt.Println("SC: done Encoded", e)
+		fmt.Printf("%p SC: done Encoded %+v \n",sc,  e)
 	}
 	return nil
 }
 
 func (sc *shortCircuit) Decode(e interface{}) error {
 	v, ok := <-sc.C
+	fmt.Printf("%p ^^^^^^^^^^^^^^^^ %+v \n",sc,  v)
 	if !ok || isEOFError(v) {
 		fmt.Println("SC: Decode EOF")
 		return io.EOF
