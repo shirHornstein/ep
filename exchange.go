@@ -504,8 +504,13 @@ func (sc *shortCircuit) Encode(e interface{}) error {
 		return io.ErrClosedPipe
 	}
 
+	if _, isErr := e.(*errMsg); isErr {
+		fmt.Println("SC: sending Encoded", e)
+	}
 	sc.C <- e
-	// fmt.Println("SC: Encoded", e)
+	if _, isErr := e.(*errMsg); isErr {
+		fmt.Println("SC: done Encoded", e)
+	}
 	return nil
 }
 
