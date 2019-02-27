@@ -326,14 +326,14 @@ func (ex *exchange) passRemoteData(out chan Dataset) chan error {
 			fmt.Printf(" ****** passRemoteData ex %+v \n", ex)
 			data, recErr := ex.receive()
 			if recErr == io.EOF { // todo
-				fmt.Println("***********************0 recive")
+				fmt.Println("***********************0 recive ", ex.UID)
 				log.Error("exchange", fmt.Sprintf("exchange type %v", ex.Type), recErr)
 				wg.Done()
 				return
 			}
 
 			if recErr != nil {
-				fmt.Println("***********************1 recive") // todo print ex.decs len
+				fmt.Println("***********************1 recive ", ex.UID) // todo print ex.decs len
 				log.Error("exchange", fmt.Sprintf("exchange type %v", ex.Type), recErr)
 				receiversErrs <- recErr
 				continue
@@ -351,7 +351,7 @@ func (ex *exchange) passRemoteData(out chan Dataset) chan error {
 			if err != nil && err != io.EOF {
 				receiversErrs <- err
 			}
-			fmt.Println("***********************2 recive")
+			fmt.Println("***********************2  recive ", ex.UID)
 			log.Error("exchange", fmt.Sprintf("error in peer %d exchange type %v", i, ex.Type), err)
 			wg.Done()
 		}(d, i)
