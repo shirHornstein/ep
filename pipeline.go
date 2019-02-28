@@ -3,6 +3,7 @@ package ep
 import (
 	"context"
 	"sync"
+	"fmt"
 )
 
 var _ = registerGob(pipeline([]Runner{}))
@@ -74,6 +75,7 @@ func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 		wg.Add(1)
 		go func(i int, inp, middle chan Dataset) {
 			defer wg.Done()
+			defer fmt.Printf("runner %p errs: %+v \n", rs[i], errs)
 			Run(ctx, rs[i], inp, middle, cancel, &errs[i])
 		}(i, inp, middle)
 

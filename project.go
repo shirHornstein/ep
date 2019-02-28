@@ -2,6 +2,7 @@ package ep
 
 import (
 	"context"
+	"fmt"
 	"sync"
 )
 
@@ -121,15 +122,17 @@ func (rs project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 			select {
 			case <-ctx.Done(): // listen to both new ctx and original ctx
 				cancel()
-				go drain(inp)
 				return
 			case data, ok := <-inp:
+				fmt.Printf("&&&&&& project recive daata %#v \n", data)
 				if !ok {
 					return
 				}
 				// dispatch (duplicate) input to all runners
 				for i := range rs {
+					fmt.Printf("&&&&&& project transform daata %#v to runner %d \n", data, i)
 					inps[i] <- data
+					fmt.Printf("&&&&&& project finishhhhhhh transform daata %#v to runner %d \n", data, i)
 				}
 			}
 		}
