@@ -130,9 +130,9 @@ func (rs project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 				}
 				// dispatch (duplicate) input to all runners
 				for i := range rs {
-					fmt.Printf("&&&&&& project transform daata %#v to runner %d \n", data, i)
+					fmt.Printf("&&&&&& project transform daata %p to runner %d \n", data, i)
 					inps[i] <- data
-					fmt.Printf("&&&&&& project finishhhhhhh transform daata %#v to runner %d \n", data, i)
+					fmt.Printf("&&&&&& project finishhhhhhh transform daata %p to runner %d \n", data, i)
 				}
 			}
 		}

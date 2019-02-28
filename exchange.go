@@ -325,7 +325,7 @@ func (ex *exchange) passRemoteData(out chan Dataset) chan error {
 		for {
 			fmt.Printf(" ****** %p passRemoteData ex %+v \n", ex, ex)
 			data, recErr := ex.receive()
-			fmt.Printf(" ****** %p passRemoteData ex %#v \n", ex, data)
+			fmt.Printf(" ****** %p passRemoteData ex %p \n", ex, data)
 			if recErr == io.EOF { // todo
 				fmt.Println("***********************0 recive ", ex.UID)
 				log.Error("exchange", fmt.Sprintf("exchange type %v", ex.Type), recErr)
