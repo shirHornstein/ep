@@ -323,8 +323,9 @@ func (ex *exchange) passRemoteData(out chan Dataset) chan error {
 	wg.Add(1)
 	go func() {
 		for {
-			fmt.Printf(" ****** passRemoteData ex %+v \n", ex)
+			fmt.Printf(" ****** %p passRemoteData ex %+v \n", ex, ex)
 			data, recErr := ex.receive()
+			fmt.Printf(" ****** %p passRemoteData ex %#v \n", ex, data)
 			if recErr == io.EOF { // todo
 				fmt.Println("***********************0 recive ", ex.UID)
 				log.Error("exchange", fmt.Sprintf("exchange type %v", ex.Type), recErr)
