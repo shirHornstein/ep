@@ -121,6 +121,7 @@ func (rs project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 			select {
 			case <-ctx.Done(): // listen to both new ctx and original ctx
 				cancel()
+				go drain(inp)
 				return
 			case data, ok := <-inp:
 				if !ok {
