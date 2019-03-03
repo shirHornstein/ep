@@ -28,7 +28,6 @@ func (s *strType) String() string     { return s.Name() }
 func (*strType) Name() string         { return "string" }
 func (*strType) Size() uint           { return 8 }
 func (*strType) Data(n int) Data      { return make(strs, n) }
-func (*strType) DataEmpty(n int) Data { return make(strs, 0, n) }
 func (*strType) Builder() DataBuilder { return nil }
 
 type strs []string
@@ -39,7 +38,6 @@ func (vs strs) Less(int, int) bool                     { return false }
 func (vs strs) Swap(int, int)                          {}
 func (vs strs) LessOther(int, Data, int) bool          { return false }
 func (vs strs) Slice(int, int) Data                    { return vs }
-func (vs strs) Append(Data) Data                       { return vs }
 func (vs strs) Duplicate(t int) Data                   { return vs }
 func (vs strs) IsNull(int) bool                        { return false }
 func (vs strs) MarkNull(int)                           {}

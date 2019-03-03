@@ -43,8 +43,7 @@ type datasetType struct{}
 func (sett *datasetType) String() string  { return sett.Name() }
 func (*datasetType) Name() string         { return "record" }
 func (*datasetType) Size() uint           { panic("call Size on each Data") }
-func (sett *datasetType) Data(n int) Data { return sett.DataEmpty(n) }
-func (*datasetType) DataEmpty(int) Data   { panic("use NewDataset function") }
+func (sett *datasetType) Data(n int) Data { panic("use NewDataset function") }
 func (*datasetType) Builder() DataBuilder { return NewDatasetBuilder() }
 
 type dataset []Data
@@ -234,26 +233,6 @@ func (set dataset) Slice(start, end int) Data {
 	res := make(dataset, len(set))
 	for i := range set {
 		res[i] = set[i].Slice(start, end)
-	}
-	return res
-}
-
-// see Data.Append (assumed by interface spec to be a Dataset)
-func (set dataset) Append(other Data) Data {
-	if set == nil || len(set) == 0 {
-		return other.Duplicate(1) // never affect other
-	}
-	if other == nil {
-		return set
-	}
-	data := other.(dataset)
-	if len(set) != len(data) {
-		panic("Unable to append mismatching number of columns")
-	}
-
-	res := make(dataset, set.Width())
-	for i := range set {
-		res[i] = set[i].Append(data[i])
 	}
 	return res
 }

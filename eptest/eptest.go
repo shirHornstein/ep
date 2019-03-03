@@ -26,9 +26,14 @@ func RunWithContext(ctx context.Context, r ep.Runner, datasets ...ep.Dataset) (r
 		close(inp)
 	}()
 
-	res = ep.NewDataset()
+	builder := ep.NewDatasetBuilder()
+	hasData := false
 	for data := range out {
-		res = res.Append(data).(ep.Dataset)
+		builder.Append(data)
+		hasData = true
+	}
+	if hasData {
+		res = builder.Data().(ep.Dataset)
 	}
 	return res, err
 }
