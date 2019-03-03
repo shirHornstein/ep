@@ -79,6 +79,12 @@ func (c *compose) SetAlias(name string) {
 // to every Composable's BatchFunction, combining their outputs into a single
 // Dataset. It is a functional implementation of ep.Project.
 func ComposeProject(cmps ...Composable) Composable {
+	if len(cmps) == 0 {
+		panic("at least 1 Composable is required for project composables")
+	}
+	if len(cmps) == 1 {
+		return cmps[0]
+	}
 	return &composeProject{cmps}
 }
 

@@ -74,3 +74,15 @@ func TestComposeProject(t *testing.T) {
 	require.Equal(t, expected3, res.At(2).Strings())
 	require.Equal(t, expected4, res.At(3).Strings())
 }
+
+func TestComposeProject_creation(t *testing.T) {
+	t.Run("no composable", func(t *testing.T) {
+		require.Panics(t, func() { ep.ComposeProject() })
+	})
+
+	t.Run("single composable without projecting", func(t *testing.T) {
+		cmp := &mulIntBy2{}
+		project := ep.ComposeProject(cmp)
+		require.IsType(t, cmp, project)
+	})
+}
