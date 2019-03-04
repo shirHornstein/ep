@@ -179,6 +179,12 @@ func (*passThrough) Run(_ context.Context, inp, out chan Dataset) error {
 	}
 	return nil
 }
+func (r *passThrough) run(data Dataset) (Dataset, error) {
+	return data, nil
+}
+func (r *passThrough) BatchFunction() BatchFunction {
+	return r.run
+}
 
 // Pick returns a new runner similar to PassThrough except that it picks and
 // returns just the data at the provided indices
