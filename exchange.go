@@ -339,7 +339,10 @@ func (ex *exchange) passRemoteData(out chan Dataset) chan error {
 				receiversErrs <- recErr
 				continue
 			}
+
+			fmt.Printf(" ****** %p passRemoteData ex  beforrreee out <- data \n", ex)
 			out <- data
+			fmt.Printf(" ****** %p passRemoteData ex  outerrrr out <- data \n", ex)
 		}
 	}()
 
@@ -508,14 +511,14 @@ func (sc *shortCircuit) Encode(e interface{}) error {
 	sc.C <- e
 	v := e.(*req)
 	if _, isErr := v.Payload.(*errMsg); isErr {
-		fmt.Printf("%p SC: done Encoded %+v \n",sc,  e)
+		fmt.Printf("%p SC: done Encoded %+v \n", sc, e)
 	}
 	return nil
 }
 
 func (sc *shortCircuit) Decode(e interface{}) error {
 	v, ok := <-sc.C
-	fmt.Printf("%p ^^^^^^^^^^^^^^^^ %#v \n",sc,  v.(*req).Payload)
+	fmt.Printf("%p ^^^^^^^^^^^^^^^^ %#v \n", sc, v.(*req).Payload)
 	if !ok || isEOFError(v) {
 		fmt.Println("SC: Decode EOF")
 		return io.EOF
