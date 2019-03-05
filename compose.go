@@ -17,21 +17,23 @@ type Composable interface {
 	BatchFunction() BatchFunction
 }
 
-// Compose returns a Runner with the provided return types. This Runner passes
-// its input through every Composable's BatchFunction implementation, where
-// every following BatchFunction receives the output of the previous one. This
-// Runner is also a Composable, which means that its BatchFunction can be
-// retrieved and used in another Compose call.
-func Compose(returns []Type, cmps ...Composable) Runner {
-	return &compose{returns, cmps}
+// Compose returns a Runner with the provided return types & the provided scopes.
+// Note: The caller's responsibility to maintain a valid set of scopes.
+// This Runner passes its input through every Composable's BatchFunction
+// implementation, where every following BatchFunction receives the output
+// of the previous one. This Runner is also a Composable, which means that
+// its BatchFunction can be retrieved and used in another Compose call.
+func Compose(returns []Type, scopes StringsSet, cmps ...Composable) Runner {
+	return &compose{returns, scopes, cmps}
 }
 
 type compose struct {
-	Ts   []Type
-	Cmps []Composable
+	ReturnTs []Type
+	Scps     StringsSet
+	Cmps     []Composable
 }
 
-func (c *compose) Returns() []Type { return c.Ts }
+func (c *compose) Returns() []Type { return c.ReturnTs }
 func (c *compose) Run(ctx context.Context, inp, out chan Dataset) error {
 	batchFunction := c.BatchFunction()
 
@@ -63,26 +65,26 @@ func (c *compose) BatchFunction() BatchFunction {
 }
 
 func (c *compose) Scopes() StringsSet {
-	scopes := make(StringsSet)
-	for _, r := range c.Cmps {
-		if s, ok := r.(ScopesRunner); ok {
-			scopes.AddAll(s.Scopes())
-		}
-	}
-	return scopes
+	return c.Scps
 }
 
 func (c *compose) SetAlias(name string) {
-	if len(c.Ts) > 1 {
+	if len(c.ReturnTs) > 1 {
 		panic("Invalid usage of alias. Consider use scope")
 	}
-	c.Ts[0] = SetAlias(c.Ts[0], name)
+	c.ReturnTs[0] = SetAlias(c.ReturnTs[0], name)
 }
 
 // ComposeProject returns a special Composable which forwards its input as-is
 // to every Composable's BatchFunction, combining their outputs into a single
 // Dataset. It is a functional implementation of ep.Project.
 func ComposeProject(cmps ...Composable) Composable {
+	if len(cmps) == 0 {
+		panic("at least 1 Composable is required for project composables")
+	}
+	if len(cmps) == 1 {
+		return cmps[0]
+	}
 	return &composeProject{cmps}
 }
 
