@@ -32,7 +32,7 @@ func ExamplePipeline_reverse() {
 }
 
 func TestPipeline_ignoreErrIgnorable(t *testing.T) {
-	runner := ep.Pipeline(&dataRunner{Dataset: ep.NewDataset(str.Data(1)), ThrowOnData: "ignore error", ThrowIgnorable: true}, &count{})
+	runner := ep.Pipeline(&dataRunner{ThrowOnData: "ignore error", ThrowIgnorable: true}, &count{})
 
 	data1 := ep.NewDataset(strs{"data"})
 	data2 := ep.NewDataset(strs{"ignore error"})
@@ -262,7 +262,7 @@ func runVerifyError(t *testing.T, runner ep.Runner, expected error) {
 func TestPipeline_errorFromExchange(t *testing.T) {
 	verifyExchangeError := func(t *testing.T, port string) {
 		infinityRunner := &waitForCancel{}
-		mightErrored := &dataRunner{Dataset: ep.NewDataset(str.Data(1)), ThrowOnData: port}
+		mightErrored := &dataRunner{ThrowOnData: port}
 		runner := ep.Pipeline(
 			infinityRunner,
 			ep.Scatter(),
@@ -294,8 +294,8 @@ func TestPipeline_multipleErrorsFromExchange(t *testing.T) {
 	verifyExchangeErrors := func(t *testing.T, port1, port2 string) {
 		infinityRunner1 := &waitForCancel{}
 		infinityRunner2 := &waitForCancel{}
-		err1 := &dataRunner{Dataset: ep.NewDataset(str.Data(1)), ThrowOnData: port1}
-		err2 := &dataRunner{Dataset: ep.NewDataset(str.Data(1)), ThrowOnData: port2}
+		err1 := &dataRunner{ThrowOnData: port1}
+		err2 := &dataRunner{ThrowOnData: port2}
 		runner := ep.Pipeline(
 			ep.Project(ep.PassThrough(), ep.Pipeline(&nodeAddr{}, err2)),
 			infinityRunner1,

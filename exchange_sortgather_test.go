@@ -61,7 +61,7 @@ func TestSortGather(t *testing.T) {
 
 func TestSortGather_error(t *testing.T) {
 	runSortGather := func(t *testing.T, sortingCols []ep.SortingCol, datasets ...ep.Dataset) {
-		var runner ep.Runner = &dataRunner{Dataset: ep.NewDataset(strs{"str"}), ThrowOnData: "failed"}
+		var runner ep.Runner = &dataRunner{ThrowOnData: "failed"}
 		runner = ep.Pipeline(runner, ep.Scatter(), &nodeAddr{}, ep.SortGather(sortingCols))
 		_, err := eptest.RunDist(t, 2, runner, datasets...)
 		require.Error(t, err)

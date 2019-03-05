@@ -37,7 +37,7 @@ func TestDistributer_connectionError(t *testing.T) {
 
 // Test that errors are transmitted across the network
 func TestDistributer_Distribute_errorFromPeer(t *testing.T) {
-	mightErrored := &dataRunner{Dataset: ep.NewDataset(), ThrowOnData: ":5552"}
+	mightErrored := &dataRunner{ThrowOnData: ":5552"}
 	runner := ep.Pipeline(ep.Scatter(), &nodeAddr{}, mightErrored)
 
 	data1 := ep.NewDataset(strs{"hello", "world"})
@@ -46,7 +46,7 @@ func TestDistributer_Distribute_errorFromPeer(t *testing.T) {
 
 	require.Error(t, err)
 	require.Equal(t, "error :5552", err.Error())
-	require.Equal(t, 0, data.Width())
+	require.Equal(t, 2, data.Width())
 }
 
 func TestDistributer_Distribute_ignoreErrIgnorable(t *testing.T) {
@@ -54,8 +54,8 @@ func TestDistributer_Distribute_ignoreErrIgnorable(t *testing.T) {
 		name string
 		r    ep.Runner
 	}{
-		{name: "from peer", r: &dataRunner{Dataset: ep.NewDataset(str.Data(1)), ThrowOnData: ":5552", ThrowIgnorable: true}},
-		{name: "from master", r: &dataRunner{Dataset: ep.NewDataset(str.Data(1)), ThrowOnData: ":5551", ThrowIgnorable: true}},
+		{name: "from peer", r: &dataRunner{ThrowOnData: ":5552", ThrowIgnorable: true}},
+		{name: "from master", r: &dataRunner{ThrowOnData: ":5551", ThrowIgnorable: true}},
 	}
 
 	for _, tc := range tests {
