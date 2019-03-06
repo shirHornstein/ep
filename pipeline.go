@@ -194,10 +194,14 @@ func (rs pipeline) Push(toPush ScopesRunner) bool {
 }
 
 func (rs pipeline) ApproxSize() int {
-	lastIdx := len(rs) - 1
-	last := rs[lastIdx]
-	if approxSizer, ok := last.(ApproxSizer); ok {
-		return approxSizer.ApproxSize()
+	for i := len(rs) - 1; i >= 0; i-- {
+		r := rs[i]
+		if approxSizer, ok := r.(ApproxSizer); ok {
+			size := approxSizer.ApproxSize()
+			if size != UnknownSize {
+				return size
+			}
+		}
 	}
 	return UnknownSize
 }

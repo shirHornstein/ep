@@ -105,14 +105,30 @@ func TestPipeline_Args_noArgs(t *testing.T) {
 
 func TestPipeline_ApproxSize(t *testing.T) {
 	t.Run("known size", func(t *testing.T) {
-		r := ep.Pipeline(&upper{}, &runnerWithSize{size: 42})
-		sizer, ok := r.(ep.ApproxSizer)
-		require.True(t, ok)
-		require.Equal(t, 42, sizer.ApproxSize())
+		t.Run("last runner", func(t *testing.T) {
+			r := ep.Pipeline(&upper{}, &runnerWithSize{size: 42})
+			sizer, ok := r.(ep.ApproxSizer)
+			require.True(t, ok)
+			require.Equal(t, 42, sizer.ApproxSize())
+		})
+
+		t.Run("middle runner", func(t *testing.T) {
+			r := ep.Pipeline(&upper{}, &runnerWithSize{size: 42}, &question{})
+			sizer, ok := r.(ep.ApproxSizer)
+			require.True(t, ok)
+			require.Equal(t, 42, sizer.ApproxSize())
+		})
+
+		t.Run("first runner", func(t *testing.T) {
+			r := ep.Pipeline(&runnerWithSize{size: 42}, &upper{}, &question{})
+			sizer, ok := r.(ep.ApproxSizer)
+			require.True(t, ok)
+			require.Equal(t, 42, sizer.ApproxSize())
+		})
 	})
 
 	t.Run("unknown size", func(t *testing.T) {
-		r := ep.Pipeline(&upper{}, &runnerWithSize{size: 42}, &question{})
+		r := ep.Pipeline(&upper{}, &question{})
 		sizer, ok := r.(ep.ApproxSizer)
 		require.True(t, ok)
 		require.Equal(t, ep.UnknownSize, sizer.ApproxSize())
