@@ -263,4 +263,3 @@ func (r *runOther) Run(ctx context.Context, inp, out chan ep.Dataset) error {
 }
 
 func (*runOther) Returns() []ep.Type { return []ep.Type{ep.Wildcard} }
-
