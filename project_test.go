@@ -1,6 +1,7 @@
 package ep_test
 
 import (
+	"context"
 	"fmt"
 	"github.com/panoplyio/ep"
 	"github.com/panoplyio/ep/eptest"
@@ -256,4 +257,26 @@ func TestProject_ApproxSize(t *testing.T) {
 		require.True(t, ok)
 		require.Equal(t, 42+11, sizer.ApproxSize())
 	})
+}
+
+func TestProject_drainOriginInput(t *testing.T) {
+	project := ep.Project(ep.PassThrough(), ep.PassThrough())
+
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+	runner := &runOther{project, cancel}
+
+	data := ep.NewDataset(strs{"data"})
+	inp := make(chan ep.Dataset)
+	out := make(chan ep.Dataset)
+	var err error
+	go func() {
+		err = runner.Run(ctx, inp, out)
+	}()
+
+	inp <- data
+	cancel()
+	inp <- data
+
+	require.NoError(t, err)
 }
