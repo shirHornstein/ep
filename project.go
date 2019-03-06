@@ -109,6 +109,7 @@ func (rs project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 
 	wg.Add(1)
 	go func() {
+		defer drain(inp)
 		defer wg.Done()
 
 		defer func() {
