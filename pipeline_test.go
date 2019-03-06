@@ -331,3 +331,31 @@ func TestPipeline_multipleErrorsFromExchange(t *testing.T) {
 		verifyExchangeErrors(t, ":5551", ":5551")
 	})
 }
+
+func TestPipeline_drainOriginInput(t *testing.T) {
+	throwIgnorable := &dataRunner{ThrowOnData: "ignore error", ThrowIgnorable: true}
+	waitForExitData := &dataRunner{ThrowOnData: "exit", ThrowIgnorable: true}
+	externalInp := make(chan ep.Dataset)
+	dupWrites := &duplicateWrites{externalInp}
+	passThroughExternalInp := &passThroughExternalInp{externalInp}
+
+	cancelInnerPipe := make(chan bool)
+	notify := &notifyOnCancel{cancelInnerPipe}
+	waitForNotification := &waitForNotification{cancelInnerPipe}
+
+	runner := ep.Project(
+		dupWrites,
+		// pipeline will keep writing output but will not exit until project cancellation
+		ep.Pipeline(throwIgnorable, waitForNotification, passThroughExternalInp),
+		waitForExitData,
+		notify,
+	)
+
+	data1 := ep.NewDataset(strs{"data"})
+	data2 := ep.NewDataset(strs{"ignore error"})
+	data3 := ep.NewDataset(strs{"other data"})
+	data4 := ep.NewDataset(strs{"exit"})
+	_, err := eptest.Run(runner, data1, data2, data3, data3, data3, data4, data3)
+	require.Error(t, err)
+	require.EqualError(t, err, ep.ErrIgnorable.Error())
+}

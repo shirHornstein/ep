@@ -245,3 +245,75 @@ func (ls *localSort) Run(ctx context.Context, inp, out chan ep.Dataset) error {
 	}
 	return nil
 }
+
+// un gob-able runners. should be used only for single peer tests
+type notifyOnCancel struct {
+	notifyDone chan bool
+}
+
+func (*notifyOnCancel) Returns() []ep.Type { return []ep.Type{str} }
+func (p *notifyOnCancel) Run(ctx context.Context, inp, out chan ep.Dataset) error {
+	for {
+		select {
+		case <-ctx.Done():
+			close(p.notifyDone)
+			return nil
+		case data, open := <-inp:
+			if !open {
+				inp = nil
+				continue
+			}
+			out <- data
+		}
+	}
+}
+
+type waitForNotification struct {
+	done chan bool
+}
+
+func (*waitForNotification) Returns() []ep.Type { return []ep.Type{str} }
+func (p *waitForNotification) Run(ctx context.Context, inp, out chan ep.Dataset) error {
+	for {
+		select {
+		case <-p.done:
+			return nil
+		case data, open := <-inp:
+			if !open {
+				inp = nil
+				continue
+			}
+			out <- data
+		}
+	}
+}
+
+type duplicateWrites struct {
+	externalInp chan ep.Dataset
+}
+
+func (*duplicateWrites) Returns() []ep.Type { return []ep.Type{ep.Wildcard} }
+func (r *duplicateWrites) Run(ctx context.Context, inp, out chan ep.Dataset) error {
+	defer close(r.externalInp)
+	for data := range inp {
+		out <- data
+		r.externalInp <- data
+	}
+	return nil
+}
+
+type passThroughExternalInp struct {
+	externalInp chan ep.Dataset
+}
+
+func (*passThroughExternalInp) Returns() []ep.Type { return []ep.Type{ep.Wildcard} }
+func (r *passThroughExternalInp) Run(ctx context.Context, inp, out chan ep.Dataset) error {
+	go func() {
+		for range inp {
+		}
+	}()
+	for data := range r.externalInp {
+		out <- data
+	}
+	return nil
+}
