@@ -252,14 +252,16 @@ type runOther struct {
 	cancel context.CancelFunc
 }
 
+func (*runOther) Returns() []ep.Type { return []ep.Type{ep.Wildcard} }
 func (r *runOther) Run(ctx context.Context, inp, out chan ep.Dataset) error {
 	innerInp := make(chan ep.Dataset)
-	go r.runner.Run(ctx, innerInp, out)
+	var err error
+	go ep.Run(ctx, r.runner, innerInp, out, nil, &err)
 
 	for data := range inp {
 		innerInp <- data
 	}
-	return nil
+	for range out {
+	}
+	return err
 }
-
-func (*runOther) Returns() []ep.Type { return []ep.Type{ep.Wildcard} }
