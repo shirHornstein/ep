@@ -7,6 +7,7 @@ import (
 	"github.com/panoplyio/ep/eptest"
 	"github.com/stretchr/testify/require"
 	"strconv"
+	"sync"
 	"testing"
 )
 
@@ -342,14 +343,17 @@ func TestPipeline_drainOriginInput(t *testing.T) {
 	data := ep.NewDataset(strs{"data"})
 	inp := make(chan ep.Dataset)
 	out := make(chan ep.Dataset)
-	var err error
+	var wg sync.WaitGroup
+	wg.Add(1)
 	go func() {
-		err = runner.Run(ctx, inp, out)
+		defer wg.Done()
+		err := runner.Run(ctx, inp, out)
+		require.NoError(t, err)
 	}()
 
 	inp <- data
 	cancel()
 	inp <- data
-
-	require.NoError(t, err)
+	close(inp)
+	wg.Wait()
 }
