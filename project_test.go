@@ -265,7 +265,7 @@ func TestProject_drainOriginInput(t *testing.T) {
 
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
-	runner := &runOther{project, cancel}
+	runner := &runOther{project}
 
 	data := ep.NewDataset(strs{"data"})
 	inp := make(chan ep.Dataset)
