@@ -338,7 +338,7 @@ func TestPipeline_drainOriginInput(t *testing.T) {
 
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
-	runner := &runOther{pipeline, cancel}
+	runner := &runOther{pipeline}
 
 	data := ep.NewDataset(strs{"data"})
 	inp := make(chan ep.Dataset)

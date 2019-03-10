@@ -97,9 +97,7 @@ func (r *dataRunner) Run(ctx context.Context, inp, out chan ep.Dataset) (err err
 		err = fmt.Errorf("error %s", r.ThrowOnData)
 	}
 	for data := range inp {
-		fmt.Println("dataRunner: b out <- data")
 		out <- data
-		fmt.Println("dataRunner: a out <- data")
 		if r.ThrowOnData == data.At(data.Width() - 1).Strings()[0] {
 			return err
 		}
@@ -248,13 +246,11 @@ func (ls *localSort) Run(ctx context.Context, inp, out chan ep.Dataset) error {
 	return nil
 }
 
-// un gob-able runners. should be used only for single peer tests
 type runOther struct {
 	runner ep.Runner
-	cancel context.CancelFunc
 }
 
-func (*runOther) Returns() []ep.Type { return []ep.Type{ep.Wildcard} }
+func (r *runOther) Returns() []ep.Type { return r.runner.Returns() }
 func (r *runOther) Run(ctx context.Context, inp, out chan ep.Dataset) error {
 	innerInp := make(chan ep.Dataset)
 	innerOut := make(chan ep.Dataset)
