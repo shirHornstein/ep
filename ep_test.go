@@ -97,7 +97,9 @@ func (r *dataRunner) Run(ctx context.Context, inp, out chan ep.Dataset) (err err
 		err = fmt.Errorf("error %s", r.ThrowOnData)
 	}
 	for data := range inp {
+		fmt.Println("dataRunner: b out <- data")
 		out <- data
+		fmt.Println("dataRunner: a out <- data")
 		if r.ThrowOnData == data.At(data.Width() - 1).Strings()[0] {
 			return err
 		}
@@ -255,13 +257,31 @@ type runOther struct {
 func (*runOther) Returns() []ep.Type { return []ep.Type{ep.Wildcard} }
 func (r *runOther) Run(ctx context.Context, inp, out chan ep.Dataset) error {
 	innerInp := make(chan ep.Dataset)
-	var err error
-	go ep.Run(ctx, r.runner, innerInp, out, nil, &err)
+	innerOut := make(chan ep.Dataset)
 
-	for data := range inp {
-		innerInp <- data
+	var err error
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		defer close(innerOut)
+		// running without ep.Run so the inp won't be draining
+		err = r.runner.Run(ctx, innerInp, innerOut)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for data := range inp {
+			innerInp <- data
+		}
+		close(innerInp)
+	}()
+
+	for data := range innerOut {
+		out <- data
 	}
-	for range out {
-	}
+
+	wg.Wait()
 	return err
 }

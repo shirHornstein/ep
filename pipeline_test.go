@@ -334,11 +334,11 @@ func TestPipeline_multipleErrorsFromExchange(t *testing.T) {
 }
 
 func TestPipeline_drainOriginInput(t *testing.T) {
-	pipline := ep.Pipeline(&dataRunner{}, &dataRunner{})
+	pipeline := ep.Pipeline(&dataRunner{}, &dataRunner{})
 
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
-	runner := &runOther{pipline, cancel}
+	runner := &runOther{pipeline, cancel}
 
 	data := ep.NewDataset(strs{"data"})
 	inp := make(chan ep.Dataset)
@@ -347,13 +347,28 @@ func TestPipeline_drainOriginInput(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := runner.Run(ctx, inp, out)
+		var err error
+		ep.Run(ctx, runner, inp, out, cancel, &err)
 		require.NoError(t, err)
 	}()
 
 	inp <- data
-	cancel()
 	inp <- data
+
+	cancel()
+
+	go func() {
+		for range out {
+		}
+	}()
+
+	inp <- data
+	inp <- data
+	inp <- data
+	inp <- data
+	inp <- data
+
 	close(inp)
+
 	wg.Wait()
 }
