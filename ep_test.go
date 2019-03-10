@@ -97,9 +97,7 @@ func (r *dataRunner) Run(ctx context.Context, inp, out chan ep.Dataset) (err err
 		err = fmt.Errorf("error %s", r.ThrowOnData)
 	}
 	for data := range inp {
-		fmt.Println("dataRunner: b out <- data")
 		out <- data
-		fmt.Println("dataRunner: a out <- data")
 		if r.ThrowOnData == data.At(data.Width() - 1).Strings()[0] {
 			return err
 		}
