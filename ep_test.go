@@ -250,7 +250,7 @@ type runOther struct {
 	runner ep.Runner
 }
 
-func (*runOther) Returns() []ep.Type { return []ep.Type{ep.Wildcard} }
+func (r *runOther) Returns() []ep.Type { return r.runner.Returns() }
 func (r *runOther) Run(ctx context.Context, inp, out chan ep.Dataset) error {
 	innerInp := make(chan ep.Dataset)
 	innerOut := make(chan ep.Dataset)
