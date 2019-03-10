@@ -248,10 +248,8 @@ func (ls *localSort) Run(ctx context.Context, inp, out chan ep.Dataset) error {
 	return nil
 }
 
-// un gob-able runners. should be used only for single peer tests
 type runOther struct {
 	runner ep.Runner
-	cancel context.CancelFunc
 }
 
 func (*runOther) Returns() []ep.Type { return []ep.Type{ep.Wildcard} }
