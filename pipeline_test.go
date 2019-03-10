@@ -7,6 +7,7 @@ import (
 	"github.com/panoplyio/ep/eptest"
 	"github.com/stretchr/testify/require"
 	"strconv"
+	"sync"
 	"testing"
 )
 
@@ -32,7 +33,7 @@ func ExamplePipeline_reverse() {
 }
 
 func TestPipeline_ignoreErrIgnorable(t *testing.T) {
-	runner := ep.Pipeline(&dataRunner{Dataset: ep.NewDataset(str.Data(1)), ThrowOnData: "ignore error", ThrowIgnorable: true}, &count{})
+	runner := ep.Pipeline(&dataRunner{ThrowOnData: "ignore error", ThrowIgnorable: true}, &count{})
 
 	data1 := ep.NewDataset(strs{"data"})
 	data2 := ep.NewDataset(strs{"ignore error"})
@@ -262,7 +263,7 @@ func runVerifyError(t *testing.T, runner ep.Runner, expected error) {
 func TestPipeline_errorFromExchange(t *testing.T) {
 	verifyExchangeError := func(t *testing.T, port string) {
 		infinityRunner := &waitForCancel{}
-		mightErrored := &dataRunner{Dataset: ep.NewDataset(str.Data(1)), ThrowOnData: port}
+		mightErrored := &dataRunner{ThrowOnData: port}
 		runner := ep.Pipeline(
 			infinityRunner,
 			ep.Scatter(),
@@ -294,8 +295,8 @@ func TestPipeline_multipleErrorsFromExchange(t *testing.T) {
 	verifyExchangeErrors := func(t *testing.T, port1, port2 string) {
 		infinityRunner1 := &waitForCancel{}
 		infinityRunner2 := &waitForCancel{}
-		err1 := &dataRunner{Dataset: ep.NewDataset(str.Data(1)), ThrowOnData: port1}
-		err2 := &dataRunner{Dataset: ep.NewDataset(str.Data(1)), ThrowOnData: port2}
+		err1 := &dataRunner{ThrowOnData: port1}
+		err2 := &dataRunner{ThrowOnData: port2}
 		runner := ep.Pipeline(
 			ep.Project(ep.PassThrough(), ep.Pipeline(&nodeAddr{}, err2)),
 			infinityRunner1,
@@ -330,4 +331,44 @@ func TestPipeline_multipleErrorsFromExchange(t *testing.T) {
 	t.Run("two errors on master", func(t *testing.T) {
 		verifyExchangeErrors(t, ":5551", ":5551")
 	})
+}
+
+func TestPipeline_drainOriginInput(t *testing.T) {
+	pipeline := ep.Pipeline(&dataRunner{}, &dataRunner{})
+
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+	runner := &runOther{pipeline}
+
+	data := ep.NewDataset(strs{"data"})
+	inp := make(chan ep.Dataset)
+	out := make(chan ep.Dataset)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		var err error
+		ep.Run(ctx, runner, inp, out, cancel, &err)
+		require.NoError(t, err)
+	}()
+
+	inp <- data
+	inp <- data
+
+	cancel()
+
+	go func() {
+		for range out {
+		}
+	}()
+
+	inp <- data
+	inp <- data
+	inp <- data
+	inp <- data
+	inp <- data
+
+	close(inp)
+
+	wg.Wait()
 }

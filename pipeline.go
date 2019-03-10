@@ -96,6 +96,7 @@ func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 func wrapInpWithCancel(ctx context.Context, inp chan Dataset) chan Dataset {
 	newInp := make(chan Dataset)
 	go func() {
+		defer drain(inp)
 		defer close(newInp)
 		for {
 			select {
