@@ -1,10 +1,12 @@
 package ep_test
 
 import (
+	"context"
 	"fmt"
 	"github.com/panoplyio/ep"
 	"github.com/panoplyio/ep/eptest"
 	"github.com/stretchr/testify/require"
+	"sync"
 	"testing"
 )
 
@@ -256,4 +258,44 @@ func TestProject_ApproxSize(t *testing.T) {
 		require.True(t, ok)
 		require.Equal(t, 42+11, sizer.ApproxSize())
 	})
+}
+
+func TestProject_drainOriginInput(t *testing.T) {
+	project := ep.Project(ep.PassThrough(), ep.PassThrough())
+
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+	runner := &runOther{project}
+
+	data := ep.NewDataset(strs{"data"})
+	inp := make(chan ep.Dataset)
+	out := make(chan ep.Dataset)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		var err error
+		ep.Run(ctx, runner, inp, out, cancel, &err)
+		require.NoError(t, err)
+	}()
+
+	inp <- data
+	inp <- data
+
+	cancel()
+
+	go func() {
+		for range out {
+		}
+	}()
+
+	inp <- data
+	inp <- data
+	inp <- data
+	inp <- data
+	inp <- data
+
+	close(inp)
+
+	wg.Wait()
 }
