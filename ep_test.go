@@ -83,20 +83,13 @@ func (r *fixedData) Run(ctx context.Context, _, out chan ep.Dataset) (err error)
 }
 
 type dataRunner struct {
-	ep.Dataset
 	// ThrowOnData is a condition for throwing error. in case the last column
 	// contains exactly this string in first row - fail with error
 	ThrowOnData    string
 	ThrowIgnorable bool
 }
 
-func (r *dataRunner) Returns() []ep.Type {
-	var types []ep.Type
-	for i := 0; i < r.Dataset.Len(); i++ {
-		types = append(types, r.Dataset.At(i).Type())
-	}
-	return types
-}
+func (r *dataRunner) Returns() []ep.Type { return []ep.Type{ep.Wildcard} }
 func (r *dataRunner) Run(ctx context.Context, inp, out chan ep.Dataset) (err error) {
 	if r.ThrowIgnorable {
 		err = ep.ErrIgnorable
@@ -104,7 +97,7 @@ func (r *dataRunner) Run(ctx context.Context, inp, out chan ep.Dataset) (err err
 		err = fmt.Errorf("error %s", r.ThrowOnData)
 	}
 	for data := range inp {
-		out <- r.Dataset
+		out <- data
 		if r.ThrowOnData == data.At(data.Width() - 1).Strings()[0] {
 			return err
 		}
@@ -251,4 +244,40 @@ func (ls *localSort) Run(ctx context.Context, inp, out chan ep.Dataset) error {
 		}
 	}
 	return nil
+}
+
+type runOther struct {
+	runner ep.Runner
+}
+
+func (r *runOther) Returns() []ep.Type { return r.runner.Returns() }
+func (r *runOther) Run(ctx context.Context, inp, out chan ep.Dataset) error {
+	innerInp := make(chan ep.Dataset)
+	innerOut := make(chan ep.Dataset)
+
+	var err error
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		defer close(innerOut)
+		// running without ep.Run so the inp won't be draining
+		err = r.runner.Run(ctx, innerInp, innerOut)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for data := range inp {
+			innerInp <- data
+		}
+		close(innerInp)
+	}()
+
+	for data := range innerOut {
+		out <- data
+	}
+
+	wg.Wait()
+	return err
 }
