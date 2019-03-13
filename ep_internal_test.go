@@ -24,11 +24,32 @@ var str = &strType{}
 
 type strType struct{}
 
-func (s *strType) String() string     { return s.Name() }
-func (*strType) Name() string         { return "string" }
-func (*strType) Size() uint           { return 8 }
-func (*strType) Data(n int) Data      { return make(strs, n) }
-func (*strType) Builder() DataBuilder { return nil }
+func (s *strType) String() string { return s.Name() }
+func (*strType) Name() string     { return "string" }
+func (*strType) Size() uint       { return 8 }
+func (*strType) Data(n int) Data  { return make(strs, n) }
+func (*strType) Builder() DataBuilder {
+	return &strBuilder{}
+}
+
+type strBuilder struct {
+	ds  []strs
+	len int
+}
+
+func (b *strBuilder) Append(data Data) {
+	strData := data.(strs)
+	b.ds = append(b.ds, strData)
+	b.len += strData.Len()
+}
+
+func (b *strBuilder) Data() Data {
+	res := make(strs, 0, b.len)
+	for _, d := range b.ds {
+		res = append(res, d...)
+	}
+	return res
+}
 
 type strs []string
 
