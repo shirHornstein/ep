@@ -92,3 +92,21 @@ func (ex *exchange) getPartitionEncoder(key string) (encoder, error) {
 
 	return enc, nil
 }
+
+type dataWithEndpoints struct {
+	data      Dataset
+	endpoints []string
+}
+
+func (s *dataWithEndpoints) Len() int {
+	return len(s.endpoints)
+}
+
+func (s *dataWithEndpoints) Less(i int, j int) bool {
+	return s.endpoints[i] < s.endpoints[j]
+}
+
+func (s *dataWithEndpoints) Swap(i int, j int) {
+	s.data.Swap(i, j)
+	s.endpoints[i], s.endpoints[j] = s.endpoints[j], s.endpoints[i]
+}
