@@ -54,9 +54,19 @@ func (ex *exchange) encodePartition(e interface{}) error {
 		lastSlicedRow = row
 	}
 
-	// leftover
-	dataToEncode := data.Slice(lastSlicedRow, dataLen)
-	return ex.partitionData(dataToEncode, lastSeenHash)
+func (ex *exchange) addEndpointsToData(data Dataset) (*dataWithEndpoints, error) {
+	dataLen := data.Len()
+	stringValues := ColumnStrings(data, ex.PartitionCols...)
+	endpoints := make([]string, dataLen)
+	for row := 0; row < dataLen; row++ {
+		hash := ex.getRowHash(stringValues, row)
+		endpoint, err := ex.hashRing.Get(hash)
+		if err != nil {
+			return nil, err
+		}
+		endpoints[row] = endpoint
+	}
+	return &dataWithEndpoints{data, endpoints}, nil
 }
 
 func (ex *exchange) getRowHash(stringValues [][]string, row int) string {
