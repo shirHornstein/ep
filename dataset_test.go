@@ -184,3 +184,24 @@ func TestDataset_Compare_mixTypes(t *testing.T) {
 	results, _ = d1Dataset.Compare(d2Dataset)
 	require.Equal(t, expected, results)
 }
+
+func TestDataset_Expand_invariant(t *testing.T) {
+	c1 := strs([]string{"a"})
+	c2 := strs([]string{"b"})
+	c3 := strs([]string{"c"})
+
+	// create ds with width 3, but columns capacity of 4
+	ds, err := ep.NewDataset(c1, c2).Expand(ep.NewDataset(c3))
+	require.NoError(t, err)
+
+	r1 := ep.NewDataset(strs([]string{"1"}))
+	r2 := ep.NewDataset(strs([]string{"2"}))
+
+	res1, err := ds.Expand(r1)
+	require.NoError(t, err)
+	res2, err := ds.Expand(r2)
+	require.NoError(t, err)
+
+	require.Equal(t, []string{"(a,b,c,1)"}, res1.Strings())
+	require.Equal(t, []string{"(a,b,c,2)"}, res2.Strings())
+}
