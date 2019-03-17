@@ -37,19 +37,31 @@ func (ex *exchange) encodePartition(e interface{}) error {
 		return err
 	}
 	sort.Sort(dataWithEndpoints)
-	dataByEndpoint := ex.groupDataByEndpoint(dataWithEndpoints)
 
-	for endpoint, d := range dataByEndpoint {
-		enc, ok := ex.encsByKey[endpoint]
+	endpoints := dataWithEndpoints.endpoints
+	lastSeenEndpoint := endpoints[0]
+	lastSlicedRow := 0
+	for row := 1; row <= len(endpoints); row++ {
+		if row != len(endpoints) && endpoints[row] == lastSeenEndpoint {
+			continue
+		}
+
+		toSend := dataWithEndpoints.data.Slice(lastSlicedRow, row)
+		enc, ok := ex.encsByKey[endpoints[lastSlicedRow]]
 		if !ok {
 			return fmt.Errorf("no matching node found")
 		}
 
-		err := enc.Encode(&req{d})
+		err := enc.Encode(&req{toSend})
 		if err != nil {
 			return err
 		}
+		lastSlicedRow = row
+		if row < len(endpoints) {
+			lastSeenEndpoint = endpoints[row]
+		}
 	}
+
 	return nil
 }
 
@@ -74,37 +86,6 @@ func (ex *exchange) getRowHash(stringValues [][]string, row int) string {
 		sb.WriteString(stringValues[col][row])
 	}
 	return sb.String()
-}
-
-func (ex *exchange) groupDataByEndpoint(d *dataWithEndpoints) map[string]Data {
-	builderByEndpoint := make(map[string]DataBuilder)
-	lastSeenEndpoint := d.endpoints[0]
-	lastSlicedRow := 0
-	for row := 1; row <= len(d.endpoints); row++ {
-		if row != len(d.endpoints) && lastSeenEndpoint == d.endpoints[row] {
-			continue
-		}
-
-		data := d.data.Slice(lastSlicedRow, row)
-		builder := builderByEndpoint[lastSeenEndpoint]
-		if builder == nil {
-			builder = NewDatasetBuilder()
-			builderByEndpoint[lastSeenEndpoint] = builder
-		}
-
-		builder.Append(data)
-		lastSlicedRow = row
-		if row < len(d.endpoints) {
-			lastSeenEndpoint = d.endpoints[row]
-		}
-	}
-
-	dataByEndpoint := make(map[string]Data)
-	for endpoint, builder := range builderByEndpoint {
-		dataByEndpoint[endpoint] = builder.Data()
-	}
-
-	return dataByEndpoint
 }
 
 type dataWithEndpoints struct {
