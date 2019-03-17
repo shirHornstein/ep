@@ -143,7 +143,10 @@ func (set dataset) Expand(other Dataset) (Dataset, error) {
 		return nil, errMismatch
 	}
 	otherCols := other.(dataset)
-	return append(set, otherCols...), nil
+	newDataset := make(dataset, 0, len(set)+len(otherCols))
+	newDataset = append(newDataset, set...)
+	newDataset = append(newDataset, otherCols...)
+	return newDataset, nil
 }
 
 // Split returns two datasets, with requested second width
