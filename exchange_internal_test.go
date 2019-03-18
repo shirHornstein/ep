@@ -2,13 +2,10 @@ package ep
 
 import (
 	"context"
-	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"math/rand"
 	"net"
 	"testing"
-	"time"
 )
 
 var exchanges = map[string]func() Runner{
@@ -282,42 +279,6 @@ func TestExchange_encodePartition_failsWithoutDataset(t *testing.T) {
 
 	err = partition.encodePartition([]int{42})
 	require.Error(t, err)
-}
-
-func TestExchange_getPartitionEncoder_consistent(t *testing.T) {
-	rand.Seed(time.Now().UTC().UnixNano())
-	maxPort := 7000
-	minPort := 6000
-	randomPort := rand.Intn(maxPort-minPort) + minPort
-	port1 := fmt.Sprintf(":%d", randomPort)
-	port2 := fmt.Sprintf(":%d", randomPort+1)
-	port3 := fmt.Sprintf(":%d", randomPort+2)
-
-	ports := []string{port1, port2, port3}
-	distributers := startCluster(t, ports...)
-	master := distributers[0]
-
-	defer terminateCluster(t, distributers...)
-
-	ctx := context.WithValue(context.Background(), distributerKey, master)
-	ctx = context.WithValue(ctx, allNodesKey, []string{port1, port2, port3})
-	ctx = context.WithValue(ctx, masterNodeKey, port1)
-	ctx = context.WithValue(ctx, thisNodeKey, port1)
-
-	partition := Partition(0).(*exchange)
-	err := partition.init(ctx)
-	require.NoError(t, err)
-
-	hashKey := fmt.Sprintf("this-is-a-key-%d", rand.Intn(1e12))
-	enc, err := partition.getPartitionEncoder(hashKey)
-	require.NoError(t, err)
-
-	// verify that getPartitionEncoder returns the same result over 100 calls
-	for i := 0; i < 100; i++ {
-		nextEncoder, err := partition.getPartitionEncoder(hashKey)
-		require.NoError(t, err)
-		require.Equal(t, enc, nextEncoder)
-	}
 }
 
 func TestExchange_encsMappedByNodes(t *testing.T) {

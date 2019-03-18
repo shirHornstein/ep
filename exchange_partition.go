@@ -3,6 +3,7 @@ package ep
 import (
 	"fmt"
 	"github.com/satori/go.uuid"
+	"sort"
 	"strings"
 )
 
@@ -31,32 +32,52 @@ func (ex *exchange) encodePartition(e interface{}) error {
 		return fmt.Errorf("encodePartition called without a dataset")
 	}
 
-	// before partitioning data, sort it to generate larger batches
-	Sort(data, ex.SortingCols)
-	stringValues := ColumnStrings(data, ex.PartitionCols...)
+	dataWithEndpoints, err := ex.addEndpointsToData(data)
+	if err != nil {
+		return err
+	}
+	sort.Sort(dataWithEndpoints)
 
-	lastSeenHash := ex.getRowHash(stringValues, 0)
+	endpoints := dataWithEndpoints.endpoints
+	lastSeenEndpoint := endpoints[0]
 	lastSlicedRow := 0
-	dataLen := data.Len()
-	for row := 1; row < dataLen; row++ {
-		hash := ex.getRowHash(stringValues, row)
-		if hash == lastSeenHash {
+	for row := 1; row <= len(endpoints); row++ {
+		if row != len(endpoints) && endpoints[row] == lastSeenEndpoint {
 			continue
 		}
 
-		dataToEncode := data.Slice(lastSlicedRow, row)
-		err := ex.partitionData(dataToEncode, lastSeenHash)
+		toSend := dataWithEndpoints.data.Slice(lastSlicedRow, row)
+		enc, ok := ex.encsByKey[endpoints[lastSlicedRow]]
+		if !ok {
+			return fmt.Errorf("no matching node found")
+		}
+
+		err := enc.Encode(&req{toSend})
 		if err != nil {
 			return err
 		}
-
-		lastSeenHash = hash
 		lastSlicedRow = row
+		if row < len(endpoints) {
+			lastSeenEndpoint = endpoints[row]
+		}
 	}
 
-	// leftover
-	dataToEncode := data.Slice(lastSlicedRow, dataLen)
-	return ex.partitionData(dataToEncode, lastSeenHash)
+	return nil
+}
+
+func (ex *exchange) addEndpointsToData(data Dataset) (*dataWithEndpoints, error) {
+	dataLen := data.Len()
+	stringValues := ColumnStrings(data, ex.PartitionCols...)
+	endpoints := make([]string, dataLen)
+	for row := 0; row < dataLen; row++ {
+		hash := ex.getRowHash(stringValues, row)
+		endpoint, err := ex.hashRing.Get(hash)
+		if err != nil {
+			return nil, err
+		}
+		endpoints[row] = endpoint
+	}
+	return &dataWithEndpoints{data, endpoints}, nil
 }
 
 func (ex *exchange) getRowHash(stringValues [][]string, row int) string {
@@ -67,28 +88,20 @@ func (ex *exchange) getRowHash(stringValues [][]string, row int) string {
 	return sb.String()
 }
 
-func (ex *exchange) partitionData(data Data, hash string) error {
-	enc, err := ex.getPartitionEncoder(hash)
-	if err != nil {
-		return err
-	}
-
-	return enc.Encode(&req{data})
+type dataWithEndpoints struct {
+	data      Dataset
+	endpoints []string
 }
 
-// getPartitionEncoder uses a hash ring to find a node that should handle
-// a provided key. This function returns an encoder that handles data
-// transmission to the matched node.
-func (ex *exchange) getPartitionEncoder(key string) (encoder, error) {
-	endpoint, err := ex.hashRing.Get(key)
-	if err != nil {
-		return nil, fmt.Errorf("cannot find a target node: %s", err)
-	}
+func (s *dataWithEndpoints) Len() int {
+	return len(s.endpoints)
+}
 
-	enc, ok := ex.encsByKey[endpoint]
-	if !ok {
-		return nil, fmt.Errorf("no matching node found")
-	}
+func (s *dataWithEndpoints) Less(i int, j int) bool {
+	return s.endpoints[i] < s.endpoints[j]
+}
 
-	return enc, nil
+func (s *dataWithEndpoints) Swap(i int, j int) {
+	s.data.Swap(i, j)
+	s.endpoints[i], s.endpoints[j] = s.endpoints[j], s.endpoints[i]
 }
