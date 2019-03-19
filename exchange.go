@@ -233,7 +233,7 @@ func (ex *exchange) init(ctx context.Context) error {
 		if node == thisNode {
 			sc = newShortCircuit()
 			ex.conns = append(ex.conns, sc)
-			ex.encs = append(ex.encs, sc)
+			ex.encsTermination = append(ex.encsTermination, sc)
 			ex.hashRing.Add(node)
 			ex.encsByKey[node] = sc
 			continue
