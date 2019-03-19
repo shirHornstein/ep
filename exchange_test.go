@@ -288,24 +288,51 @@ func TestPartition(t *testing.T) {
 
 		require.Equal(t, expectedOutput, res.Strings())
 	})
-}
 
-func TestPartition_sendsCompleteDatasets(t *testing.T) {
-	firstColumn := strs{"foo", "bar", "meh", "nya", "shtoot", "a", "few", "more", "things"}
-	secondColumn := strs{"f", "s", "f", "f", "s", "f", "f", "f", "s"}
+	t.Run("sends complete datasets", func(t *testing.T) {
+		t.Run("multiple rows", func(t *testing.T) {
+			// mappings with current hashing algorithm:
+			// r, t, f 5551
+			// s, z, x 5552
+			//
+			// despite difference in column values, all rows assigned
+			// to each node must arrive together, not separately
+			firstColumn := strs{"foo", "bar", "meh", "nya", "shtoot", "a", "few", "more", "things"}
+			secondColumn := strs{"r", "s", "t", "z", "f", "x", "r", "s", "f"}
 
-	data := ep.NewDataset(firstColumn, secondColumn)
-	runner := ep.Pipeline(ep.Partition(1), &count{})
+			data := ep.NewDataset(firstColumn, secondColumn)
+			runner := ep.Pipeline(ep.Partition(1), &count{})
 
-	res, err := eptest.RunDist(t, 2, runner, data)
-	require.NoError(t, err)
+			res, err := eptest.RunDist(t, 2, runner, data)
+			require.NoError(t, err)
 
-	// there are 6 "f" and 3 "s" in second column which is used for partitioning
-	expected := []string{"6", "3"}
-	sizes := res.At(0)
+			// node 5551 is supposed to receive 5 rows; 5552 - 4 rows
+			expected := []string{"5", "4"}
+			sizes := res.At(0)
 
-	require.Equal(t, 2, sizes.Len())
-	require.ElementsMatch(t, expected, sizes.Strings())
+			require.Equal(t, 2, sizes.Len())
+			require.ElementsMatch(t, expected, sizes.Strings())
+		})
+
+		t.Run("single row", func(t *testing.T) {
+			// r maps to 5551 with current hashing algorithm
+			firstColumn := strs{"foo"}
+			secondColumn := strs{"r"}
+
+			data := ep.NewDataset(firstColumn, secondColumn)
+			runner := ep.Pipeline(ep.Partition(1), &count{})
+
+			res, err := eptest.RunDist(t, 2, runner, data)
+			require.NoError(t, err)
+
+			// node 5551 is supposed to receive 5 rows; 5552 - 4 rows
+			expected := []string{"1"}
+			sizes := res.At(0)
+
+			require.Equal(t, 1, sizes.Len())
+			require.ElementsMatch(t, expected, sizes.Strings())
+		})
+	})
 }
 
 // test that exchange runners act as passThrough when executed without a
