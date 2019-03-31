@@ -29,7 +29,9 @@ func Project(runners ...Runner) Runner {
 	} else if len(flat) == 1 {
 		return runners[0]
 	}
-
+	if cmpProj, ok := createComposeProjectRunner(runners); ok {
+		return cmpProj
+	}
 	return flat
 }
 
@@ -232,4 +234,7 @@ func (*dummyRunner) Args() []Type    { return []Type{Wildcard} }
 func (*dummyRunner) Returns() []Type { return []Type{dummy} }
 func (*dummyRunner) Run(_ context.Context, inp, out chan Dataset) error {
 	return nil
+}
+func (*dummyRunner) BatchFunction() BatchFunction {
+	return func(Dataset) (Dataset, error) { return variadicDummiesBatch, nil }
 }

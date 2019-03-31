@@ -49,6 +49,8 @@ type runnerWithSize struct {
 	size int
 }
 
+func (r *runnerWithSize) Returns() []ep.Type { return []ep.Type{ep.Wildcard} }
+
 func (r *runnerWithSize) ApproxSize() int {
 	return r.size
 }

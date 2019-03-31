@@ -75,6 +75,24 @@ func (c *compose) SetAlias(name string) {
 	c.ReturnTs[0] = SetAlias(c.ReturnTs[0], name)
 }
 
+func (c *compose) Filter(keep []bool) {
+	last := c.Cmps[len(c.Cmps)-1]
+	if f, isFilterable := last.(FilterRunner); isFilterable {
+		f.Filter(keep)
+	}
+	if proj, ok := last.(*composeProject); ok {
+		proj.Filter(keep)
+		if len(c.ReturnTs) != len(keep) {
+			panic("bb")
+		}
+		for i, toKeep := range keep {
+			if !toKeep {
+				c.ReturnTs[i] = dummy
+			}
+		}
+	}
+}
+
 // ComposeProject returns a special Composable which forwards its input as-is
 // to every Composable's BatchFunction, combining their outputs into a single
 // Dataset. It is a functional implementation of ep.Project.
@@ -112,4 +130,48 @@ func (p *composeProject) BatchFunction() BatchFunction {
 		}
 		return result, nil
 	}
+}
+
+func (p *composeProject) Filter(keep []bool) {
+	if len(p.Cmps) != len(keep) {
+		panic("aa")
+	}
+	for i, toKeep := range keep {
+		if !toKeep {
+			p.Cmps[i] = dummyRunnerSingleton
+		}
+	}
+}
+
+func createComposeRunner(runners []Runner) (Runner, bool) {
+	var ok bool
+	scopes := make(StringsSet)
+	cmps := make([]Composable, len(runners))
+	for i, r := range runners {
+		if scp, ok := r.(ScopesRunner); ok {
+			scopes.AddAll(scp.Scopes())
+		}
+		if cmps[i], ok = r.(Composable); !ok {
+			return nil, false
+		}
+	}
+	retTypes := pipeline(runners).Returns()
+	return Compose(retTypes, scopes, cmps...), true
+}
+
+func createComposeProjectRunner(runners []Runner) (Runner, bool) {
+	var ok bool
+	var retTypes []Type
+	scopes := make(StringsSet)
+	cmps := make([]Composable, len(runners))
+	for i, r := range runners {
+		retTypes = append(retTypes, r.Returns()...)
+		if scp, ok := r.(ScopesRunner); ok {
+			scopes.AddAll(scp.Scopes())
+		}
+		if cmps[i], ok = r.(Composable); !ok {
+			return nil, false
+		}
+	}
+	return Compose(retTypes, scopes, ComposeProject(cmps...)), true
 }
