@@ -33,6 +33,9 @@ type Dataset interface {
 	// Split divides dataset to two parts, where the second part width determined by
 	// the given secondWidth argument
 	Split(secondWidth int) (Dataset, Dataset)
+
+	// MarkNullByColumns marks null in the first columns of a dataset determined by cols argument for a given row
+	MarkNullByColumns(cols int, row int)
 }
 
 // Record is exposed data type similar to postgres' record, implements Type
@@ -268,6 +271,12 @@ func (set dataset) IsNull(i int) bool {
 func (set dataset) MarkNull(i int) {
 	for _, d := range set {
 		d.MarkNull(i)
+	}
+}
+
+func (set dataset) MarkNullByColumns(cols int, row int) {
+	for i := 0; i < len(set) && i < cols; i++ {
+		set[i].MarkNull(row)
 	}
 }
 
