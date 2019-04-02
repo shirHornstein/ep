@@ -44,6 +44,10 @@ func PlanList(ctx context.Context, items []interface{}) ([]Runner, error) {
 
 		if p, ok := r.(project); ok {
 			runners = append(runners, p...)
+		} else if p, ok := isComposeProject(r); ok {
+			for _, cmp := range p {
+				runners = append(runners, cmp.(Runner))
+			}
 		} else {
 			runners = append(runners, r)
 		}

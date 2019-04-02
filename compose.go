@@ -172,16 +172,31 @@ func createComposeRunner(runners []Runner) (Runner, bool) {
 }
 
 func createComposeProjectRunner(runners []Runner) (Runner, bool) {
-	var ok bool
 	scopes := make(StringsSet)
-	cmps := make([]Composable, len(runners))
-	for i, r := range runners {
+	var flat composeProject = make([]Composable, 0, len(runners))
+	for _, r := range runners {
 		if scp, ok := r.(ScopesRunner); ok {
 			scopes.AddAll(scp.Scopes())
 		}
-		if cmps[i], ok = r.(Composable); !ok {
+		c, isCmp := r.(Composable)
+		if !isCmp {
 			return nil, false
 		}
+
+		if p, isProject := isComposeProject(r); isProject {
+			flat = append(flat, p...)
+		} else {
+			flat = append(flat, c)
+		}
 	}
-	return Compose(scopes, ComposeProject(cmps...)), true
+	return Compose(scopes, ComposeProject(flat...)), true
+}
+
+func isComposeProject(r Runner) (composeProject, bool) {
+	comp, isCmp := r.(*compose)
+	if isCmp && len(comp.Cmps) == 1 {
+		p, isProject := comp.Cmps[0].(composeProject)
+		return p, isProject
+	}
+	return nil, false
 }
