@@ -19,14 +19,13 @@ type Composable interface {
 	BatchFunction() BatchFunction
 }
 
-// Compose returns a Runner with the provided return types & the provided scopes.
+// Compose returns a Runner with the the provided scopes.
 // Note: The caller's responsibility to maintain a valid set of scopes.
 // This Runner passes its input through every Composable's BatchFunction
 // implementation, where every following BatchFunction receives the output
 // of the previous one. This Runner is also a Composable, which means that
 // its BatchFunction can be retrieved and used in another Compose call.
-// TODO avia
-func Compose(returns []Type, scopes StringsSet, cmps ...Composable) Runner {
+func Compose(scopes StringsSet, cmps ...Composable) Runner {
 	return &compose{Scps: scopes, Cmps: cmps}
 }
 
@@ -169,17 +168,14 @@ func createComposeRunner(runners []Runner) (Runner, bool) {
 			return nil, false
 		}
 	}
-	retTypes := pipeline(runners).Returns()
-	return Compose(retTypes, scopes, cmps...), true
+	return Compose(scopes, cmps...), true
 }
 
 func createComposeProjectRunner(runners []Runner) (Runner, bool) {
 	var ok bool
-	var retTypes []Type
 	scopes := make(StringsSet)
 	cmps := make([]Composable, len(runners))
 	for i, r := range runners {
-		retTypes = append(retTypes, r.Returns()...)
 		if scp, ok := r.(ScopesRunner); ok {
 			scopes.AddAll(scp.Scopes())
 		}
@@ -187,5 +183,5 @@ func createComposeProjectRunner(runners []Runner) (Runner, bool) {
 			return nil, false
 		}
 	}
-	return Compose(retTypes, scopes, ComposeProject(cmps...)), true
+	return Compose(scopes, ComposeProject(cmps...)), true
 }
