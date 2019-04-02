@@ -78,7 +78,7 @@ func GetAlias(col Type) string {
 // see Aliasing and Scoping
 func Scope(r Runner, label string) Runner {
 	if cmp, ok := r.(*compose); ok {
-		cmp.Scope = label
+		cmp.RetScope = label
 		return r
 	}
 	return &scope{r, label}

@@ -30,10 +30,10 @@ func Compose(scopes StringsSet, cmps ...Composable) Runner {
 }
 
 type compose struct {
-	Alias string
-	Scope string
-	Scps  StringsSet
-	Cmps  []Composable
+	Alias    string
+	RetScope string
+	Scps     StringsSet
+	Cmps     []Composable
 }
 
 func (c *compose) Returns() []Type {
@@ -46,8 +46,8 @@ func (c *compose) Returns() []Type {
 		}
 		ret[0] = SetAlias(ret[0], c.Alias)
 	}
-	if c.Scope != "" {
-		ret = SetScope(ret, c.Scope)
+	if c.RetScope != "" {
+		ret = SetScope(ret, c.RetScope)
 	}
 	return ret
 }
