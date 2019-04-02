@@ -9,12 +9,34 @@ var _ = registerGob(&passThrough{}, &pick{}, &tail{})
 // UnknownSize is used when size cannot be estimated
 const UnknownSize = -1
 
+// returns should be implemented by ALL entities in the system to allow
+// types check
+// TODO: consider it make it public after interfaces restructure
+type returns interface {
+	// Returns the constant list of data types that are produced by this entity.
+	//
+	// NOTE: Violation of meeting these defined types (either by producing
+	// mismatching number of Data objects within the produced Datasets, or by
+	// returning incorrect types) may result in a panic or worse - incorrect
+	// results
+	//
+	// NOTE: If you need to annotate the returned data with names for
+	// referencing later, use the `As()` helper function
+	//
+	// NOTE: In some cases you may not know the returned types ahead of time,
+	// because it's somehow depends on the input types. For such cases, use the
+	// Wildcard type.
+	Returns() []Type
+}
+
 // Runner represents objects that can receive a stream of input datasets,
-// manipulate them in some way (filter, mapping, reduction, expansion, etc.) and
+// manipulate them in some way (filter, mapping, reduction, expansion, etc.)
 // and produce a new stream of the formatted values.
 // NOTE: Some Runners will run concurrently, this it's important to not modify
 // the input in-place. Instead, copy/create a new dataset and use that
 type Runner interface {
+	returns // Runner must declare its return types
+
 	// Run the manipulation code. Receive datasets from the `inp` stream, cast
 	// and modify them as needed (no in-place), and send the results to the
 	// `out` stream. Return when the `inp` is closed.
@@ -38,21 +60,6 @@ type Runner interface {
 	// stream. The behavior of other Runners in case they receive empty
 	// Datasets to `inp` stream is undefined.
 	Run(ctx context.Context, inp, out chan Dataset) error
-
-	// Returns the constant list of data types that are produced by this Runner.
-	//
-	// NOTE: Violation of meeting these defined types (either by producing
-	// mismatching number of Data objects within the produced Datasets, or by
-	// returning incorrect types) may result in a panic or worse - incorrect
-	// results
-	//
-	// NOTE: If you need to annotate the returned data with names for
-	// referencing later, use the `As()` helper function
-	//
-	// NOTE: In some cases you may not know the returned types ahead of time,
-	// because it's somehow depends on the input types. For such cases, use the
-	// Wildcard type.
-	Returns() []Type
 }
 
 // RunnerArgs is a Runner that also exposes a list of argument types that it

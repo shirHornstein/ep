@@ -14,6 +14,8 @@ type BatchFunction func(Dataset) (Dataset, error)
 // Composable is a type that holds a BatchFunction implementation and can be
 // used to Compose runners.
 type Composable interface {
+	returns // Composable must declare its return types
+
 	BatchFunction() BatchFunction
 }
 
@@ -23,17 +25,35 @@ type Composable interface {
 // implementation, where every following BatchFunction receives the output
 // of the previous one. This Runner is also a Composable, which means that
 // its BatchFunction can be retrieved and used in another Compose call.
+// TODO avia
 func Compose(returns []Type, scopes StringsSet, cmps ...Composable) Runner {
-	return &compose{returns, scopes, cmps}
+	return &compose{Scps: scopes, Cmps: cmps}
 }
 
 type compose struct {
-	ReturnTs []Type
-	Scps     StringsSet
-	Cmps     []Composable
+	Alias string
+	Scope string
+	Scps  StringsSet
+	Cmps  []Composable
 }
 
-func (c *compose) Returns() []Type { return c.ReturnTs }
+func (c *compose) Returns() []Type {
+	last := len(c.Cmps) - 1
+	ret := returnsOne(c.Cmps[last], last, c.getPrev)
+
+	if c.Alias != "" {
+		if len(ret) > 1 {
+			panic("Invalid usage of alias. Consider use scope")
+		}
+		ret[0] = SetAlias(ret[0], c.Alias)
+	}
+	if c.Scope != "" {
+		ret = SetScope(ret, c.Scope)
+	}
+	return ret
+}
+func (c *compose) getPrev(j int) returns { return c.Cmps[j-1] }
+
 func (c *compose) Run(ctx context.Context, inp, out chan Dataset) error {
 	batchFunction := c.BatchFunction()
 
@@ -64,32 +84,13 @@ func (c *compose) BatchFunction() BatchFunction {
 	}
 }
 
-func (c *compose) Scopes() StringsSet {
-	return c.Scps
-}
-
-func (c *compose) SetAlias(name string) {
-	if len(c.ReturnTs) > 1 {
-		panic("Invalid usage of alias. Consider use scope")
-	}
-	c.ReturnTs[0] = SetAlias(c.ReturnTs[0], name)
-}
+func (c *compose) Scopes() StringsSet   { return c.Scps }
+func (c *compose) SetAlias(name string) { c.Alias = name }
 
 func (c *compose) Filter(keep []bool) {
 	last := c.Cmps[len(c.Cmps)-1]
-	if f, isFilterable := last.(FilterRunner); isFilterable {
+	if f, isFilterable := last.(interface{ Filter(keep []bool) }); isFilterable {
 		f.Filter(keep)
-	}
-	if proj, ok := last.(*composeProject); ok {
-		proj.Filter(keep)
-		if len(c.ReturnTs) != len(keep) {
-			panic("bb")
-		}
-		for i, toKeep := range keep {
-			if !toKeep {
-				c.ReturnTs[i] = dummy
-			}
-		}
 	}
 }
 
@@ -103,17 +104,23 @@ func ComposeProject(cmps ...Composable) Composable {
 	if len(cmps) == 1 {
 		return cmps[0]
 	}
-	return &composeProject{cmps}
+	return composeProject(cmps)
 }
 
-type composeProject struct {
-	Cmps []Composable
-}
+type composeProject []Composable
 
-func (p *composeProject) BatchFunction() BatchFunction {
-	funcs := make([]BatchFunction, len(p.Cmps))
-	for i := 0; i < len(p.Cmps); i++ {
-		funcs[i] = p.Cmps[i].BatchFunction()
+// Returns a concatenation of all composables' return types
+func (cs composeProject) Returns() []Type {
+	var types []Type
+	for _, c := range cs {
+		types = append(types, c.Returns()...)
+	}
+	return types
+}
+func (cs composeProject) BatchFunction() BatchFunction {
+	funcs := make([]BatchFunction, len(cs))
+	for i := 0; i < len(cs); i++ {
+		funcs[i] = cs[i].BatchFunction()
 	}
 
 	return func(data Dataset) (Dataset, error) {
@@ -132,14 +139,21 @@ func (p *composeProject) BatchFunction() BatchFunction {
 	}
 }
 
-func (p *composeProject) Filter(keep []bool) {
-	if len(p.Cmps) != len(keep) {
-		panic("aa")
-	}
-	for i, toKeep := range keep {
-		if !toKeep {
-			p.Cmps[i] = dummyRunnerSingleton
+func (cs composeProject) Filter(keep []bool) {
+	currIdx := 0
+	for i, c := range cs {
+		returnLen := len(c.Returns())
+		// simplest (and most common for project) case - c return single value
+		if returnLen == 1 {
+			if !keep[currIdx] {
+				cs[i] = dummyRunnerSingleton
+			}
+		} else {
+			if r, isFilterable := c.(interface{ Filter(keep []bool) }); isFilterable {
+				r.Filter(keep[currIdx : currIdx+returnLen])
+			}
 		}
+		currIdx += returnLen
 	}
 }
 

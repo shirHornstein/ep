@@ -174,6 +174,7 @@ func (q *question) Run(_ context.Context, inp, out chan ep.Dataset) error {
 
 type addInts struct{}
 
+func (*addInts) Returns() []ep.Type { return []ep.Type{integer} }
 func (*addInts) BatchFunction() ep.BatchFunction {
 	return func(data ep.Dataset) (ep.Dataset, error) {
 		d0 := data.At(0).(integers)
@@ -188,6 +189,7 @@ func (*addInts) BatchFunction() ep.BatchFunction {
 
 type negateInt struct{}
 
+func (*negateInt) Returns() []ep.Type { return []ep.Type{integer} }
 func (*negateInt) BatchFunction() ep.BatchFunction {
 	return func(data ep.Dataset) (ep.Dataset, error) {
 		d0 := data.At(0).(integers)
@@ -201,6 +203,7 @@ func (*negateInt) BatchFunction() ep.BatchFunction {
 
 type mulIntBy2 struct{}
 
+func (*mulIntBy2) Returns() []ep.Type { return []ep.Type{integer} }
 func (*mulIntBy2) BatchFunction() ep.BatchFunction {
 	return func(data ep.Dataset) (ep.Dataset, error) {
 		d0 := data.At(0).(integers)
