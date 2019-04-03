@@ -192,7 +192,7 @@ func createComposeProjectRunner(runners []Runner) (Runner, bool) {
 	return Compose(scopes, ComposeProject(flat...)), true
 }
 
-func isComposeProject(r Runner) (composeProject, bool) {
+func isComposeProject(r returns) (composeProject, bool) {
 	comp, isCmp := r.(*compose)
 	if isCmp && len(comp.Cmps) == 1 {
 		p, isProject := comp.Cmps[0].(composeProject)

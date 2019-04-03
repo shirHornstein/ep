@@ -82,6 +82,29 @@ func TestPipeline_creationSingleRunnerAfterFlat(t *testing.T) {
 	require.True(t, isPassThrough)
 }
 
+func TestPipeline_creationComposable(t *testing.T) {
+	nestedPipeline := Pipeline(PassThrough(), Pipeline(&dummyRunner{}, PassThrough()), PassThrough())
+	_, isCmp := nestedPipeline.(Composable)
+	require.True(t, isCmp)
+
+	nestedComposablePipeline := Pipeline(
+		Pipeline(&dummyRunner{}, &dummyRunner{}),
+		Pipeline(&dummyRunner{}, &dummyRunner{}, passThroughSingleton),
+	)
+
+	c, isCmp := nestedComposablePipeline.(*compose)
+	require.True(t, isCmp)
+	require.Equal(t, 2, len(c.Cmps))
+
+	pipelineWithProject := Pipeline(&dummyRunner{}, Compose(nil, ComposeProject(passThroughSingleton, &dummyRunner{})))
+	c, isCmp = pipelineWithProject.(*compose)
+	require.True(t, isCmp)
+	require.Equal(t, 2, len(c.Cmps))
+	p, isCmp := isComposeProject(c.Cmps[1])
+	require.True(t, isCmp)
+	require.Equal(t, 2, len(p))
+}
+
 // Measures the number of datasets (ops) per second going through a pipeline
 // composed of 3 passThrough-s. At the time of writing, it was evident that
 // performance is not impacted by the size of the datasets (sensible, given
@@ -94,7 +117,10 @@ func BenchmarkPipeline(b *testing.B) {
 	defer close(out)
 
 	r := pipeline{PassThrough(), PassThrough(), PassThrough()}
-	go r.Run(context.Background(), inp, out)
+	go func() {
+		err := r.Run(context.Background(), inp, out)
+		require.NoError(b, err)
+	}()
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -102,4 +128,5 @@ func BenchmarkPipeline(b *testing.B) {
 		inp <- data
 		<-out
 	}
+	drain(out)
 }

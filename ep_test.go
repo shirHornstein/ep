@@ -284,3 +284,13 @@ func (r *runOther) Run(ctx context.Context, inp, out chan ep.Dataset) error {
 	wg.Wait()
 	return err
 }
+
+type runnerWithSize struct {
+	ep.Runner
+	size int
+}
+
+func (r *runnerWithSize) Returns() []ep.Type { return []ep.Type{ep.Wildcard} }
+func (r *runnerWithSize) ApproxSize() int {
+	return r.size
+}

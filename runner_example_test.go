@@ -36,21 +36,10 @@ func ExampleScopesRunner_Scopes() {
 	// map[upper_scope:{}]
 }
 
-func ExampleApproxSizer() {
+func ExampleApproxSizer_ApproxSize() {
 	var runner ep.Runner = &runnerWithSize{size: 42}
 	fmt.Println(runner.(ep.ApproxSizer).ApproxSize())
 
 	// Output:
 	// 42
-}
-
-type runnerWithSize struct {
-	ep.Runner
-	size int
-}
-
-func (r *runnerWithSize) Returns() []ep.Type { return []ep.Type{ep.Wildcard} }
-
-func (r *runnerWithSize) ApproxSize() int {
-	return r.size
 }
