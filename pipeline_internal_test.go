@@ -110,23 +110,35 @@ func TestPipeline_creationComposable(t *testing.T) {
 // performance is not impacted by the size of the datasets (sensible, given
 // the implementation details).
 func BenchmarkPipeline(b *testing.B) {
-	data := NewDataset(dummy.Data(-1))
-	inp := make(chan Dataset)
-	out := make(chan Dataset)
-	defer close(inp)
-	defer close(out)
+	run := func(r Runner) func(b *testing.B) {
+		return func(b *testing.B) {
+			data := NewDataset(dummy.Data(-1))
+			inp := make(chan Dataset)
+			out := make(chan Dataset)
 
-	r := pipeline{PassThrough(), PassThrough(), PassThrough()}
-	go func() {
-		err := r.Run(context.Background(), inp, out)
-		require.NoError(b, err)
-	}()
+			go func() {
+				var err error
+				Run(context.Background(), r, inp, out, nil, &err)
+				require.NoError(b, err)
+			}()
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		// run a single dataset through the pipeline
-		inp <- data
-		<-out
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				// run a single dataset through the pipeline
+				inp <- data
+				<-out
+			}
+			close(inp)
+			drain(out)
+		}
 	}
-	drain(out)
+	b.Run("runner", func(b *testing.B) {
+		r := pipeline{PassThrough(), PassThrough(), PassThrough()}
+		run(r)(b)
+	})
+	b.Run("compose", func(b *testing.B) {
+		r := &compose{Cmps: []Composable{passThroughSingleton, passThroughSingleton, passThroughSingleton}}
+		run(r)(b)
+	})
+
 }
