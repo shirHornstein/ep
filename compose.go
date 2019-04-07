@@ -38,7 +38,7 @@ type compose struct {
 
 func (c *compose) Returns() []Type {
 	last := len(c.Cmps) - 1
-	ret := returnsOne(c.Cmps[last], last, c.getPrev)
+	ret := returnsOne(last, c.getIReturns)
 
 	if c.Alias != "" {
 		if len(ret) > 1 {
@@ -51,7 +51,7 @@ func (c *compose) Returns() []Type {
 	}
 	return ret
 }
-func (c *compose) getPrev(j int) returns { return c.Cmps[j-1] }
+func (c *compose) getIReturns(i int) returns { return c.Cmps[i] }
 
 func (c *compose) Run(ctx context.Context, inp, out chan Dataset) error {
 	batchFunction := c.BatchFunction()

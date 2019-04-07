@@ -125,10 +125,10 @@ func wrapInpWithCancel(ctx context.Context, inp chan Dataset) chan Dataset {
 // see Runner & Wildcard
 func (rs pipeline) Returns() []Type {
 	last := len(rs) - 1
-	return returnsOne(rs[last], last, rs.getPrev) // start with the last one.
+	return returnsOne(last, rs.getIReturns) // start with the last one.
 }
 
-func (rs pipeline) getPrev(j int) returns { return rs[j-1] }
+func (rs pipeline) getIReturns(i int) returns { return rs[i] }
 
 // Args returns the arguments expected by the first runner in this pipeline.
 // If that runner is an instance of RunnerArgs, its Args() result will be returned.
@@ -141,8 +141,8 @@ func (rs pipeline) Args() []Type {
 	return []Type{Wildcard}
 }
 
-func returnsOne(current returns, j int, getPrev func(int) returns) []Type {
-	res := current.Returns()
+func returnsOne(j int, get func(int) returns) []Type {
+	res := get(j).Returns()
 	if j == 0 {
 		return res
 	}
@@ -153,8 +153,7 @@ func returnsOne(current returns, j int, getPrev func(int) returns) []Type {
 		if w, isWildcard := res[i].(*wildcardType); isWildcard {
 			// wildcard found - replace it with the types from the previous
 			// runner (which might also contain Wildcards)
-			prevRet := getPrev(j)
-			prev := returnsOne(prevRet, j-1, getPrev)
+			prev := returnsOne(j-1, get)
 			prev = prev[:len(prev)-w.CutFromTail]
 			if w.Idx != nil {
 				// wildcard for a specific column in the input
