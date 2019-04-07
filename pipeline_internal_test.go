@@ -112,15 +112,13 @@ func TestPipeline_creationComposable(t *testing.T) {
 func BenchmarkPipeline(b *testing.B) {
 	run := func(r Runner) func(b *testing.B) {
 		return func(b *testing.B) {
+			var err error
+
 			data := NewDataset(dummy.Data(-1))
 			inp := make(chan Dataset)
 			out := make(chan Dataset)
 
-			go func() {
-				var err error
-				Run(context.Background(), r, inp, out, nil, &err)
-				require.NoError(b, err)
-			}()
+			go Run(context.Background(), r, inp, out, nil, &err)
 
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
@@ -130,6 +128,8 @@ func BenchmarkPipeline(b *testing.B) {
 			}
 			close(inp)
 			drain(out)
+
+			require.NoError(b, err)
 		}
 	}
 	b.Run("runner", func(b *testing.B) {
