@@ -83,26 +83,32 @@ func TestPipeline_creationSingleRunnerAfterFlat(t *testing.T) {
 }
 
 func TestPipeline_creationComposable(t *testing.T) {
-	nestedPipeline := Pipeline(PassThrough(), Pipeline(&dummyRunner{}, PassThrough()), PassThrough())
-	_, isCmp := nestedPipeline.(Composable)
-	require.True(t, isCmp)
+	t.Run("nestedPipeline", func(t *testing.T) {
+		nestedPipeline := Pipeline(PassThrough(), Pipeline(&dummyRunner{}, PassThrough()), PassThrough())
+		_, isCmp := nestedPipeline.(Composable)
+		require.True(t, isCmp)
+	})
 
-	nestedComposablePipeline := Pipeline(
-		Pipeline(&dummyRunner{}, &dummyRunner{}),
-		Pipeline(&dummyRunner{}, &dummyRunner{}, passThroughSingleton),
-	)
+	t.Run("nestedComposablePipeline", func(t *testing.T) {
+		nestedComposablePipeline := Pipeline(
+			Pipeline(&dummyRunner{}, &dummyRunner{}),
+			Pipeline(&dummyRunner{}, &dummyRunner{}, passThroughSingleton),
+		)
 
-	c, isCmp := nestedComposablePipeline.(*compose)
-	require.True(t, isCmp)
-	require.Equal(t, 2, len(c.Cmps))
+		c, isCmp := nestedComposablePipeline.(*compose)
+		require.True(t, isCmp)
+		require.Equal(t, 2, len(c.Cmps))
+	})
 
-	pipelineWithProject := Pipeline(&dummyRunner{}, Compose(nil, ComposeProject(passThroughSingleton, &dummyRunner{})))
-	c, isCmp = pipelineWithProject.(*compose)
-	require.True(t, isCmp)
-	require.Equal(t, 2, len(c.Cmps))
-	p, isCmp := isComposeProject(c.Cmps[1])
-	require.True(t, isCmp)
-	require.Equal(t, 2, len(p))
+	t.Run("pipelineWithProject", func(t *testing.T) {
+		pipelineWithProject := Pipeline(&dummyRunner{}, Compose(nil, ComposeProject(passThroughSingleton, &dummyRunner{})))
+		c, isCmp := pipelineWithProject.(*compose)
+		require.True(t, isCmp)
+		require.Equal(t, 2, len(c.Cmps))
+		p, isCmp := isComposeProject(c.Cmps[1])
+		require.True(t, isCmp)
+		require.Equal(t, 2, len(p))
+	})
 }
 
 // Measures the number of datasets (ops) per second going through a pipeline
