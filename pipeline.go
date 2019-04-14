@@ -40,6 +40,10 @@ func Pipeline(runners ...Runner) Runner {
 	} else if len(filtered) == 1 {
 		return filtered[0] // only one runner left, no need for a pipeline
 	}
+
+	if cmp, ok := createComposeRunner(runners); ok {
+		return cmp
+	}
 	return filtered
 }
 
@@ -120,8 +124,11 @@ func wrapInpWithCancel(ctx context.Context, inp chan Dataset) chan Dataset {
 // calling this function recursively).
 // see Runner & Wildcard
 func (rs pipeline) Returns() []Type {
-	return rs.returnsOne(len(rs) - 1) // start with the last one.
+	last := len(rs) - 1
+	return returnsOne(last, rs.getIReturns) // start with the last one.
 }
+
+func (rs pipeline) getIReturns(i int) returns { return rs[i] }
 
 // Args returns the arguments expected by the first runner in this pipeline.
 // If that runner is an instance of RunnerArgs, its Args() result will be returned.
@@ -134,8 +141,8 @@ func (rs pipeline) Args() []Type {
 	return []Type{Wildcard}
 }
 
-func (rs pipeline) returnsOne(j int) []Type {
-	res := rs[j].Returns()
+func returnsOne(j int, get func(int) returns) []Type {
+	res := get(j).Returns()
 	if j == 0 {
 		return res
 	}
@@ -146,7 +153,7 @@ func (rs pipeline) returnsOne(j int) []Type {
 		if w, isWildcard := res[i].(*wildcardType); isWildcard {
 			// wildcard found - replace it with the types from the previous
 			// runner (which might also contain Wildcards)
-			prev := rs.returnsOne(j - 1)
+			prev := returnsOne(j-1, get)
 			prev = prev[:len(prev)-w.CutFromTail]
 			if w.Idx != nil {
 				// wildcard for a specific column in the input
@@ -159,13 +166,7 @@ func (rs pipeline) returnsOne(j int) []Type {
 }
 
 func (rs pipeline) Filter(keep []bool) {
-	lastIdx := len(rs) - 1
-	last := rs[lastIdx]
-	// pipeline contains at least 2 runners.
-	// if last is exchange, filter its input (i.e. one runner before last)
-	if _, isExchanger := last.(*exchange); isExchanger {
-		last = rs[lastIdx-1]
-	}
+	last := rs[len(rs)-1]
 	if f, isFilterable := last.(FilterRunner); isFilterable {
 		f.Filter(keep)
 	}

@@ -46,3 +46,18 @@ func TestProject_creationPreservePipeline(t *testing.T) {
 	require.True(t, isProject)
 	require.Equal(t, 2, len(p))
 }
+
+func TestProject_creationFlatComposable(t *testing.T) {
+	runner := Project(
+		Project(&dummyRunner{}, &dummyRunner{}),
+		Project(PassThrough(), Pipeline(&dummyRunner{}, &dummyRunner{})),
+		PassThrough(),
+	)
+
+	p, isCmpProject := isComposeProject(runner)
+	require.True(t, isCmpProject)
+	require.Equal(t, 5, len(p))
+
+	_, isProject := isComposeProject(p[0])
+	require.False(t, isProject)
+}
