@@ -110,3 +110,19 @@ func (rs union) Scopes() StringsSet {
 	}
 	return scopes
 }
+
+func (rs union) ApproxSize() int {
+	var total int
+	for _, r := range rs {
+		approxSizer, ok := r.(ApproxSizer)
+		if !ok {
+			return UnknownSize
+		}
+		size := approxSizer.ApproxSize()
+		if size == UnknownSize {
+			return UnknownSize
+		}
+		total += size
+	}
+	return total
+}
