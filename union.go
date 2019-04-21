@@ -100,3 +100,13 @@ func (rs union) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 	}
 	return err
 }
+
+func (rs union) Scopes() StringsSet {
+	scopes := make(StringsSet)
+	for _, r := range rs {
+		if sr, ok := r.(ScopesRunner); ok {
+			scopes.AddAll(sr.Scopes())
+		}
+	}
+	return scopes
+}
