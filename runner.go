@@ -29,6 +29,10 @@ type returns interface {
 	Returns() []Type
 }
 
+type EqualRunner interface {
+	Equals(other Runner) bool
+}
+
 // Runner represents objects that can receive a stream of input datasets,
 // manipulate them in some way (filter, mapping, reduction, expansion, etc.)
 // and produce a new stream of the formatted values.
