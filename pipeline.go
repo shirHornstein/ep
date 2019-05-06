@@ -49,6 +49,21 @@ func Pipeline(runners ...Runner) Runner {
 
 type pipeline []Runner
 
+func (rs pipeline) Equals(other Runner) bool {
+	otherP,ok := other.(pipeline)
+	if  !ok || len(rs) != len(otherP) {
+		return false
+	}
+
+	for i, r := range rs {
+		if !r.Equals(otherP[i]) {
+			return false
+		}
+	}
+
+	return true
+}
+
 func (rs pipeline) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 	ctx = initError(ctx)
 	// choose first error out from all errors

@@ -211,6 +211,22 @@ func (rs project) ApproxSize() int {
 	return totalSize
 }
 
+
+func (rs project) Equals(other Runner) bool {
+	otherP,ok := other.(project)
+	if  !ok || len(rs) != len(otherP) {
+		return false
+	}
+
+	for i, r := range rs {
+		if !r.Equals(otherP[i]) {
+			return false
+		}
+	}
+
+	return true
+}
+
 // useDummySingleton replaces all dummies with pre-defined singleton to allow addresses comparison
 // instead of casting for each batch.
 // required for distribute runner that creates new dummy instances instead of using singleton
