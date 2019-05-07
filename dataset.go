@@ -366,20 +366,32 @@ func (set dataset) Strings() []string {
 	return res
 }
 
-// ColumnStrings returns string values of selected columns of a provided dataset.
-// If no columns provided, all columns are used
-func ColumnStrings(set Dataset, cols ...int) [][]string {
-	if len(cols) == 0 {
-		setWidth := set.Width()
-		cols = make([]int, setWidth)
-		for i := 0; i < setWidth; i++ {
-			cols[i] = i
-		}
+func (set dataset) columnStrings() [][]string {
+	stringValues := make([][]string, len(set))
+	for i, c := range set {
+		stringValues[i] = c.Strings()
 	}
+	return stringValues
+}
 
+// ColumnStringsPartial returns string values of selected columns of a provided dataset
+func ColumnStringsPartial(set Dataset, cols []int) [][]string {
 	stringValues := make([][]string, len(cols))
 	for i, col := range cols {
 		stringValues[i] = set.At(col).Strings()
+	}
+	return stringValues
+}
+
+// ColumnStrings returns string values of all columns of a provided dataset
+func ColumnStrings(set Dataset) [][]string {
+	if d, isSimpleDataset := set.(dataset); isSimpleDataset {
+		return d.columnStrings()
+	}
+	width := set.Width()
+	stringValues := make([][]string, width)
+	for i := 0; i < width; i++ {
+		stringValues[i] = set.At(i).Strings()
 	}
 	return stringValues
 }
