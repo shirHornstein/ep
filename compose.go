@@ -36,6 +36,25 @@ type compose struct {
 	Cmps     []Composable
 }
 
+func (c *compose) Equals(other interface{}) bool {
+	r, ok := other.(*compose)
+	isEqual := ok && c.Alias == r.Alias &&
+		c.RetScope == r.RetScope &&
+		c.Scps.ContainsAll(r.Scps) &&
+		len(c.Scps) == len(r.Scps)
+
+	if !isEqual {
+		return false
+	}
+
+	for i, cmp := range c.Cmps {
+		if !cmp.Equals(r.Cmps[i]) {
+			return false
+		}
+	}
+
+	return true
+}
 func (c *compose) Returns() []Type {
 	last := len(c.Cmps) - 1
 	ret := returnsOne(last, c.getIReturns)
@@ -107,6 +126,11 @@ func ComposeProject(cmps ...Composable) Composable {
 }
 
 type composeProject []Composable
+
+func (cs composeProject) Equals(other interface{}) bool {
+	_, ok := other.(composeProject)
+	return ok
+}
 
 // Returns a concatenation of all composables' return types
 func (cs composeProject) Returns() []Type {

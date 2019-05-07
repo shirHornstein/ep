@@ -232,18 +232,32 @@ type distRunner struct {
 	d          *distributer
 }
 
-func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) error {
+func (d *distRunner) Equals(other interface{}) bool {
+	r, ok := other.(*distRunner)
+	isEqual := ok && r.Runner.Equals(d.Runner) && d.MasterAddr == r.MasterAddr
+	if !isEqual || len(d.Addrs) != len(r.Addrs) {
+		return false
+	}
+	for i, v := range d.Addrs {
+		if v != r.Addrs[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func (d *distRunner) Run(ctx context.Context, inp, out chan Dataset) error {
 	var errs []error
 
 	var decs []*gob.Decoder
-	isMain := r.d.addr == r.MasterAddr
-	for i := 0; i < len(r.Addrs) && isMain; i++ {
-		addr := r.Addrs[i]
-		if addr == r.d.addr {
+	isMain := d.d.addr == d.MasterAddr
+	for i := 0; i < len(d.Addrs) && isMain; i++ {
+		addr := d.Addrs[i]
+		if addr == d.d.addr {
 			continue
 		}
 
-		conn, err := r.d.Dial("tcp", addr)
+		conn, err := d.d.Dial("tcp", addr)
 		if err != nil {
 			errs = append(errs, err)
 			break
@@ -257,7 +271,7 @@ func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) error {
 		}
 
 		enc := gob.NewEncoder(conn)
-		err = enc.Encode(r)
+		err = enc.Encode(d)
 		if err != nil {
 			errs = append(errs, err)
 			break
@@ -266,10 +280,10 @@ func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) error {
 		decs = append(decs, gob.NewDecoder(conn))
 	}
 
-	ctx = context.WithValue(ctx, allNodesKey, r.Addrs)
-	ctx = context.WithValue(ctx, masterNodeKey, r.MasterAddr)
-	ctx = context.WithValue(ctx, thisNodeKey, r.d.addr)
-	ctx = context.WithValue(ctx, distributerKey, r.d)
+	ctx = context.WithValue(ctx, allNodesKey, d.Addrs)
+	ctx = context.WithValue(ctx, masterNodeKey, d.MasterAddr)
+	ctx = context.WithValue(ctx, thisNodeKey, d.d.addr)
+	ctx = context.WithValue(ctx, distributerKey, d.d)
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -282,7 +296,7 @@ func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			err := r.Runner.Run(ctx, inp, out)
+			err := d.Runner.Run(ctx, inp, out)
 			if err != nil {
 				respErrs <- err
 			}

@@ -149,6 +149,21 @@ type sorter struct {
 	sortingCols []ep.SortingCol
 }
 
+func (s *sorter) Equals(other interface{}) bool {
+	r, ok := other.(*sorter)
+	if !ok || len(s.sortingCols) != len(r.sortingCols) {
+		return false
+	}
+
+	for i, col := range s.sortingCols {
+		if !col.Equals(r.sortingCols[i]) {
+			return false
+		}
+	}
+
+	return true
+}
+
 func (*sorter) Returns() []ep.Type { return []ep.Type{ep.Wildcard} }
 func (r *sorter) Run(ctx context.Context, inp, out chan ep.Dataset) error {
 	for data := range inp {

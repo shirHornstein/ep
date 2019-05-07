@@ -27,6 +27,11 @@ type alias struct {
 	Label string
 }
 
+func (a *alias) Equals(other interface{}) bool {
+	r, ok := other.(*alias)
+	return ok && a.Label == r.Label
+}
+
 // Returns implements ep.Runner
 func (a *alias) Returns() []Type {
 	inpTypes := a.Runner.Returns()
@@ -87,6 +92,11 @@ func Scope(r Runner, label string) Runner {
 type scope struct {
 	Runner
 	Label string
+}
+
+func (s *scope) Equals(other interface{}) bool {
+	r, ok := other.(*scope)
+	return ok && s.Label == r.Label
 }
 
 // Returns implements ep.Runner

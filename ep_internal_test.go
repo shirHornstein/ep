@@ -89,6 +89,11 @@ type errOnPort struct {
 	Port string
 }
 
+func (r *errOnPort) Equals(other interface{}) bool {
+	o, ok := other.(*errOnPort)
+	return ok && r.Port == o.Port
+}
+
 func (*errOnPort) Returns() []Type { return nil }
 func (r *errOnPort) Run(ctx context.Context, inp, out chan Dataset) error {
 	for data := range inp {
@@ -105,6 +110,10 @@ func (r *errOnPort) Run(ctx context.Context, inp, out chan Dataset) error {
 
 type waitForCancel struct{}
 
+func (*waitForCancel) Equals(other interface{}) bool {
+	_, ok := other.(*waitForCancel)
+	return ok
+}
 func (*waitForCancel) Returns() []Type { return nil }
 func (r *waitForCancel) Run(ctx context.Context, inp, out chan Dataset) error {
 	for {
@@ -124,6 +133,11 @@ func closeWithoutCancel(r Runner, port string) Runner {
 type dontCancel struct {
 	Runner
 	Port string
+}
+
+func (r *dontCancel) Equals(other interface{}) bool {
+	o, ok := other.(*dontCancel)
+	return ok && r.Port == o.Port && r.Runner.Equals(o.Runner)
 }
 
 func (r *dontCancel) Returns() []Type { return r.Runner.Returns() }
@@ -169,6 +183,11 @@ type dontCloseInp struct {
 	Port string
 }
 
+func (r *dontCloseInp) Equals(other interface{}) bool {
+	o, ok := other.(*dontCloseInp)
+	return ok && r.Port == o.Port && r.Runner.Equals(o.Runner)
+}
+
 func (r *dontCloseInp) Returns() []Type { return r.Runner.Returns() }
 func (r *dontCloseInp) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 	var wg sync.WaitGroup
@@ -208,6 +227,10 @@ func (r *dontCloseInp) Run(ctx context.Context, inp, out chan Dataset) (err erro
 
 type drainInp struct{}
 
+func (*drainInp) Equals(other interface{}) bool {
+	_, ok := other.(*drainInp)
+	return ok
+}
 func (*drainInp) Returns() []Type { return nil }
 func (r *drainInp) Run(ctx context.Context, inp, out chan Dataset) error {
 	for range inp {
@@ -217,6 +240,10 @@ func (r *drainInp) Run(ctx context.Context, inp, out chan Dataset) error {
 
 type fixedData struct{}
 
+func (*fixedData) Equals(other interface{}) bool {
+	_, ok := other.(*fixedData)
+	return ok
+}
 func (*fixedData) Returns() []Type { return nil }
 func (r *fixedData) Run(ctx context.Context, inp, out chan Dataset) error {
 	out <- NewDataset(str.Data(2))

@@ -49,9 +49,9 @@ func Pipeline(runners ...Runner) Runner {
 
 type pipeline []Runner
 
-func (rs pipeline) Equals(other Runner) bool {
-	otherP,ok := other.(pipeline)
-	if  !ok || len(rs) != len(otherP) {
+func (rs pipeline) Equals(other interface{}) bool {
+	otherP, ok := other.(pipeline)
+	if !ok || len(rs) != len(otherP) {
 		return false
 	}
 

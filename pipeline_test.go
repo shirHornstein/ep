@@ -140,6 +140,11 @@ type tailCutter struct {
 	CutFromTail int
 }
 
+func (t *tailCutter) Equals(other interface{}) bool {
+	r, ok := other.(*tailCutter)
+	return ok && t.CutFromTail == r.CutFromTail
+}
+
 func (r *tailCutter) Returns() []ep.Type { return []ep.Type{ep.WildcardMinusTail(r.CutFromTail)} }
 func (*tailCutter) Run(_ context.Context, inp, out chan ep.Dataset) error {
 	for data := range inp {
@@ -150,9 +155,19 @@ func (*tailCutter) Run(_ context.Context, inp, out chan ep.Dataset) error {
 
 type runnerWithArgs struct{ ep.Runner }
 
+func (r *runnerWithArgs) Equals(other interface{}) bool {
+	o, ok := other.(*runnerWithArgs)
+	return ok && r.Runner.Equals(o.Runner)
+}
+
 func (r *runnerWithArgs) Args() []ep.Type { return []ep.Type{ep.Any} }
 
 type runnerWithoutArgs struct{ ep.Runner }
+
+func (r *runnerWithoutArgs) Equals(other interface{}) bool {
+	o, ok := other.(*runnerWithoutArgs)
+	return ok && r.Runner.Equals(o.Runner)
+}
 
 // errors handling
 func TestPipeline_errorPropagation(t *testing.T) {

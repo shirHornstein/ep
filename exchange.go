@@ -78,6 +78,11 @@ type exchange struct {
 	nextPeer       int       // next peer to read from
 }
 
+func (ex *exchange) Equals(other interface{}) bool {
+	r, ok := other.(*exchange)
+	return ok && ex.Type == r.Type
+}
+
 func (ex *exchange) Returns() []Type { return []Type{Wildcard} }
 func (ex *exchange) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 	defer func() {

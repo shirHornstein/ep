@@ -30,6 +30,21 @@ func Union(runners ...Runner) (Runner, error) {
 
 type union []Runner
 
+func (rs union) Equals(other interface{}) bool {
+	r, ok := other.(union)
+	if !ok || len(rs) != len(r) {
+		return false
+	}
+
+	for i, cur := range rs {
+		if !cur.Equals(r[i]) {
+			return false
+		}
+	}
+
+	return true
+}
+
 // see Runner. Assumes all runners has the same return types.
 func (rs union) Returns() []Type {
 	types, err := rs.returnsErr()

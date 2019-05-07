@@ -173,6 +173,11 @@ type passThrough struct {
 	scopes      StringsSet
 }
 
+func (r *passThrough) Equals(other interface{}) bool {
+	o, ok := other.(*passThrough)
+	return ok && AreEqualTypes(r.ReturnTypes, o.ReturnTypes) && r.scopes.ContainsAll(o.scopes)
+}
+
 func (r *passThrough) Scopes() StringsSet {
 	return r.scopes
 }
@@ -202,6 +207,19 @@ func (r *passThrough) BatchFunction() BatchFunction {
 func Pick(indices ...int) Runner { return &pick{indices} }
 
 type pick struct{ Indices []int }
+
+func (r *pick) Equals(other interface{}) bool {
+	o, ok := other.(*pick)
+	if !ok || len(r.Indices) != len(o.Indices) {
+		return false
+	}
+	for i, idx := range r.Indices {
+		if idx != o.Indices[i] {
+			return false
+		}
+	}
+	return true
+}
 
 func (r *pick) Returns() []Type {
 	types := make([]Type, len(r.Indices))
@@ -242,6 +260,11 @@ func Tail(returnTypes []Type) Runner {
 
 type tail struct {
 	Types []Type
+}
+
+func (r *tail) Equals(other interface{}) bool {
+	o, ok := other.(*tail)
+	return ok && AreEqualTypes(r.Types, o.Types)
 }
 
 func (r *tail) Returns() []Type { return r.Types }

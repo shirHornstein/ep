@@ -11,6 +11,12 @@ type SortingCol struct {
 	Desc  bool
 }
 
+// Equals implements ep.equals
+func (s *SortingCol) Equals(other interface{}) bool {
+	r, ok := other.(*SortingCol)
+	return ok && s.Index == r.Index && s.Desc == r.Desc
+}
+
 // Sort sorts given dataset by given sorting conditions
 func Sort(data Dataset, sortingCols []SortingCol) {
 	// if no data - don't change anything

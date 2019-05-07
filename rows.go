@@ -26,6 +26,10 @@ type rows struct {
 	Err        error
 }
 
+func (*rows) Equals(other interface{}) bool {
+	_, ok := other.(*rows)
+	return ok
+}
 func (r *rows) Run(ctx context.Context, inp, out chan Dataset) error {
 	if r.Out != nil {
 		if r.Out != out {
