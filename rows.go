@@ -104,15 +104,13 @@ func (r *rows) Next(dest []driver.Value) error {
 	}
 
 	// build the batch of data
-	var columnar [][]string
-	for i := 0; i < data.Width(); i++ {
-		columnar = append(columnar, data.At(i).Strings())
-	}
+	columnar := ColumnStrings(data)
 
 	// transpose the columnar strings to rows of strings for the buffer.
 	rows := make([][]string, data.Len())
+	dataWidth := data.Width()
 	for i := range rows {
-		row := make([]string, data.Width())
+		row := make([]string, dataWidth)
 		for j := range row {
 			row[j] = columnar[j][i]
 		}

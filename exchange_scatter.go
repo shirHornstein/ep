@@ -15,8 +15,9 @@ func Scatter() Runner {
 
 func (ex *exchange) encodeScatter(data Dataset) error {
 	amountOfPeers := len(ex.encs)
-	peersWithLargerBatch := data.Len() % amountOfPeers
-	batchSize := data.Len() / amountOfPeers
+	dataLen := data.Len()
+	peersWithLargerBatch := dataLen % amountOfPeers
+	batchSize := dataLen / amountOfPeers
 	start := 0
 	var err error
 
@@ -31,7 +32,7 @@ func (ex *exchange) encodeScatter(data Dataset) error {
 	}
 
 	// send data batch size
-	for i := peersWithLargerBatch; i < amountOfPeers && start < data.Len(); i++ {
+	for i := peersWithLargerBatch; i < amountOfPeers && start < dataLen; i++ {
 		end := start + batchSize
 		err = ex.encodeNext(data.Slice(start, end))
 		if err != nil {

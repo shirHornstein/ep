@@ -67,7 +67,7 @@ func (ex *exchange) encodePartition(e interface{}) error {
 
 func (ex *exchange) addEndpointsToData(data Dataset) (*dataWithEndpoints, error) {
 	dataLen := data.Len()
-	stringValues := ColumnStrings(data, ex.PartitionCols...)
+	stringValues := ColumnStringsPartial(data, ex.PartitionCols)
 	endpoints := make([]string, dataLen)
 	for row := 0; row < dataLen; row++ {
 		hash := ex.getRowHash(stringValues, row)
