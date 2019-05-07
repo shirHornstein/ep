@@ -138,8 +138,10 @@ func (set dataset) Expand(other Dataset) (Dataset, error) {
 		return set, nil
 	}
 	// when expanding with variadicNulls - don't force same length
-	isAnyVariadicNulls := set.Len() < 0 || other.Len() < 0
-	if set.Len() != other.Len() && !isAnyVariadicNulls {
+	thisLen := set.Len()
+	otherLen := other.Len()
+	isAnyVariadicNulls := thisLen < 0 || otherLen < 0
+	if thisLen != otherLen && !isAnyVariadicNulls {
 		return nil, errMismatch
 	}
 	otherCols := other.(dataset)
@@ -368,8 +370,9 @@ func (set dataset) Strings() []string {
 // If no columns provided, all columns are used
 func ColumnStrings(set Dataset, cols ...int) [][]string {
 	if len(cols) == 0 {
-		cols = make([]int, set.Width())
-		for i := 0; i < set.Width(); i++ {
+		setWidth := set.Width()
+		cols = make([]int, setWidth)
+		for i := 0; i < setWidth; i++ {
 			cols[i] = i
 		}
 	}
