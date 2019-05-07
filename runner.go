@@ -9,10 +9,18 @@ var _ = registerGob(&passThrough{}, &pick{}, &tail{})
 // UnknownSize is used when size cannot be estimated
 const UnknownSize = -1
 
+//TODO
+type equals interface {
+	// Equals TODO
+	Equals(other interface{}) bool
+}
+
 // returns should be implemented by ALL entities in the system to allow
 // types check
 // TODO: consider it make it public after interfaces restructure
 type returns interface {
+	equals
+
 	// Returns the constant list of data types that are produced by this entity.
 	//
 	// NOTE: Violation of meeting these defined types (either by producing
@@ -27,10 +35,6 @@ type returns interface {
 	// because it's somehow depends on the input types. For such cases, use the
 	// Wildcard type.
 	Returns() []Type
-}
-
-type EqualRunner interface {
-	Equals(other Runner) bool
 }
 
 // Runner represents objects that can receive a stream of input datasets,
