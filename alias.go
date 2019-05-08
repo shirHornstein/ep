@@ -96,7 +96,7 @@ type scope struct {
 
 func (s *scope) Equals(other interface{}) bool {
 	r, ok := other.(*scope)
-	return ok && s.Label == r.Label
+	return ok && s.Label == r.Label && s.Runner.Equals(r.Runner)
 }
 
 // Returns implements ep.Runner
