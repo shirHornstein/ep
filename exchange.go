@@ -80,7 +80,27 @@ type exchange struct {
 
 func (ex *exchange) Equals(other interface{}) bool {
 	r, ok := other.(*exchange)
-	return ok && ex.Type == r.Type
+	isEqual := ok && ex.Type == r.Type &&
+		len(ex.SortingCols) == len(r.SortingCols) &&
+		len(ex.PartitionCols) == len(r.PartitionCols)
+
+	if !isEqual {
+		return false
+	}
+
+	for i, s := range ex.SortingCols {
+		if !s.Equals(r.SortingCols[i]) {
+			return false
+		}
+	}
+
+	for i, p := range ex.PartitionCols {
+		if p != r.PartitionCols[i] {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (ex *exchange) Returns() []Type { return []Type{Wildcard} }
