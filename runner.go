@@ -9,9 +9,9 @@ var _ = registerGob(&passThrough{}, &pick{}, &tail{})
 // UnknownSize is used when size cannot be estimated
 const UnknownSize = -1
 
-//TODO
 type equals interface {
-	// Equals TODO
+	// Equals returns true if two runners are equal so they both resolve with same result.
+	// for example: 1+2 != 1+3, while exchange(type:gather, id:8) == exchange(type:gather, id:10).
 	Equals(other interface{}) bool
 }
 
