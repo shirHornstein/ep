@@ -128,8 +128,18 @@ func ComposeProject(cmps ...Composable) Composable {
 type composeProject []Composable
 
 func (cs composeProject) Equals(other interface{}) bool {
-	_, ok := other.(composeProject)
-	return ok
+	otherP, ok := other.(composeProject)
+	if !ok || len(cs) != len(otherP) {
+		return false
+	}
+
+	for i, r := range cs {
+		if !r.Equals(otherP[i]) {
+			return false
+		}
+	}
+
+	return true
 }
 
 // Returns a concatenation of all composables' return types
