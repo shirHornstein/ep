@@ -53,12 +53,17 @@ func AreEqualTypes(ts1, ts2 []Type) bool {
 	}
 
 	for i, t1 := range ts1 {
-		if t1.Name() != ts2[i].Name() && !isAny(t1) && !isAny(ts2[i]) {
+		if !IsSameType(t1, ts2[i]) && !isAny(t1) && !isAny(ts2[i]) {
 			return false // mismatching type name
 		}
 	}
 
 	return true
+}
+
+// IsSameType compares types and returns true if types are equal
+func IsSameType(t1, t2 Type) bool {
+	return t1.Name() == t2.Name()
 }
 
 // see Wildcard above.
