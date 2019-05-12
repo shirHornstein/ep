@@ -12,8 +12,11 @@ const UnknownSize = -1
 // equals should be implemented by ALL entities in the system to allow
 // equality check
 type equals interface {
-	// Equals returns true if two runners are equal so they both resolve with same result.
-	// for example: 1+2 != 1+3, while exchange(type:gather, id:8) == exchange(type:gather, id:10).
+	// Equals returns true if this equals to other, so they both resolve to same result.
+	// for example:
+	// - runner of 1+2 is not equal to runner of 1+3
+	// - batch(size:200) is equal to batch(size:300) as final rows will be the same
+	// - exchange(type:gather, id:8) is equal to exchange(type:gather, id:10), even though ids are different
 	Equals(other interface{}) bool
 }
 
