@@ -234,16 +234,7 @@ type distRunner struct {
 
 func (r *distRunner) Equals(other interface{}) bool {
 	o, ok := other.(*distRunner)
-	isEqual := ok && o.Runner.Equals(r.Runner) && r.MasterAddr == o.MasterAddr
-	if !isEqual || len(r.Addrs) != len(o.Addrs) {
-		return false
-	}
-	for i, v := range r.Addrs {
-		if v != o.Addrs[i] {
-			return false
-		}
-	}
-	return true
+	return ok && r.MasterAddr == o.MasterAddr && o.Runner.Equals(r.Runner)
 }
 
 func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) error {

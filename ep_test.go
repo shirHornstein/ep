@@ -354,7 +354,7 @@ type runnerWithSize struct {
 
 func (r *runnerWithSize) Equals(other interface{}) bool {
 	o, ok := other.(*runnerWithSize)
-	return ok && r.Runner.Equals(o.Runner) && r.size == o.size
+	return ok && r.size == o.size && r.Runner.Equals(o.Runner)
 }
 
 func (r *runnerWithSize) Returns() []ep.Type { return []ep.Type{ep.Wildcard} }
