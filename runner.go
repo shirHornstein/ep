@@ -9,6 +9,8 @@ var _ = registerGob(&passThrough{}, &pick{}, &tail{})
 // UnknownSize is used when size cannot be estimated
 const UnknownSize = -1
 
+// equals should be implemented by ALL entities in the system to allow
+// equality check
 type equals interface {
 	// Equals returns true if two runners are equal so they both resolve with same result.
 	// for example: 1+2 != 1+3, while exchange(type:gather, id:8) == exchange(type:gather, id:10).
