@@ -20,8 +20,8 @@ type batch struct {
 }
 
 func (b *batch) Equals(other interface{}) bool {
-	r, ok := other.(*batch)
-	return ok && b.Size == r.Size
+	_, ok := other.(*batch)
+	return ok
 }
 
 func (b *batch) Returns() []Type { return []Type{Wildcard} }
