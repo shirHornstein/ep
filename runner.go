@@ -179,7 +179,7 @@ type passThrough struct {
 
 func (r *passThrough) Equals(other interface{}) bool {
 	o, ok := other.(*passThrough)
-	return ok && AreEqualTypes(r.ReturnTypes, o.ReturnTypes) && r.scopes.ContainsAll(o.scopes)
+	return ok && AreEqualTypes(r.ReturnTypes, o.ReturnTypes)
 }
 
 func (r *passThrough) Scopes() StringsSet {

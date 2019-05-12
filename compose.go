@@ -38,9 +38,7 @@ type compose struct {
 
 func (c *compose) Equals(other interface{}) bool {
 	r, ok := other.(*compose)
-	isEqual := ok && c.Alias == r.Alias &&
-		c.RetScope == r.RetScope &&
-		c.Scps.ContainsAll(r.Scps) &&
+	isEqual := ok && c.RetScope == r.RetScope &&
 		len(c.Scps) == len(r.Scps)
 
 	if !isEqual {
