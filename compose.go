@@ -14,6 +14,7 @@ type BatchFunction func(Dataset) (Dataset, error)
 // Composable is a type that holds a BatchFunction implementation and can be
 // used to Compose runners.
 type Composable interface {
+	equals
 	returns // Composable must declare its return types
 
 	BatchFunction() BatchFunction

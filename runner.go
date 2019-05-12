@@ -24,8 +24,6 @@ type equals interface {
 // types check
 // TODO: consider it make it public after interfaces restructure
 type returns interface {
-	equals
-
 	// Returns the constant list of data types that are produced by this entity.
 	//
 	// NOTE: Violation of meeting these defined types (either by producing
@@ -48,6 +46,7 @@ type returns interface {
 // NOTE: Some Runners will run concurrently, this it's important to not modify
 // the input in-place. Instead, copy/create a new dataset and use that
 type Runner interface {
+	equals
 	returns // Runner must declare its return types
 
 	// Run the manipulation code. Receive datasets from the `inp` stream, cast
