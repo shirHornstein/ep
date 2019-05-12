@@ -29,7 +29,7 @@ type alias struct {
 
 func (a *alias) Equals(other interface{}) bool {
 	r, ok := other.(*alias)
-	return ok && a.Label == r.Label
+	return ok && a.Label == r.Label && a.Runner.Equals(r.Runner)
 }
 
 // Returns implements ep.Runner
