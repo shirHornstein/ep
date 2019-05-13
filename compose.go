@@ -39,7 +39,7 @@ type compose struct {
 
 func (c *compose) Equals(other interface{}) bool {
 	r, ok := other.(*compose)
-	if !ok || len(c.Cmps) == len(r.Cmps) {
+	if !ok || len(c.Cmps) != len(r.Cmps) {
 		return false
 	}
 
