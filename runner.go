@@ -9,6 +9,17 @@ var _ = registerGob(&passThrough{}, &pick{}, &tail{})
 // UnknownSize is used when size cannot be estimated
 const UnknownSize = -1
 
+// equals should be implemented by ALL entities in the system to allow
+// equality check
+type equals interface {
+	// Equals returns true if this equals to other, so they both resolve to same result.
+	// for example:
+	// - runner of 1+2 is not equal to runner of 1+3
+	// - batch(size:200) is equal to batch(size:300) as final rows will be the same
+	// - exchange(type:gather, id:8) is equal to exchange(type:gather, id:10), even though ids are different
+	Equals(other interface{}) bool
+}
+
 // returns should be implemented by ALL entities in the system to allow
 // types check
 // TODO: consider it make it public after interfaces restructure
@@ -35,6 +46,7 @@ type returns interface {
 // NOTE: Some Runners will run concurrently, this it's important to not modify
 // the input in-place. Instead, copy/create a new dataset and use that
 type Runner interface {
+	equals
 	returns // Runner must declare its return types
 
 	// Run the manipulation code. Receive datasets from the `inp` stream, cast
@@ -169,6 +181,11 @@ type passThrough struct {
 	scopes      StringsSet
 }
 
+func (r *passThrough) Equals(other interface{}) bool {
+	o, ok := other.(*passThrough)
+	return ok && AreEqualTypes(r.ReturnTypes, o.ReturnTypes)
+}
+
 func (r *passThrough) Scopes() StringsSet {
 	return r.scopes
 }
@@ -198,6 +215,19 @@ func (r *passThrough) BatchFunction() BatchFunction {
 func Pick(indices ...int) Runner { return &pick{indices} }
 
 type pick struct{ Indices []int }
+
+func (r *pick) Equals(other interface{}) bool {
+	o, ok := other.(*pick)
+	if !ok || len(r.Indices) != len(o.Indices) {
+		return false
+	}
+	for i, idx := range r.Indices {
+		if idx != o.Indices[i] {
+			return false
+		}
+	}
+	return true
+}
 
 func (r *pick) Returns() []Type {
 	types := make([]Type, len(r.Indices))
@@ -238,6 +268,11 @@ func Tail(returnTypes []Type) Runner {
 
 type tail struct {
 	Types []Type
+}
+
+func (r *tail) Equals(other interface{}) bool {
+	o, ok := other.(*tail)
+	return ok && AreEqualTypes(r.Types, o.Types)
 }
 
 func (r *tail) Returns() []Type { return r.Types }

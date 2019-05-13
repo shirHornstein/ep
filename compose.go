@@ -14,6 +14,7 @@ type BatchFunction func(Dataset) (Dataset, error)
 // Composable is a type that holds a BatchFunction implementation and can be
 // used to Compose runners.
 type Composable interface {
+	equals
 	returns // Composable must declare its return types
 
 	BatchFunction() BatchFunction
@@ -36,6 +37,20 @@ type compose struct {
 	Cmps     []Composable
 }
 
+func (c *compose) Equals(other interface{}) bool {
+	r, ok := other.(*compose)
+	if !ok || len(c.Cmps) == len(r.Cmps) {
+		return false
+	}
+
+	for i, cmp := range c.Cmps {
+		if !cmp.Equals(r.Cmps[i]) {
+			return false
+		}
+	}
+
+	return true
+}
 func (c *compose) Returns() []Type {
 	last := len(c.Cmps) - 1
 	ret := returnsOne(last, c.getIReturns)
@@ -107,6 +122,21 @@ func ComposeProject(cmps ...Composable) Composable {
 }
 
 type composeProject []Composable
+
+func (cs composeProject) Equals(other interface{}) bool {
+	otherP, ok := other.(composeProject)
+	if !ok || len(cs) != len(otherP) {
+		return false
+	}
+
+	for i, r := range cs {
+		if !r.Equals(otherP[i]) {
+			return false
+		}
+	}
+
+	return true
+}
 
 // Returns a concatenation of all composables' return types
 func (cs composeProject) Returns() []Type {

@@ -20,6 +20,10 @@ func NewErrRunner(e error) ep.Runner {
 	return &errRunner{error: e, name: "err"}
 }
 
+func (r *errRunner) Equals(other interface{}) bool {
+	o, ok := other.(*errRunner)
+	return ok && r.name == o.name && r.error.Error() == o.error.Error()
+}
 func (*errRunner) Returns() []ep.Type { return []ep.Type{} }
 func (r *errRunner) Run(ctx context.Context, inp, out chan ep.Dataset) error {
 	for range inp {

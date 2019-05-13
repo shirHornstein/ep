@@ -232,6 +232,11 @@ type distRunner struct {
 	d          *distributer
 }
 
+func (r *distRunner) Equals(other interface{}) bool {
+	o, ok := other.(*distRunner)
+	return ok && r.MasterAddr == o.MasterAddr && o.Runner.Equals(r.Runner)
+}
+
 func (r *distRunner) Run(ctx context.Context, inp, out chan Dataset) error {
 	var errs []error
 

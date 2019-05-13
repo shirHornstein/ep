@@ -48,6 +48,21 @@ func Placeholder(shift int, runners ...Runner) Runner {
 
 type project []Runner
 
+func (rs project) Equals(other interface{}) bool {
+	otherP, ok := other.(project)
+	if !ok || len(rs) != len(otherP) {
+		return false
+	}
+
+	for i, r := range rs {
+		if !r.Equals(otherP[i]) {
+			return false
+		}
+	}
+
+	return true
+}
+
 // Returns a concatenation of all runners' return types
 func (rs project) Returns() []Type {
 	var types []Type
@@ -230,6 +245,10 @@ var variadicDummiesBatch = NewDataset(dummy.Data(-1))
 
 type dummyRunner struct{}
 
+func (*dummyRunner) Equals(other interface{}) bool {
+	_, ok := other.(*dummyRunner)
+	return ok
+}
 func (*dummyRunner) Args() []Type    { return []Type{Wildcard} }
 func (*dummyRunner) Returns() []Type { return []Type{dummy} }
 func (*dummyRunner) Run(_ context.Context, inp, out chan Dataset) error {

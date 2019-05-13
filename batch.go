@@ -19,6 +19,11 @@ type batch struct {
 	Size int
 }
 
+func (b *batch) Equals(other interface{}) bool {
+	_, ok := other.(*batch)
+	return ok
+}
+
 func (b *batch) Returns() []Type { return []Type{Wildcard} }
 func (b *batch) Run(ctx context.Context, inp, out chan Dataset) error {
 	buffer := NewDatasetBuilder()
