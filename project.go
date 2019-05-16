@@ -162,17 +162,15 @@ func (rs project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 		}
 	}()
 
-	var resultWidth int
 	// collect & join the output from all runners, in order
+	var resultWidth int
 	for {
-		var resultFirstIter Dataset
 		var result []Data
-
 		firstIter := resultWidth == 0
 		if firstIter {
-			resultFirstIter = NewDataset()
+			result = dataset{}
 		} else {
-			result = make([]Data, resultWidth)
+			result = make([]Data, 0, resultWidth)
 		}
 
 		allOpen, allDummies := true, true
@@ -191,18 +189,7 @@ func (rs project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 			}
 
 			if open {
-				if firstIter {
-					resultFirstIter, err = resultFirstIter.Expand(curr)
-					if err != nil {
-						return err
-					}
-				} else {
-					currWidth := curr.Width()
-					for j := 0; j < currWidth; j++ {
-						result[i] = curr.At(j)
-						i++
-					}
-				}
+				result = append(result, curr.(dataset)...)
 			}
 		}
 
@@ -210,12 +197,8 @@ func (rs project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 			return // all done
 		}
 
-		if firstIter {
-			resultWidth = resultFirstIter.Width()
-			out <- resultFirstIter
-		} else {
-			out <- NewDataset(result...)
-		}
+		resultWidth = len(result)
+		out <- dataset(result)
 
 		if allDummies {
 			return
