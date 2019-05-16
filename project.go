@@ -197,7 +197,8 @@ func (rs project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 						return err
 					}
 				} else {
-					for j := 0; j < curr.Width(); j++ {
+					currWidth := curr.Width()
+					for j := 0; j < currWidth; j++ {
 						result[i] = curr.At(j)
 						i++
 					}
