@@ -163,14 +163,14 @@ func (rs project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 	}()
 
 	// collect & join the output from all runners, in order
-	var resultWidth int
+	var resultLen int
 	for {
 		var result []Data
-		firstIter := resultWidth == 0
+		firstIter := resultLen == 0
 		if firstIter {
 			result = dataset{}
 		} else {
-			result = make([]Data, 0, resultWidth)
+			result = make([]Data, 0, resultLen)
 		}
 
 		allOpen, allDummies := true, true
@@ -189,6 +189,12 @@ func (rs project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 			}
 
 			if open {
+				if len(result) > 0 {
+					err := rs.hasDifferentLength(curr.At(0).Len(), result[0].Len())
+					if err != nil {
+						return err
+					}
+				}
 				result = append(result, curr.(dataset)...)
 			}
 		}
@@ -197,7 +203,7 @@ func (rs project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 			return // all done
 		}
 
-		resultWidth = len(result)
+		resultLen = len(result)
 		out <- dataset(result)
 
 		if allDummies {
@@ -241,6 +247,15 @@ func (rs project) useDummySingleton() {
 			rs[i] = dummyRunnerSingleton
 		}
 	}
+}
+
+func (rs project) hasDifferentLength(thisLen, otherLen int) error {
+	// when expanding with variadicNulls - don't force same length
+	isAnyVariadicNulls := thisLen < 0 || otherLen < 0
+	if !isAnyVariadicNulls && thisLen != otherLen {
+		return errMismatch
+	}
+	return nil
 }
 
 // dummyRunnerSingleton is a runner that does nothing and just returns immediately
