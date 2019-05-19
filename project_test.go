@@ -30,6 +30,18 @@ func ExampleProject_reversed() {
 	// [(is hello?,HELLO) (is world?,WORLD)] <nil>
 }
 
+func TestProject_noErrorWithDummies(t *testing.T) {
+	runner := ep.Project(&upper{}, &upper{}, &upper{}).(ep.FilterRunner)
+	runner.Filter([]bool{false, false, true})
+
+	data1 := ep.NewDataset(strs([]string{"hello", "world"}))
+	data2 := ep.NewDataset(strs([]string{"Herzl", "theodor"}))
+	data, err := eptest.Run(runner, data1, data2)
+	require.NoError(t, err)
+	require.Equal(t, 3, data.Width())
+	require.Equal(t, 4, data.Len())
+}
+
 func TestProject_errorInFirstRunner(t *testing.T) {
 	err := fmt.Errorf("something bad happened")
 	infinity := &waitForCancel{}
@@ -132,6 +144,17 @@ func TestProject_errorMismatchRows(t *testing.T) {
 	runner := ep.Project(&upper{}, &count{})
 	data := ep.NewDataset(strs([]string{"hello", "world"}))
 	_, err := eptest.Run(runner, data)
+	require.Error(t, err)
+	require.Equal(t, "mismatched number of rows", err.Error())
+}
+
+func TestProject_errorMismatchRowsWithDummies(t *testing.T) {
+	runner := ep.Project(&upper{}, &upper{}, &upper{}, &count{}).(ep.FilterRunner)
+	runner.Filter([]bool{false, false, true, true})
+
+	data1 := ep.NewDataset(strs([]string{"hello", "world"}))
+	data2 := ep.NewDataset(strs([]string{"Herzl"}))
+	_, err := eptest.Run(runner, data1, data2)
 	require.Error(t, err)
 	require.Equal(t, "mismatched number of rows", err.Error())
 }
@@ -298,4 +321,57 @@ func TestProject_drainOriginInput(t *testing.T) {
 	close(inp)
 
 	wg.Wait()
+}
+
+func BenchmarkProjectImpl(b *testing.B) {
+	b.Run("2runners", func(b *testing.B) {
+		runner := ep.Project(&upper{}, &question{})
+		data := ep.NewDataset(strs([]string{"sUndAy", "mOnDay", "TueSdAY", "wednESday", "tHuRSday", "FRIday"}))
+		batches := make([]ep.Dataset, 1000)
+		for i := 0; i < 1000; i++ {
+			batches[i] = data
+		}
+		b.ResetTimer()
+		for n := 0; n < b.N; n++ {
+			data, err := eptest.Run(runner, batches...)
+			require.NoError(b, err)
+			require.NotNil(b, data)
+		}
+	})
+	b.Run("5runners", func(b *testing.B) {
+		runner := ep.Project(&question{}, &upper{}, &question{}, &upper{}, &question{})
+		data := ep.NewDataset(strs([]string{"sUndAy", "mOnDay", "TueSdAY", "wednESday", "tHuRSday", "FRIday"}))
+		batches := make([]ep.Dataset, 1000)
+		for i := 0; i < 1000; i++ {
+			batches[i] = data
+		}
+		b.ResetTimer()
+		for n := 0; n < b.N; n++ {
+			data, err := eptest.Run(runner, batches...)
+			require.NoError(b, err)
+			require.NotNil(b, data)
+		}
+	})
+	b.Run("100runners", func(b *testing.B) {
+		runners := make([]ep.Runner, 100)
+		for i := 0; i < 96; i++ {
+			runners[i] = &question{}
+			runners[i+1] = &upper{}
+			runners[i+2] = &question{}
+			runners[i+3] = &upper{}
+			runners[i+4] = &question{}
+		}
+		runner := ep.Project(runners...)
+		data := ep.NewDataset(strs([]string{"sUndAy", "mOnDay", "TueSdAY", "wednESday", "tHuRSday", "FRIday"}))
+		batches := make([]ep.Dataset, 1000)
+		for i := 0; i < 1000; i++ {
+			batches[i] = data
+		}
+		b.ResetTimer()
+		for n := 0; n < b.N; n++ {
+			data, err := eptest.Run(runner, batches...)
+			require.NoError(b, err)
+			require.NotNil(b, data)
+		}
+	})
 }

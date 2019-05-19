@@ -163,17 +163,12 @@ func (rs project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 	}()
 
 	// collect & join the output from all runners, in order
-	var resultLen int
+	var resultWidth int
 	for {
-		var result []Data
-		firstIter := resultLen == 0
-		if firstIter {
-			result = dataset{}
-		} else {
-			result = make([]Data, 0, resultLen)
-		}
-
+		resultLen := -1
+		result := make([]Data, 0, resultWidth)
 		allOpen, allDummies := true, true
+
 		for i := range rs {
 			curr, open := <-outs[i]
 
@@ -189,11 +184,9 @@ func (rs project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 			}
 
 			if open {
-				if len(result) > 0 {
-					err := rs.hasDifferentLength(curr.At(0).Len(), result[0].Len())
-					if err != nil {
-						return err
-					}
+				resultLen, err = rs.verifySameLength(resultLen, curr.Len())
+				if err != nil {
+					return err
 				}
 				result = append(result, curr.(dataset)...)
 			}
@@ -203,7 +196,7 @@ func (rs project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 			return // all done
 		}
 
-		resultLen = len(result)
+		resultWidth = len(result)
 		out <- dataset(result)
 
 		if allDummies {
@@ -249,13 +242,16 @@ func (rs project) useDummySingleton() {
 	}
 }
 
-func (rs project) hasDifferentLength(thisLen, otherLen int) error {
+func (rs project) verifySameLength(len1, len2 int) (int, error) {
 	// when expanding with variadicNulls - don't force same length
-	isAnyVariadicNulls := thisLen < 0 || otherLen < 0
-	if !isAnyVariadicNulls && thisLen != otherLen {
-		return errMismatch
+	isAnyVariadicNulls := len1 < 0 || len2 < 0
+	if !isAnyVariadicNulls && len1 != len2 {
+		return -1, errMismatch
 	}
-	return nil
+	if len1 == -1 {
+		return len2, nil
+	}
+	return len1, nil
 }
 
 // dummyRunnerSingleton is a runner that does nothing and just returns immediately
