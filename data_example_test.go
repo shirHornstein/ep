@@ -228,6 +228,7 @@ func ExampleData_Compare_strings() {
 
 	// Output: [1 4 4 5 3 5 2 1]
 }
+
 func ExampleData_Compare_integers() {
 	d1 := integers{1, 2, 5}
 	d2 := integers{1, 3, 4}
@@ -235,4 +236,26 @@ func ExampleData_Compare_integers() {
 	fmt.Println(comparisonResult)
 
 	// Output: [1 5 4]
+}
+
+func ExampleDataset_CopyNTimes() {
+	d1 := make(integers, 3)
+	d2 := integers{1, 2, 5}
+	d1.CopyNTimes(d2, 0, 0, []int{1, 1, 1})
+	fmt.Println(d1)
+
+	d1 = make(integers, 3)
+	d2 = integers{1, 2, 5}
+	d1.CopyNTimes(d2, 0, 0, []int{2, 1})
+	fmt.Println(d1)
+
+	d1 = make(integers, 3)
+	d2 = integers{1, 2, 5}
+	d1.CopyNTimes(d2, 0, 0, []int{1})
+	fmt.Println(d1)
+
+	// Output:
+	// [1 2 5]
+	// [1 1 2]
+	// [1 0 0]
 }
