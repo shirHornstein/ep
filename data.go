@@ -52,6 +52,11 @@ type Data interface {
 	// Equivalent to this[toRow] = from.Slice(fromRow, fromRow+1)
 	Copy(from Data, fromRow, toRow int)
 
+	// CopyNTimes copies len(dup) rows from given data from fromRow position to this data,
+	// located at toRow position.
+	// each line will be copied dup[i] times.
+	CopyNTimes(from Data, fromRow, toRow int, duplications []int)
+
 	// Strings returns the string representation of all of the Data values
 	Strings() []string
 }
