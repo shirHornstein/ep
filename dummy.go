@@ -44,5 +44,6 @@ func (vs *variadicDummies) Compare(other Data) ([]compare.Result, error) {
 	panic("dummies are not comparable")
 }
 
-func (*variadicDummies) Copy(Data, int, int) {}
-func (*variadicDummies) Strings() []string   { return []string{} }
+func (*variadicDummies) Copy(Data, int, int)                                    {}
+func (vs *variadicDummies) CopyNTimes(from Data, fromRow, toRow int, dup []int) {}
+func (*variadicDummies) Strings() []string                                      { return []string{} }

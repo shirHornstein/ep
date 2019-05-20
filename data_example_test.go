@@ -94,6 +94,21 @@ func (vs strs) Copy(from ep.Data, fromRow, toRow int) {
 	src := from.(strs)
 	vs[toRow] = src[fromRow]
 }
+
+func (vs strs) CopyNTimes(from ep.Data, fromRow, toRow int, duplications []int) {
+	src := from.(strs)
+
+	for i, n := range duplications {
+		val := src[fromRow+i]
+
+		for j := 0; j < n; j++ {
+			vs[toRow+j] = val
+		}
+
+		toRow += n
+	}
+}
+
 func (vs strs) Strings() []string { return vs }
 
 type integerType struct{}
@@ -174,6 +189,19 @@ func (vs integers) Compare(other ep.Data) ([]compare.Result, error) {
 func (vs integers) Copy(from ep.Data, fromRow, toRow int) {
 	src := from.(integers)
 	vs[toRow] = src[fromRow]
+}
+func (vs integers) CopyNTimes(from ep.Data, fromRow, toRow int, duplications []int) {
+	src := from.(integers)
+
+	for i, n := range duplications {
+		val := src[fromRow+i]
+
+		for j := 0; j < n; j++ {
+			vs[toRow+j] = val
+		}
+
+		toRow += n
+	}
 }
 func (vs integers) Strings() []string {
 	s := make([]string, vs.Len())

@@ -348,6 +348,13 @@ func (set dataset) Copy(from Data, fromRow, toRow int) {
 	}
 }
 
+func (set dataset) CopyNTimes(from Data, fromRow, toRow int, dup []int) {
+	src := from.(dataset)
+	for idx, d := range set {
+		d.CopyNTimes(src.At(idx), fromRow, toRow, dup)
+	}
+}
+
 // see Data.Strings
 func (set dataset) Strings() []string {
 	if set.Len() <= 0 {
