@@ -184,7 +184,7 @@ func (rs project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 			}
 
 			if open {
-				resultLen, err = rs.verifySameLength(resultLen, curr.Len())
+				resultLen, err = verifySameLength(resultLen, curr.Len())
 				if err != nil {
 					return err
 				}
@@ -240,18 +240,6 @@ func (rs project) useDummySingleton() {
 			rs[i] = dummyRunnerSingleton
 		}
 	}
-}
-
-func (rs project) verifySameLength(len1, len2 int) (int, error) {
-	// when expanding with variadicNulls - don't force same length
-	isAnyVariadicNulls := len1 < 0 || len2 < 0
-	if !isAnyVariadicNulls && len1 != len2 {
-		return -1, errMismatch
-	}
-	if len1 == -1 {
-		return len2, nil
-	}
-	return len1, nil
 }
 
 // dummyRunnerSingleton is a runner that does nothing and just returns immediately
