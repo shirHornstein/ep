@@ -55,6 +55,7 @@ type Data interface {
 	// CopyNTimes copies len(dup) rows from given data from fromRow position to this data,
 	// located at toRow position.
 	// i-th line will be copied dup[i] times.
+	// this[toRow:] is expected to have capacity larger than all duplications.
 	CopyNTimes(from Data, fromRow, toRow int, duplications []int)
 
 	// Strings returns the string representation of all of the Data values
