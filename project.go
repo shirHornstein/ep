@@ -163,9 +163,12 @@ func (rs project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 	}()
 
 	// collect & join the output from all runners, in order
+	var resultWidth int
 	for {
-		result := NewDataset()
+		resultLen := -1
+		result := make([]Data, 0, resultWidth)
 		allOpen, allDummies := true, true
+
 		for i := range rs {
 			curr, open := <-outs[i]
 
@@ -181,10 +184,11 @@ func (rs project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 			}
 
 			if open {
-				result, err = result.Expand(curr)
+				resultLen, err = verifySameLength(resultLen, curr.Len())
 				if err != nil {
 					return err
 				}
+				result = append(result, curr.(dataset)...)
 			}
 		}
 
@@ -192,7 +196,8 @@ func (rs project) Run(ctx context.Context, inp, out chan Dataset) (err error) {
 			return // all done
 		}
 
-		out <- result
+		resultWidth = len(result)
+		out <- dataset(result)
 
 		if allDummies {
 			return

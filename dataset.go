@@ -137,18 +137,29 @@ func (set dataset) Expand(other Dataset) (Dataset, error) {
 	} else if other == nil {
 		return set, nil
 	}
-	// when expanding with variadicNulls - don't force same length
-	thisLen := set.Len()
-	otherLen := other.Len()
-	isAnyVariadicNulls := thisLen < 0 || otherLen < 0
-	if thisLen != otherLen && !isAnyVariadicNulls {
-		return nil, errMismatch
+
+	_, err := verifySameLength(set.Len(), other.Len())
+	if err != nil {
+		return nil, err
 	}
+
 	otherCols := other.(dataset)
 	newDataset := make(dataset, 0, len(set)+len(otherCols))
 	newDataset = append(newDataset, set...)
 	newDataset = append(newDataset, otherCols...)
 	return newDataset, nil
+}
+
+func verifySameLength(len1, len2 int) (int, error) {
+	// when expanding with variadicNulls - don't force same length
+	isAnyVariadicNulls := len1 < 0 || len2 < 0
+	if !isAnyVariadicNulls && len1 != len2 {
+		return -1, errMismatch
+	}
+	if len1 == -1 {
+		return len2, nil
+	}
+	return len1, nil
 }
 
 // Split returns two datasets, with requested second width
