@@ -53,21 +53,21 @@ func (b *strBuilder) Data() Data {
 
 type strs []string
 
-func (strs) Type() Type                                                      { return str }
-func (vs strs) Len() int                                                     { return len(vs) }
-func (vs strs) Less(int, int) bool                                           { return false }
-func (vs strs) Swap(int, int)                                                {}
-func (vs strs) LessOther(int, Data, int) bool                                { return false }
-func (vs strs) Slice(int, int) Data                                          { return vs }
-func (vs strs) Duplicate(t int) Data                                         { return vs }
-func (vs strs) IsNull(int) bool                                              { return false }
-func (vs strs) MarkNull(int)                                                 {}
-func (vs strs) Nulls() []bool                                                { return make([]bool, vs.Len()) }
-func (vs strs) Equal(Data) bool                                              { return false }
-func (vs strs) Compare(Data) ([]compare.Result, error)                       { return make([]compare.Result, vs.Len()), nil }
-func (vs strs) Copy(Data, int, int)                                          {}
-func (vs strs) CopyNTimes(from Data, fromRow, toRow int, duplications []int) {}
-func (vs strs) Strings() []string                                            { return vs }
+func (strs) Type() Type                                { return str }
+func (vs strs) Len() int                               { return len(vs) }
+func (vs strs) Less(int, int) bool                     { return false }
+func (vs strs) Swap(int, int)                          {}
+func (vs strs) LessOther(int, Data, int) bool          { return false }
+func (vs strs) Slice(int, int) Data                    { return vs }
+func (vs strs) Duplicate(t int) Data                   { return vs }
+func (vs strs) IsNull(int) bool                        { return false }
+func (vs strs) MarkNull(int)                           {}
+func (vs strs) Nulls() []bool                          { return make([]bool, vs.Len()) }
+func (vs strs) Equal(Data) bool                        { return false }
+func (vs strs) Compare(Data) ([]compare.Result, error) { return make([]compare.Result, vs.Len()), nil }
+func (vs strs) Copy(Data, int, int)                    {}
+func (vs strs) CopyNTimes(Data, int, int, []int)       {}
+func (vs strs) Strings() []string                      { return vs }
 
 func startCluster(t *testing.T, ports ...string) []Distributer {
 	res := make([]Distributer, len(ports))
