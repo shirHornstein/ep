@@ -254,8 +254,20 @@ func ExampleDataset_CopyNTimes() {
 	d1.CopyNTimes(d2, 0, 0, []int{1})
 	fmt.Println(d1)
 
+	d1 = make(integers, 3)
+	d2 = integers{1, 2, 5}
+	d1.CopyNTimes(d2, 1, 0, []int{1})
+	fmt.Println(d1)
+
+	d1 = make(integers, 3)
+	d2 = integers{1, 2, 5}
+	d1.CopyNTimes(d2, 0, 1, []int{1})
+	fmt.Println(d1)
+
 	// Output:
 	// [1 2 5]
 	// [1 1 2]
 	// [1 0 0]
+	// [2 0 0]
+	// [0 1 0]
 }
