@@ -163,7 +163,7 @@ func (cs composeProject) BatchFunction() BatchFunction {
 			if err != nil {
 				return nil, err
 			}
-			resultLen, err = cs.verifySameLength(resultLen, res.Len())
+			resultLen, err = verifySameLength(resultLen, res.Len())
 			if err != nil {
 				return nil, err
 			}
@@ -172,18 +172,6 @@ func (cs composeProject) BatchFunction() BatchFunction {
 		resultWidth = len(result)
 		return NewDataset(result...), nil
 	}
-}
-
-func (cs composeProject) verifySameLength(len1, len2 int) (int, error) {
-	// when expanding with variadicNulls - don't force same length
-	isAnyVariadicNulls := len1 < 0 || len2 < 0
-	if !isAnyVariadicNulls && len1 != len2 {
-		return -1, errMismatch
-	}
-	if len1 == -1 {
-		return len2, nil
-	}
-	return len1, nil
 }
 
 func (cs composeProject) Filter(keep []bool) {
