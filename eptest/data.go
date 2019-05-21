@@ -181,6 +181,15 @@ func VerifyDataNullsHandling(t *testing.T, data ep.Data, expectedNullString stri
 		require.Equal(t, data.IsNull(nullIdx), data.IsNull(newNullIdx))
 	})
 
+	t.Run("TestData_CopyNTimes_withNulls_"+data.Type().String(), func(t *testing.T) {
+		newNullIdx := nullIdx + 2
+		require.False(t, data.IsNull(newNullIdx))
+		require.NotEqual(t, data.IsNull(nullIdx), data.IsNull(newNullIdx))
+
+		data.CopyNTimes(data, nullIdx, newNullIdx, []int{1})
+		require.Equal(t, data.IsNull(nullIdx), data.IsNull(newNullIdx))
+	})
+
 	t.Run("TestData_Strings_withNulls_"+data.Type().String(), func(t *testing.T) {
 		strings := data.Strings()
 		require.Equal(t, expectedNullString, strings[nullIdx])
