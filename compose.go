@@ -147,25 +147,43 @@ func (cs composeProject) Returns() []Type {
 	return types
 }
 func (cs composeProject) BatchFunction() BatchFunction {
+	var resultWidth, resultLen int
 	funcs := make([]BatchFunction, len(cs))
 	for i := 0; i < len(cs); i++ {
+		resultWidth = 0
 		funcs[i] = cs[i].BatchFunction()
 	}
 
 	return func(data Dataset) (Dataset, error) {
-		result := NewDataset()
+		result := make([]Data, 0, resultWidth)
+		resultLen = -1
+
 		for col := 0; col < len(funcs); col++ {
 			res, err := funcs[col](data)
 			if err != nil {
 				return nil, err
 			}
-			result, err = result.Expand(res)
+			resultLen, err = cs.verifySameLength(resultLen, res.Len())
 			if err != nil {
 				return nil, err
 			}
+			result = append(result, res.(dataset)...)
 		}
-		return result, nil
+		resultWidth = len(result)
+		return NewDataset(result...), nil
 	}
+}
+
+func (cs composeProject) verifySameLength(len1, len2 int) (int, error) {
+	// when expanding with variadicNulls - don't force same length
+	isAnyVariadicNulls := len1 < 0 || len2 < 0
+	if !isAnyVariadicNulls && len1 != len2 {
+		return -1, errMismatch
+	}
+	if len1 == -1 {
+		return len2, nil
+	}
+	return len1, nil
 }
 
 func (cs composeProject) Filter(keep []bool) {
