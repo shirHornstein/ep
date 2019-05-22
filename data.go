@@ -58,6 +58,11 @@ type Data interface {
 	// this[toRow:] is expected to have capacity larger than sum of all duplications
 	CopyNTimes(from Data, fromRow, toRow int, duplications []int)
 
+	// CopyByIndexes copies len(fromRows) rows from given data for all fromRow[i] position to this data,
+	// located at toRow position.
+	// this[toRow:] is expected to have capacity larger than len(fromRows)
+	CopyByIndexes(from Data, fromRows []int, toRow int)
+
 	// Strings returns the string representation of all of the Data values
 	Strings() []string
 }
