@@ -283,3 +283,25 @@ func ExampleDataset_CopyNTimes() {
 	// [5 5 0]
 	// [0 1 0]
 }
+
+func ExampleDataset_CopyByIndexes() {
+	d1 := make(integers, 3)
+	d2 := integers{1, 2, 5}
+	d1.CopyByIndexes(d2, []int{1, 1, 1}, 0)
+	fmt.Println(d1)
+
+	d1 = make(integers, 3)
+	d2 = integers{1, 2, 5}
+	d1.CopyByIndexes(d2, []int{2, 1}, 0)
+	fmt.Println(d1)
+
+	d1 = make(integers, 3)
+	d2 = integers{1, 2, 5}
+	d1.CopyByIndexes(d2, []int{0, 2}, 1)
+	fmt.Println(d1)
+
+	// Output:
+	// [2 2 2]
+	// [5 2 0]
+	// [0 1 5]
+}
