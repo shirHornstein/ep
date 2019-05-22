@@ -46,4 +46,5 @@ func (vs *variadicDummies) Compare(other Data) ([]compare.Result, error) {
 
 func (*variadicDummies) Copy(Data, int, int)              {}
 func (*variadicDummies) CopyNTimes(Data, int, int, []int) {}
+func (*variadicDummies) CopyByIndexes(Data, []int, int)   {}
 func (*variadicDummies) Strings() []string                { return []string{} }

@@ -46,6 +46,10 @@ func (b *strBuilder) Data() ep.Data {
 
 type strs []string
 
+func (vs strs) CopyByIndexes(from ep.Data, fromRows []int, toRow int) {
+	panic("implement me")
+}
+
 func (strs) Type() ep.Type         { return str }
 func (vs strs) Len() int           { return len(vs) }
 func (vs strs) Less(i, j int) bool { return vs[i] < vs[j] }
@@ -201,6 +205,14 @@ func (vs integers) CopyNTimes(from ep.Data, fromRow, toRow int, duplications []i
 		}
 
 		toRow += n
+	}
+}
+func (vs integers) CopyByIndexes(from ep.Data, fromRows []int, toRow int) {
+	src := from.(integers)
+
+	for _, n := range fromRows {
+		vs[toRow] = src[n]
+		toRow++
 	}
 }
 func (vs integers) Strings() []string {
