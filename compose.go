@@ -150,7 +150,6 @@ func (cs composeProject) BatchFunction() BatchFunction {
 	var resultWidth, resultLen int
 	funcs := make([]BatchFunction, len(cs))
 	for i := 0; i < len(cs); i++ {
-		resultWidth = 0
 		funcs[i] = cs[i].BatchFunction()
 	}
 
