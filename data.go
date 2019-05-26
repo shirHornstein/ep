@@ -53,13 +53,13 @@ type Data interface {
 	Copy(from Data, fromRow, toRow int)
 
 	// CopyNTimes copies len(dup) rows from given data from fromRow position to this data,
-	// located at toRow position.
+	// starting at toRow position.
 	// i-th line will be copied dup[i] times.
 	// this[toRow:] is expected to have capacity larger than sum of all duplications
 	CopyNTimes(from Data, fromRow, toRow int, duplications []int)
 
-	// CopyByIndexes copies len(fromRows) rows from given data for all fromRow[i] position to this data,
-	// located at toRow position.
+	// CopyByIndexes copies all indices in fromRows from given data to this data,
+	// starting at toRow position.
 	// this[toRow:] is expected to have capacity larger than len(fromRows)
 	CopyByIndexes(from Data, fromRows []int, toRow int)
 
