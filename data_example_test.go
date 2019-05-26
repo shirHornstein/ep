@@ -112,8 +112,8 @@ func (vs strs) CopyNTimes(from ep.Data, fromRow, toRow int, duplications []int) 
 func (vs strs) CopyByIndexes(from ep.Data, fromRows []int, toRow int) {
 	src := from.(strs)
 
-	for _, n := range fromRows {
-		vs[toRow] = src[n]
+	for _, idx := range fromRows {
+		vs[toRow] = src[idx]
 		toRow++
 	}
 }
@@ -215,8 +215,8 @@ func (vs integers) CopyNTimes(from ep.Data, fromRow, toRow int, duplications []i
 func (vs integers) CopyByIndexes(from ep.Data, fromRows []int, toRow int) {
 	src := from.(integers)
 
-	for _, n := range fromRows {
-		vs[toRow] = src[n]
+	for _, idx := range fromRows {
+		vs[toRow] = src[idx]
 		toRow++
 	}
 }
