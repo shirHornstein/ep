@@ -197,7 +197,7 @@ func VerifyDataNullsHandling(t *testing.T, data ep.Data, expectedNullString stri
 		require.False(t, data.IsNull(newNullIdx))
 		require.NotEqual(t, data.IsNull(nullIdx), data.IsNull(newNullIdx))
 
-		data.CopyByIndexes(data, []int{nullIdx, newNullIdx}, newNullIdx)
+		data.CopyByIndexes(data, []int{nullIdx, nullIdx}, newNullIdx)
 		require.Equal(t, data.IsNull(nullIdx), data.IsNull(newNullIdx))
 		require.Equal(t, data.IsNull(newNullIdx), data.IsNull(newNullIdx+1))
 	})
