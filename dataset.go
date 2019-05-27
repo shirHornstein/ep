@@ -368,8 +368,8 @@ func (set dataset) CopyNTimes(from Data, fromRow, toRow int, dup []int) {
 
 func (set dataset) CopyByIndexes(from Data, fromRows []int, toRow int) {
 	src := from.(dataset)
-	for i, idx := range set {
-		idx.CopyByIndexes(src.At(i), fromRows, toRow)
+	for idx, d := range set {
+		d.CopyByIndexes(src.At(idx), fromRows, toRow)
 	}
 }
 
