@@ -94,6 +94,21 @@ func (vs strs) Copy(from ep.Data, fromRow, toRow int) {
 	src := from.(strs)
 	vs[toRow] = src[fromRow]
 }
+
+func (vs strs) CopyNTimes(from ep.Data, fromRow, toRow int, duplications []int) {
+	src := from.(strs)
+
+	for i, n := range duplications {
+		val := src[fromRow+i]
+
+		for j := 0; j < n; j++ {
+			vs[toRow+j] = val
+		}
+
+		toRow += n
+	}
+}
+
 func (vs strs) Strings() []string { return vs }
 
 type integerType struct{}
@@ -175,6 +190,19 @@ func (vs integers) Copy(from ep.Data, fromRow, toRow int) {
 	src := from.(integers)
 	vs[toRow] = src[fromRow]
 }
+func (vs integers) CopyNTimes(from ep.Data, fromRow, toRow int, duplications []int) {
+	src := from.(integers)
+
+	for i, n := range duplications {
+		val := src[fromRow+i]
+
+		for j := 0; j < n; j++ {
+			vs[toRow+j] = val
+		}
+
+		toRow += n
+	}
+}
 func (vs integers) Strings() []string {
 	s := make([]string, vs.Len())
 	for i, v := range vs {
@@ -200,6 +228,7 @@ func ExampleData_Compare_strings() {
 
 	// Output: [1 4 4 5 3 5 2 1]
 }
+
 func ExampleData_Compare_integers() {
 	d1 := integers{1, 2, 5}
 	d2 := integers{1, 3, 4}
@@ -207,4 +236,38 @@ func ExampleData_Compare_integers() {
 	fmt.Println(comparisonResult)
 
 	// Output: [1 5 4]
+}
+
+func ExampleDataset_CopyNTimes() {
+	d1 := make(integers, 3)
+	d2 := integers{1, 2, 5}
+	d1.CopyNTimes(d2, 0, 0, []int{1, 1, 1})
+	fmt.Println(d1)
+
+	d1 = make(integers, 3)
+	d2 = integers{1, 2, 5}
+	d1.CopyNTimes(d2, 0, 0, []int{2, 1})
+	fmt.Println(d1)
+
+	d1 = make(integers, 3)
+	d2 = integers{1, 2, 5}
+	d1.CopyNTimes(d2, 0, 0, []int{1})
+	fmt.Println(d1)
+
+	d1 = make(integers, 3)
+	d2 = integers{1, 2, 5}
+	d1.CopyNTimes(d2, 1, 0, []int{0, 2})
+	fmt.Println(d1)
+
+	d1 = make(integers, 3)
+	d2 = integers{1, 2, 5}
+	d1.CopyNTimes(d2, 0, 1, []int{1})
+	fmt.Println(d1)
+
+	// Output:
+	// [1 2 5]
+	// [1 1 2]
+	// [1 0 0]
+	// [5 5 0]
+	// [0 1 0]
 }

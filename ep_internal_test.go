@@ -66,6 +66,7 @@ func (vs strs) Nulls() []bool                          { return make([]bool, vs.
 func (vs strs) Equal(Data) bool                        { return false }
 func (vs strs) Compare(Data) ([]compare.Result, error) { return make([]compare.Result, vs.Len()), nil }
 func (vs strs) Copy(Data, int, int)                    {}
+func (vs strs) CopyNTimes(Data, int, int, []int)       {}
 func (vs strs) Strings() []string                      { return vs }
 
 func startCluster(t *testing.T, ports ...string) []Distributer {
