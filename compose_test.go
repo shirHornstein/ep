@@ -116,7 +116,7 @@ func BenchmarkComposeProjectImpl(b *testing.B) {
 
 	b.Run("100runners", func(b *testing.B) {
 		composables := make([]ep.Composable, 100)
-		for i := 0; i < 99; i += 2 {
+		for i := 0; i < 100; i += 2 {
 			composables[i] = &mulIntBy2{}
 			composables[i+1] = &negateInt{}
 		}

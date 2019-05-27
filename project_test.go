@@ -354,7 +354,7 @@ func BenchmarkProjectImpl(b *testing.B) {
 	})
 	b.Run("100runners", func(b *testing.B) {
 		runners := make([]ep.Runner, 100)
-		for i := 0; i < 96; i += 5 {
+		for i := 0; i < 100; i += 5 {
 			runners[i] = &question{}
 			runners[i+1] = &upper{}
 			runners[i+2] = &question{}
