@@ -84,3 +84,51 @@ func TestComposeProject_creation(t *testing.T) {
 		require.IsType(t, cmp, project)
 	})
 }
+
+func BenchmarkComposeProjectImpl(b *testing.B) {
+	data := ep.NewDataset(integer.Data(1000))
+
+	b.Run("2runners", func(b *testing.B) {
+		compProj := ep.ComposeProject(&negateInt{}, &mulIntBy2{})
+		batchFunction := compProj.BatchFunction()
+
+		b.ResetTimer()
+		for n := 0; n < b.N; n++ {
+			res, err := batchFunction(data)
+			require.NoError(b, err)
+			require.NotNil(b, data)
+			require.Equal(b, data.Len(), res.Len())
+		}
+	})
+
+	b.Run("5runners", func(b *testing.B) {
+		compProj := ep.ComposeProject(&mulIntBy2{}, &negateInt{}, &mulIntBy2{}, &negateInt{}, &mulIntBy2{})
+		batchFunction := compProj.BatchFunction()
+
+		b.ResetTimer()
+		for n := 0; n < b.N; n++ {
+			res, err := batchFunction(data)
+			require.NoError(b, err)
+			require.NotNil(b, data)
+			require.Equal(b, data.Len(), res.Len())
+		}
+	})
+
+	b.Run("100runners", func(b *testing.B) {
+		composables := make([]ep.Composable, 100)
+		for i := 0; i < 100; i += 2 {
+			composables[i] = &mulIntBy2{}
+			composables[i+1] = &negateInt{}
+		}
+		compProj := ep.ComposeProject(composables...)
+		batchFunction := compProj.BatchFunction()
+
+		b.ResetTimer()
+		for n := 0; n < b.N; n++ {
+			res, err := batchFunction(data)
+			require.NoError(b, err)
+			require.NotNil(b, data)
+			require.Equal(b, data.Len(), res.Len())
+		}
+	})
+}
