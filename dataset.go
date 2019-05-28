@@ -366,6 +366,13 @@ func (set dataset) CopyNTimes(from Data, fromRow, toRow int, dup []int) {
 	}
 }
 
+func (set dataset) CopyByIndexes(from Data, fromRows []int, toRow int) {
+	src := from.(dataset)
+	for idx, d := range set {
+		d.CopyByIndexes(src.At(idx), fromRows, toRow)
+	}
+}
+
 // see Data.Strings
 func (set dataset) Strings() []string {
 	if set.Len() <= 0 {

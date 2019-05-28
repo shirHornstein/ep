@@ -109,6 +109,15 @@ func (vs strs) CopyNTimes(from ep.Data, fromRow, toRow int, duplications []int) 
 	}
 }
 
+func (vs strs) CopyByIndexes(from ep.Data, fromRows []int, toRow int) {
+	src := from.(strs)
+
+	for _, idx := range fromRows {
+		vs[toRow] = src[idx]
+		toRow++
+	}
+}
+
 func (vs strs) Strings() []string { return vs }
 
 type integerType struct{}
@@ -203,6 +212,14 @@ func (vs integers) CopyNTimes(from ep.Data, fromRow, toRow int, duplications []i
 		toRow += n
 	}
 }
+func (vs integers) CopyByIndexes(from ep.Data, fromRows []int, toRow int) {
+	src := from.(integers)
+
+	for _, idx := range fromRows {
+		vs[toRow] = src[idx]
+		toRow++
+	}
+}
 func (vs integers) Strings() []string {
 	s := make([]string, vs.Len())
 	for i, v := range vs {
@@ -270,4 +287,26 @@ func ExampleDataset_CopyNTimes() {
 	// [1 0 0]
 	// [5 5 0]
 	// [0 1 0]
+}
+
+func ExampleDataset_CopyByIndexes() {
+	d1 := make(integers, 3)
+	d2 := integers{1, 2, 5}
+	d1.CopyByIndexes(d2, []int{1, 1, 1}, 0)
+	fmt.Println(d1)
+
+	d1 = make(integers, 3)
+	d2 = integers{1, 2, 5}
+	d1.CopyByIndexes(d2, []int{2, 1}, 0)
+	fmt.Println(d1)
+
+	d1 = make(integers, 3)
+	d2 = integers{1, 2, 5}
+	d1.CopyByIndexes(d2, []int{0, 2}, 1)
+	fmt.Println(d1)
+
+	// Output:
+	// [2 2 2]
+	// [5 2 0]
+	// [0 1 5]
 }
